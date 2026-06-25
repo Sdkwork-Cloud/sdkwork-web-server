@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/web-pc-certificates",
+    "displayName": "SDKWork Web PC Certificates",
+    "version": "0.0.0",
+    "type": "react-package",
+    "root": "sdkwork-web-server/apps/sdkwork-web-pc/packages/sdkwork-web-pc-certificates",
+    "domain": "certificates",
+    "capability": "feature",
+    "status": "planned",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true
+  },
+  "dependencies": {
+    "packages": ["@sdkwork/web-pc-core"],
+    "sdkFamilies": ["sdkwork-web-app-sdk"]
+  }
+}

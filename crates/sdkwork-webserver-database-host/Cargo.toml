@@ -1,0 +1,11 @@
+[package]
+name = "sdkwork-webserver-database-host"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dotenvy.workspace = true
+sdkwork-database-config.workspace = true
+sdkwork-database-lifecycle.workspace = true
+sdkwork-database-spi.workspace = true
+sdkwork-database-sqlx.workspace = true

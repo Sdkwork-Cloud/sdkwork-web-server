@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.database.table-registry",
+  "tables": [
+    {
+      "table_name": "web_site",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_domain",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_nginx_config",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_certificate",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_deployment",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_env_variable",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_health_check",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_health_result",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_audit_log",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "web_server",
+      "owner": "web-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    }
+  ]
+}

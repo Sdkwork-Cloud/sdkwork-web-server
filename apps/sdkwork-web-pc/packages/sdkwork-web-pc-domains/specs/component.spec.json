@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/web-pc-domains",
+    "displayName": "SDKWork Web PC Domains",
+    "version": "0.0.0",
+    "type": "react-package",
+    "root": "sdkwork-web-server/apps/sdkwork-web-pc/packages/sdkwork-web-pc-domains",
+    "domain": "domains",
+    "capability": "feature",
+    "status": "planned",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true
+  },
+  "dependencies": {
+    "packages": ["@sdkwork/web-pc-core"],
+    "sdkFamilies": ["sdkwork-web-app-sdk"]
+  }
+}

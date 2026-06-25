@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 3,
+  "kind": "sdkwork.app",
+  "app": {
+    "key": "sdkwork-web",
+    "name": "SDKWork Web Server",
+    "displayName": "SDKWork Web Server",
+    "description": "SDKWork standards-aligned HTTP web server control plane with app-api and backend-api surfaces.",
+    "vendor": "SDKWork",
+    "officialWebsiteUrl": "https://sdkwork.com/apps/sdkwork-web",
+    "supportUrl": "https://sdkwork.com/support",
+    "privacyPolicyUrl": "https://sdkwork.com/privacy",
+    "termsOfServiceUrl": "https://sdkwork.com/terms",
+    "iconUrl": "https://cdn.sdkwork.com/apps/sdkwork-web/assets/icon-1024.png",
+    "appType": "SDK",
+    "versionSource": "manifest",
+    "identifiers": {
+      "packageName": null,
+      "bundleId": null,
+      "desktopAppId": null,
+      "containerImage": "registry.sdkwork.com/apps/sdkwork-web"
+    }
+  },
+  "backend": {
+    "profileKey": "backend-root-admin",
+    "ownerMode": "tenant",
+    "grantMode": "current",
+    "platform": "API",
+    "appId": null,
+    "tenantId": "100001",
+    "organizationId": "0"
+  },
+  "runtime": {
+    "family": "server",
+    "framework": "rust-service",
+    "runtimes": [
+      "API"
+    ],
+    "deliveryModes": [
+      "CONTAINER_IMAGE"
+    ],
+    "defaultPlatform": "API",
+    "defaultArchitecture": "x64",
+    "deploymentProfile": "cloud",
+    "runtimeTarget": "server",
+    "supportedDeploymentProfiles": [
+      "standalone",
+      "cloud"
+    ]
+  },
+  "publish": {
+    "status": "ACTIVE",
+    "platforms": [
+      "API"
+    ],
+    "installPlatforms": [
+      "API"
+    ],
+    "defaultPackageId": "linux-x64-cloud-server-tar-gz",
+    "storeUrl": "https://sdkwork.com/apps/sdkwork-web",
+    "config": {
+      "workspaceRoot": "sdkwork-web-server",
+      "framework": "rust-service"
+    }
+  },
+  "release": {
+    "defaultVersion": "0.1.0",
+    "notes": [
+      {
+        "version": "0.1.0",
+        "title": "Initial standards-aligned bootstrap",
+        "body": "Bootstrap SDKWork Web Server with web-framework, database framework, and utils integration."
+      }
+    ]
+  },
+  "apiSurfaces": [
+    {
+      "id": "sdkwork-web-app-api",
+      "kind": "app-api",
+      "apiPrefix": "/app/v3/api",
+      "authority": "apis/app-api/web/openapi.yaml"
+    },
+    {
+      "id": "sdkwork-web-backend-api",
+      "kind": "backend-api",
+      "apiPrefix": "/backend/v3/api",
+      "authority": "apis/backend-api/web/openapi.yaml"
+    }
+  ],
+  "sdkFamilies": [],
+  "sdkDependencies": [
+    {
+      "family": "sdkwork-iam-app-sdk",
+      "reason": "IAM login/session and tenant request context for protected app-api routes."
+    },
+    {
+      "family": "sdkwork-iam-backend-sdk",
+      "reason": "Platform operator IAM for protected backend-api routes."
+    }
+  ],
+  "dependencyApiExports": [],
+  "dependencyApiSurfaces": []
+}

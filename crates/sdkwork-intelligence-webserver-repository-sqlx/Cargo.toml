@@ -1,0 +1,25 @@
+[package]
+name = "sdkwork-intelligence-webserver-repository-sqlx"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+hex = "0.4"
+serde_json.workspace = true
+sha2 = "0.10"
+sqlx.workspace = true
+uuid.workspace = true
+
+sdkwork-database-config.workspace = true
+sdkwork-database-sqlx.workspace = true
+dotenvy.workspace = true
+sdkwork-webserver-contract.workspace = true
+sdkwork-webserver-database-host.workspace = true
+sdkwork-id-core.workspace = true
+sdkwork-intelligence-webserver-service.workspace = true
+sdkwork-webserver-acme-service.workspace = true
+sdkwork-webserver-edge-runtime.workspace = true
+sdkwork-utils-rust.workspace = true
+tracing.workspace = true

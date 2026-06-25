@@ -1,0 +1,547 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.route.manifest",
+  "packageName": "sdkwork-router-webserver-app-api",
+  "surface": "app-api",
+  "owner": "sdkwork-web",
+  "domain": "platform",
+  "capability": "webserver",
+  "apiAuthority": "sdkwork-web.app",
+  "sdkFamily": "sdkwork-web-app-sdk",
+  "prefix": "/app/v3/api",
+  "source": {
+    "crateRoot": "crates/sdkwork-router-webserver-app-api",
+    "crateImport": "sdkwork_router_webserver_app_api",
+    "openApiAuthority": "sdks/sdkwork-web-app-sdk/openapi/web-app-api.openapi.json"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites",
+      "operationId": "sites.list",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.read",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites",
+      "operationId": "sites.create",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}",
+      "operationId": "sites.retrieve",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.read",
+      "idempotent": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/app/v3/api/sites/{siteId}",
+      "operationId": "sites.update",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/app/v3/api/sites/{siteId}",
+      "operationId": "sites.delete",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/activate",
+      "operationId": "sites.activate",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/pause",
+      "operationId": "sites.pause",
+      "tags": [
+        "site"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/domains",
+      "operationId": "sites.domains.list",
+      "tags": [
+        "domain"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/domains",
+      "operationId": "sites.domains.create",
+      "tags": [
+        "domain"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/domains/{domainId}",
+      "operationId": "sites.domains.retrieve",
+      "tags": [
+        "domain"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/app/v3/api/sites/{siteId}/domains/{domainId}",
+      "operationId": "sites.domains.delete",
+      "tags": [
+        "domain"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/domains/{domainId}/verify",
+      "operationId": "sites.domains.verify",
+      "tags": [
+        "domain"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/deployments",
+      "operationId": "sites.deployments.list",
+      "tags": [
+        "deployment"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/deployments",
+      "operationId": "sites.deployments.create",
+      "tags": [
+        "deployment"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/deployments/{deploymentId}",
+      "operationId": "sites.deployments.retrieve",
+      "tags": [
+        "deployment"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/deployments/{deploymentId}/rollback",
+      "operationId": "sites.deployments.rollback",
+      "tags": [
+        "deployment"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/env_variables",
+      "operationId": "sites.envVariables.list",
+      "tags": [
+        "envVariable"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/env_variables",
+      "operationId": "sites.envVariables.create",
+      "tags": [
+        "envVariable"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/certificates",
+      "operationId": "certificates.list",
+      "tags": [
+        "certificate"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.certificates.read",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/certificates",
+      "operationId": "certificates.create",
+      "tags": [
+        "certificate"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.certificates.write",
+      "idempotent": true
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/sites/{siteId}/health_checks",
+      "operationId": "sites.healthChecks.list",
+      "tags": [
+        "monitor"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": false
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/sites/{siteId}/health_checks",
+      "operationId": "sites.healthChecks.create",
+      "tags": [
+        "monitor"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web.app"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api",
+      "permission": "web.sites.write",
+      "idempotent": true
+    }
+  ]
+}

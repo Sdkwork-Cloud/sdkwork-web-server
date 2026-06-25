@@ -1,0 +1,2 @@
+-- SQLite: recreate column deployed_at when legacy Webed_at exists
+-- Baseline fresh installs already use deployed_at after baseline fix.

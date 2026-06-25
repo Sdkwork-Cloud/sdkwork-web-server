@@ -1,0 +1,7 @@
+[package]
+name = "sdkwork-webserver-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sdkwork-utils-rust.workspace = true

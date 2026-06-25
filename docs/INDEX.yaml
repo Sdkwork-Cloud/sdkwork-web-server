@@ -1,0 +1,16 @@
+schemaVersion: 1
+kind: sdkwork.docs.index
+repository: sdkwork-web
+canon:
+  prd: docs/product/prd/PRD.md
+  techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
+entries:
+  - id: ADR-20260623-acme-certificate-authority
+    path: docs/architecture/decisions/ADR-20260623-acme-certificate-authority.md
+    kind: adr
+    status: accepted
+  - id: REQ-2026-0002
+    path: docs/product/requirements/REQ-2026-0002-instant-acme-letsencrypt.md
+    kind: req
+    status: draft
+domains: []

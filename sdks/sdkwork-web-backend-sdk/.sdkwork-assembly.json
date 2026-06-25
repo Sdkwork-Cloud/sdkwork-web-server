@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "sdkFamily": "sdkwork-web-backend-sdk",
+  "surface": "backend-api",
+  "apiAuthority": "sdkwork-web.backend",
+  "openApiPath": "openapi/web-backend-api.openapi.json"
+}

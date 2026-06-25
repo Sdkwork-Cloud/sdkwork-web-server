@@ -1,0 +1,18 @@
+[package]
+name = "sdkwork-webserver-certificate-worker"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "sdkwork-webserver-certificate-worker"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+dotenvy.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+sdkwork-intelligence-webserver-repository-sqlx.workspace = true
+sdkwork-intelligence-webserver-service.workspace = true

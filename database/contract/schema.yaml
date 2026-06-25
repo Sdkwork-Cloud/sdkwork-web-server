@@ -1,0 +1,41 @@
+schema_version: 1
+kind: sdkwork.database.schema
+module_id: web
+contract_version: 1.0.0
+owner_team: web-platform
+compliance_level: L2
+engines:
+  - postgres
+  - sqlite
+table_prefix: web_
+tables:
+  - name: web_site
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_domain
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_nginx_config
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_certificate
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_deployment
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_env_variable
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_health_check
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_health_result
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_audit_log
+    lifecycle_status: active
+    owner: web-platform
+  - name: web_server
+    lifecycle_status: active
+    owner: web-platform

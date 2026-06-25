@@ -1,0 +1,33 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@sdkwork/app-topology':
+        specifier: file:../sdkwork-app-topology
+        version: file:../sdkwork-app-topology
+      yaml:
+        specifier: ^2.8.0
+        version: 2.9.0
+
+packages:
+
+  '@sdkwork/app-topology@file:../sdkwork-app-topology':
+    resolution: {directory: ../sdkwork-app-topology, type: directory}
+    hasBin: true
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
+snapshots:
+
+  '@sdkwork/app-topology@file:../sdkwork-app-topology': {}
+
+  yaml@2.9.0: {}

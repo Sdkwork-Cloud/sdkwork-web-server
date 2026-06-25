@@ -1,0 +1,95 @@
+{
+  "$schema": "../sdkwork-github-workflow/schemas/sdkwork-workflow.schema.json",
+  "schemaVersion": "2026-06-06.sdkwork.workflow.v1",
+  "app": {
+    "id": "sdkwork-web",
+    "name": "SDKWork Web Server",
+    "repository": "Sdkwork-Cloud/sdkwork-web-server",
+    "sourcePath": ".",
+    "configPath": "sdkwork.app.config.json"
+  },
+  "release": {
+    "artifactPrefix": "sdkwork-web",
+    "defaultVersion": "0.1.0",
+    "changelog": {
+      "source": "app-manifest",
+      "maxCommitSubjects": 50
+    }
+  },
+  "dependencies": [
+    {
+      "id": "sdkwork-appbase",
+      "repository": "Sdkwork-Cloud/sdkwork-appbase",
+      "refInput": "SDKWORK_APPBASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-web-framework",
+      "repository": "Sdkwork-Cloud/sdkwork-web-framework",
+      "refInput": "SDKWORK_WEB_FRAMEWORK_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-database",
+      "repository": "Sdkwork-Cloud/sdkwork-database",
+      "refInput": "SDKWORK_DATABASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-utils",
+      "repository": "Sdkwork-Cloud/sdkwork-utils",
+      "refInput": "SDKWORK_UTILS_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-app-topology",
+      "repository": "Sdkwork-Cloud/sdkwork-app-topology",
+      "refInput": "SDKWORK_APP_TOPOLOGY_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    }
+  ],
+  "toolchains": {
+    "node": "22",
+    "pnpm": "10.30.2",
+    "rust": "stable"
+  },
+  "lifecycle": {
+    "build": [
+      {
+        "name": "Build web API server",
+        "shell": "pwsh",
+        "run": "cargo build --workspace --release"
+      }
+    ],
+    "validate": [
+      {
+        "name": "Validate web standards",
+        "shell": "pwsh",
+        "run": "cargo test --workspace && pnpm check"
+      }
+    ]
+  },
+  "targets": [
+    {
+      "id": "linux-x64-cloud-server-tar-gz",
+      "profile": "server",
+      "platform": "linux",
+      "architecture": "x64",
+      "formats": ["tar.gz"],
+      "runner": "ubuntu-24.04",
+      "outputGlobs": ["target/release/sdkwork-webserver-api-server*"],
+      "deploymentProfile": "cloud",
+      "runtimeTarget": "server"
+    }
+  ],
+  "security": {
+    "artifactAttestations": true,
+    "sbomRequired": false,
+    "signingRequired": false
+  },
+  "publish": {
+    "workflowArtifact": true,
+    "githubRelease": false,
+    "retentionDays": 30
+  }
+}

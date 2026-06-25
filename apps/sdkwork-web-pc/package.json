@@ -1,0 +1,7 @@
+{
+  "name": "@sdkwork/web-pc",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "SDKWork Web Server PC management client (Phase 2 scaffold)"
+}

@@ -1,0 +1,13 @@
+[package]
+name = "sdkwork-intelligence-webserver-service"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+sdkwork-webserver-acme-service.workspace = true
+sdkwork-webserver-contract.workspace = true
+sdkwork-webserver-core.workspace = true
+sdkwork-webserver-edge-runtime.workspace = true
+tracing.workspace = true
