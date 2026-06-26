@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
   "crates/sdkwork-webserver-database-host",
-  "crates/sdkwork-router-webserver-common",
+  "crates/sdkwork-routes-webserver-common",
   "crates/sdkwork-webserver-contract",
   "crates/sdkwork-webserver-core",
   "crates/sdkwork-webserver-acme-service",
@@ -11,8 +11,8 @@ members = [
   "crates/sdkwork-webserver-certificate-worker",
   "crates/sdkwork-intelligence-webserver-service",
   "crates/sdkwork-intelligence-webserver-repository-sqlx",
-  "crates/sdkwork-router-webserver-app-api",
-  "crates/sdkwork-router-webserver-backend-api",
+  "crates/sdkwork-routes-webserver-app-api",
+  "crates/sdkwork-routes-webserver-backend-api",
   "crates/sdkwork-webserver-api-server",
 ]
 
@@ -54,14 +54,15 @@ sdkwork-webserver-core = { path = "crates/sdkwork-webserver-core" }
 sdkwork-webserver-database-host = { path = "crates/sdkwork-webserver-database-host" }
 sdkwork-intelligence-webserver-service = { path = "crates/sdkwork-intelligence-webserver-service" }
 sdkwork-intelligence-webserver-repository-sqlx = { path = "crates/sdkwork-intelligence-webserver-repository-sqlx" }
-sdkwork-router-webserver-app-api = { path = "crates/sdkwork-router-webserver-app-api" }
-sdkwork-router-webserver-backend-api = { path = "crates/sdkwork-router-webserver-backend-api" }
-sdkwork-router-webserver-common = { path = "crates/sdkwork-router-webserver-common" }
+sdkwork-routes-webserver-app-api = { path = "crates/sdkwork-routes-webserver-app-api" }
+sdkwork-routes-webserver-backend-api = { path = "crates/sdkwork-routes-webserver-backend-api" }
+sdkwork-routes-webserver-common = { path = "crates/sdkwork-routes-webserver-common" }
 sdkwork-webserver-api-server = { path = "crates/sdkwork-webserver-api-server" }
 
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
 sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
+sdkwork-web-bootstrap = { path = "../sdkwork-web-framework/crates/sdkwork-web-bootstrap" }
 sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config", package = "sdkwork-database-config" }
 sdkwork-database-lifecycle = { path = "../sdkwork-database/crates/sdkwork-database-lifecycle", package = "sdkwork-database-lifecycle" }
 sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi", package = "sdkwork-database-spi" }

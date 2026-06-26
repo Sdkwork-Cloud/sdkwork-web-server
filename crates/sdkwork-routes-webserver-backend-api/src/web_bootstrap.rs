@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use sdkwork_router_webserver_common::{
+use sdkwork_routes_webserver_common::{
     web_auth_mode_from_env, with_problem_correlation, ProductionFailClosedResolver, WebAuthMode,
 };
 use sdkwork_web_axum::{with_web_request_context, WebFrameworkLayer};

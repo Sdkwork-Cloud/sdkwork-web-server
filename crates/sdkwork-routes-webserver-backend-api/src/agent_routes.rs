@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
 };
 use sdkwork_intelligence_webserver_service::WebService;
-use sdkwork_router_webserver_common::WebApiError;
+use sdkwork_routes_webserver_common::WebApiError;
 use sdkwork_webserver_contract::{AgentHeartbeatRequest, WebServiceError, WebServiceResult};
 use std::sync::Arc;
 

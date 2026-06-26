@@ -2078,16 +2078,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
-name = "sdkwork-iam-bootstrap"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "sdkwork-iam-context-service",
- "sdkwork-iam-module-registry",
- "sqlx",
-]
-
-[[package]]
 name = "sdkwork-database-config"
 version = "0.1.0"
 dependencies = [
@@ -2153,6 +2143,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-iam-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "base64",
+ "chrono",
+ "rand_core 0.6.4",
+ "sdkwork-iam-context-service",
+ "sdkwork-iam-module-registry",
+ "sha2",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "sdkwork-iam-context-service"
 version = "0.1.0"
 dependencies = [
@@ -2185,16 +2190,19 @@ dependencies = [
  "password-hash",
  "rand_core 0.6.4",
  "reqwest",
- "sdkwork-iam-bootstrap",
+ "sdkwork-database-config",
  "sdkwork-database-sqlx",
+ "sdkwork-iam-bootstrap",
  "sdkwork-iam-context-service",
  "sdkwork-utils-rust",
  "sdkwork-web-axum",
  "sdkwork-web-core",
  "serde",
  "serde_json",
+ "sha1",
  "sha2",
  "sqlx",
+ "urlencoding",
  "uuid",
 ]
 
@@ -2243,13 +2251,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-webserver-app-api"
+name = "sdkwork-routes-webserver-app-api"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
  "sdkwork-iam-web-adapter",
- "sdkwork-router-webserver-common",
+ "sdkwork-routes-webserver-common",
  "sdkwork-web-axum",
  "sdkwork-web-core",
  "sdkwork-webserver-contract",
@@ -2259,13 +2267,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-webserver-backend-api"
+name = "sdkwork-routes-webserver-backend-api"
 version = "0.1.0"
 dependencies = [
  "axum",
  "sdkwork-iam-web-adapter",
  "sdkwork-intelligence-webserver-service",
- "sdkwork-router-webserver-common",
+ "sdkwork-routes-webserver-common",
  "sdkwork-web-axum",
  "sdkwork-web-core",
  "sdkwork-webserver-contract",
@@ -2273,7 +2281,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-webserver-common"
+name = "sdkwork-routes-webserver-common"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -2335,6 +2343,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-web-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "http",
+ "sdkwork-web-axum",
+ "sdkwork-web-contract",
+ "sdkwork-web-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "sdkwork-web-contract"
 version = "0.1.0"
 dependencies = [
@@ -2389,9 +2414,10 @@ dependencies = [
  "axum",
  "sdkwork-intelligence-webserver-repository-sqlx",
  "sdkwork-intelligence-webserver-service",
- "sdkwork-router-webserver-app-api",
- "sdkwork-router-webserver-backend-api",
- "sdkwork-router-webserver-common",
+ "sdkwork-routes-webserver-app-api",
+ "sdkwork-routes-webserver-backend-api",
+ "sdkwork-routes-webserver-common",
+ "sdkwork-web-bootstrap",
  "sdkwork-webserver-database-host",
  "tokio",
  "tracing",

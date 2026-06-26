@@ -4,7 +4,7 @@ pub mod correlation;
 pub mod problem;
 
 use async_trait::async_trait;
-use sdkwork_iam_web_adapter::IamDatabaseWebRequestContextResolver;
+use sdkwork_iam_web_adapter::IamWebRequestContextResolver;
 use sdkwork_web_core::{WebFrameworkError, WebRequestContextResolver, WebRequestPrincipal};
 use sdkwork_webserver_contract::{
     web_is_production_like_environment, web_use_dev_inline_auth_resolver,
@@ -17,7 +17,7 @@ const PRODUCTION_AUTH_UNAVAILABLE: &str = "production Web auth requires IAM Post
 
 pub enum WebAuthMode {
     DevInline,
-    IamDatabase(IamDatabaseWebRequestContextResolver),
+    IamDatabase(IamWebRequestContextResolver),
     ProductionFailClosed,
 }
 
@@ -34,7 +34,7 @@ pub async fn web_auth_mode_from_env() -> WebAuthMode {
         return WebAuthMode::ProductionFailClosed;
     }
 
-    WebAuthMode::IamDatabase(sdkwork_iam_web_adapter::iam_database_resolver_from_env().await)
+    WebAuthMode::IamDatabase(sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env().await)
 }
 
 #[derive(Clone, Default)]

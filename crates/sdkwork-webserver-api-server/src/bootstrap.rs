@@ -1,30 +1,18 @@
-﻿use axum::{extract::Extension, http::StatusCode, routing::get, Router};
+﻿use axum::{Extension, Router};
 use sdkwork_intelligence_webserver_repository_sqlx::bootstrap_web_runtime_from_env;
-use sdkwork_intelligence_webserver_service::WebService;
-use sdkwork_router_webserver_app_api::{
+use sdkwork_routes_webserver_app_api::{
     build_router_with_shared_app_api, wrap_router_with_web_framework_from_env as wrap_app_router,
 };
-use sdkwork_router_webserver_backend_api::{
+use sdkwork_routes_webserver_backend_api::{
     build_agent_router, build_router_with_shared_backend_api,
     wrap_router_with_web_framework_from_env as wrap_backend_router,
 };
-use sdkwork_router_webserver_common::with_problem_correlation;
+use sdkwork_routes_webserver_common::with_problem_correlation;
+use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
 use std::sync::Arc;
 use tracing::info;
 
-async fn healthz() -> &'static str {
-    "ok"
-}
-
-async fn readyz(
-    Extension(service): Extension<Arc<WebService>>,
-) -> Result<&'static str, StatusCode> {
-    service
-        .ready_check()
-        .await
-        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    Ok("ok")
-}
+use crate::readiness::WebServiceReadinessCheck;
 
 pub async fn build_router() -> Result<Router, String> {
     let runtime = bootstrap_web_runtime_from_env().await?;
@@ -38,13 +26,16 @@ pub async fn build_router() -> Result<Router, String> {
     let app_router = wrap_app_router(app_business_router).await;
     let backend_router = wrap_backend_router(backend_business_router).await;
 
-    Ok(Router::new()
+    let business_router = Router::new()
         .merge(app_router)
         .merge(backend_router)
         .merge(with_problem_correlation(agent_router))
-        .route("/healthz", get(healthz))
-        .route("/readyz", get(readyz))
-        .layer(Extension(service)))
+        .layer(Extension(service.clone()));
+
+    let service_router_config = ServiceRouterConfig::default()
+        .with_readiness_check(Arc::new(WebServiceReadinessCheck::new(service)));
+
+    Ok(service_router(business_router, service_router_config))
 }
 
 pub async fn run_database_migrate_only() -> Result<(), String> {

@@ -16,9 +16,14 @@ axum.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
-sdkwork-router-webserver-app-api.workspace = true
-sdkwork-router-webserver-backend-api.workspace = true
-sdkwork-router-webserver-common.workspace = true
+sdkwork-routes-webserver-app-api.workspace = true
+sdkwork-routes-webserver-backend-api.workspace = true
+sdkwork-routes-webserver-common.workspace = true
 sdkwork-intelligence-webserver-repository-sqlx.workspace = true
 sdkwork-intelligence-webserver-service.workspace = true
 sdkwork-webserver-database-host.workspace = true
+sdkwork-web-bootstrap.workspace = true
+
+[[bin]]
+name = "sdkwork-web-standalone-gateway"
+path = "src/main.rs"

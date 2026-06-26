@@ -6,7 +6,7 @@ SDKWork Web Server standards alignment status for `sdkwork-web-server`.
 
 | Framework | Status | Evidence |
 | --- | --- | --- |
-| `sdkwork-web-framework` | Integrated | `sdkwork-router-webserver-*` web bootstrap, dual-token route manifests, auth context injection |
+| `sdkwork-web-framework` | Integrated | `sdkwork-routes-webserver-*` web bootstrap, dual-token route manifests, auth context injection |
 | `sdkwork-database` | Integrated | `database/` assets, `sdkwork-webserver-database-host`, `pnpm db:*` |
 | `sdkwork-utils-rust` | Integrated | `sdkwork-webserver-core` env parsing, repository slugify |
 | `sdkwork-discovery` | Deferred | V1 is HTTP-only unified-process; add when split-services RPC is required |

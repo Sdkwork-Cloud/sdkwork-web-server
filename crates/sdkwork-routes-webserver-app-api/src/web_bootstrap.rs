@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::Router;
-use sdkwork_iam_web_adapter::IamDatabaseWebRequestContextResolver;
-use sdkwork_router_webserver_common::{
+use sdkwork_iam_web_adapter::IamWebRequestContextResolver;
+use sdkwork_routes_webserver_common::{
     web_auth_mode_from_env, with_problem_correlation, ProductionFailClosedResolver, WebAuthMode,
 };
 use sdkwork_web_axum::{with_web_request_context, WebFrameworkLayer};
@@ -61,7 +61,7 @@ pub fn wrap_router_with_web_framework(
 }
 
 pub fn wrap_router_with_iam_database_web_framework(
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     router: Router,
 ) -> Router {
     with_web_request_context(

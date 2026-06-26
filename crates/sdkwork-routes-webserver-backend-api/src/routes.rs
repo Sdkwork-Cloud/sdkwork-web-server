@@ -13,7 +13,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::{auth::require_backend_context, paths};
-use sdkwork_router_webserver_common::WebApiError;
+use sdkwork_routes_webserver_common::WebApiError;
 
 #[derive(Clone)]
 struct BackendState {

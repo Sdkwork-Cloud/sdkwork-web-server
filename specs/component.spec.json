@@ -29,8 +29,8 @@
   "contracts": {
     "publicExports": [
       "crates/sdkwork-webserver-api-server",
-      "crates/sdkwork-router-webserver-app-api",
-      "crates/sdkwork-router-webserver-backend-api"
+      "crates/sdkwork-routes-webserver-app-api",
+      "crates/sdkwork-routes-webserver-backend-api"
     ],
     "runtimeEntrypoints": [
       {

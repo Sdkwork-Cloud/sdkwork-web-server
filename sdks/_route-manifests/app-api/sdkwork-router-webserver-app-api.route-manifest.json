@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "sdkwork.route.manifest",
-  "packageName": "sdkwork-router-webserver-app-api",
+  "packageName": "sdkwork-routes-webserver-app-api",
   "surface": "app-api",
   "owner": "sdkwork-web",
   "domain": "platform",
@@ -10,8 +10,8 @@
   "sdkFamily": "sdkwork-web-app-sdk",
   "prefix": "/app/v3/api",
   "source": {
-    "crateRoot": "crates/sdkwork-router-webserver-app-api",
-    "crateImport": "sdkwork_router_webserver_app_api",
+    "crateRoot": "crates/sdkwork-routes-webserver-app-api",
+    "crateImport": "sdkwork_routes_webserver_app_api",
     "openApiAuthority": "sdks/sdkwork-web-app-sdk/openapi/web-app-api.openapi.json"
   },
   "routes": [

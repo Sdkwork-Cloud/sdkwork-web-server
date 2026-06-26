@@ -1,5 +1,5 @@
 [package]
-name = "sdkwork-router-webserver-app-api"
+name = "sdkwork-routes-webserver-app-api"
 version.workspace = true
 edition.workspace = true
 
@@ -9,7 +9,7 @@ axum.workspace = true
 serde.workspace = true
 sdkwork-webserver-contract.workspace = true
 sdkwork-iam-web-adapter.workspace = true
-sdkwork-router-webserver-common.workspace = true
+sdkwork-routes-webserver-common.workspace = true
 sdkwork-web-axum.workspace = true
 sdkwork-web-core.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
