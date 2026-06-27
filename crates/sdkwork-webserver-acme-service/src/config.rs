@@ -1,6 +1,9 @@
-use sha2::{Digest, Sha256};
+use sdkwork_utils_rust::derive_aes_256_key;
 
 use crate::{AcmeServiceError, AcmeServiceResult};
+
+/// HKDF info 上下文绑定，将派生密钥绑定到 ACME 证书加密用途，防止跨用途密钥复用。
+const CERT_ENCRYPTION_KEY_INFO: &[u8] = b"sdkwork-web-acme-cert-encryption";
 
 /// Runtime ACME configuration loaded from environment.
 #[derive(Clone, Debug)]
@@ -78,10 +81,13 @@ fn load_encryption_key() -> AcmeServiceResult<Vec<u8>> {
         }
     };
 
-    if raw.len() >= 32 {
-        return Ok(raw.as_bytes()[..32].to_vec());
-    }
-
-    let digest = Sha256::digest(raw.as_bytes());
-    Ok(digest.to_vec())
+    // 使用 HKDF-SHA256 派生 32 字节 AES-256 密钥，替代裸 SHA-256 摘要。
+    // HKDF 提供标准密钥派生流程（RFC 5869），支持任意长度输入，
+    // 并通过 info 上下文绑定将密钥隔离到 ACME 证书加密用途。
+    let derived = derive_aes_256_key(
+        raw.as_bytes(),
+        b"sdkwork-web-acme",
+        CERT_ENCRYPTION_KEY_INFO,
+    );
+    Ok(derived.to_vec())
 }

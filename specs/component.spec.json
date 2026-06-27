@@ -28,15 +28,15 @@
   ],
   "contracts": {
     "publicExports": [
-      "crates/sdkwork-webserver-api-server",
+      "crates/sdkwork-web-standalone-gateway",
       "crates/sdkwork-routes-webserver-app-api",
       "crates/sdkwork-routes-webserver-backend-api"
     ],
     "runtimeEntrypoints": [
       {
-        "id": "api-server",
-        "crate": "sdkwork-webserver-api-server",
-        "binary": "sdkwork-webserver-api-server"
+        "id": "standalone-gateway",
+        "crate": "sdkwork-web-standalone-gateway",
+        "binary": "sdkwork-web-standalone-gateway"
       }
     ]
   }

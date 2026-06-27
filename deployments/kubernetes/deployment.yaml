@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sdkwork-webserver-api-server
+  name: sdkwork-web-standalone-gateway
   labels:
     app.kubernetes.io/name: sdkwork-web
-    app.kubernetes.io/component: api-server
+    app.kubernetes.io/component: standalone-gateway
     app.kubernetes.io/part-of: sdkwork-web
 spec:
   replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: sdkwork-web
-      app.kubernetes.io/component: api-server
+      app.kubernetes.io/component: standalone-gateway
   template:
     metadata:
       labels:
         app.kubernetes.io/name: sdkwork-web
-        app.kubernetes.io/component: api-server
+        app.kubernetes.io/component: standalone-gateway
         app.kubernetes.io/part-of: sdkwork-web
     spec:
       containers:
-        - name: api-server
-          image: sdkwork-webserver-api-server:latest
+        - name: standalone-gateway
+          image: sdkwork-web-standalone-gateway:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

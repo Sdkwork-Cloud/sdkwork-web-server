@@ -170,10 +170,14 @@ impl WebRepository {
         &self,
         tenant_id: i64,
     ) -> WebServiceResult<Vec<(AgentCertificateBundle, String)>> {
+        // 通过 web_certificate → web_domain → web_site JOIN 过滤，
+        // 仅返回有效（未删除）站点的证书，避免向 agent 泄漏已下线站点的 TLS 私钥。
         let rows = sqlx::query(
-            "SELECT uuid, cert_name, fingerprint, metadata
-             FROM web_certificate
-             WHERE tenant_id = $1 AND status = 1",
+            "SELECT c.uuid, c.cert_name, c.fingerprint, c.metadata
+             FROM web_certificate c
+             INNER JOIN web_domain d ON d.id = c.domain_id
+             INNER JOIN web_site s ON s.id = d.site_id
+             WHERE c.tenant_id = $1 AND c.status = 1 AND s.deleted_at IS NULL",
         )
         .bind(tenant_id)
         .fetch_all(&self.pool)

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-app-sdk",
+    "version": "1.0.0",
+    "language": "csharp",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "SDKWork.Web.AppSdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "Api/Api.cs",
+      "sha256": "e364bc3f68ea97ed07b0f3f744f654e476c218c511855008bc8642a38f62c307"
+    },
+    {
+      "path": "Api/ApiPaths.cs",
+      "sha256": "cfde740396191366aeea51720553025dce9d358a2d9fb9050cbf97d6a24811ee"
+    },
+    {
+      "path": "Api/CertificateApi.cs",
+      "sha256": "0070253fb72bd972ba10749ebba5afc2facfea2374b1ea19db5a092c591096aa"
+    },
+    {
+      "path": "Api/DeploymentApi.cs",
+      "sha256": "3ae59c576d46a74f80f29f843f2c7d77ff19ff96b093bbf69dfe514636d25cc1"
+    },
+    {
+      "path": "Api/DomainApi.cs",
+      "sha256": "f16a921c0bded80ce8d66fe8ba57e2eedc3a8348463f276e9dae227b1cc1adca"
+    },
+    {
+      "path": "Api/EnvVariableApi.cs",
+      "sha256": "b415df5e9c6a19785dec5accba29994712a9d9fb927fcc2b79dc5404cb0be44f"
+    },
+    {
+      "path": "Api/MonitorApi.cs",
+      "sha256": "b2ce6abe64d42d727a4c3236e0af434ee5115ff96485b566aca2e5a38edfd3bd"
+    },
+    {
+      "path": "Api/SiteApi.cs",
+      "sha256": "89c20ed29bee8071dca796194f803023a70bdf1ae1fae738b0205fcea6911f82"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "64a1727613d4b6b088129400427b90dd4b37047f48beacade665a76418398740"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "9f2030a8a491d26598cbd3a1b858d55e4f8e7bb70c9bf4b6024cd8c425a84e0b"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "Http/HttpClient.cs",
+      "sha256": "65a4554112d3915b6fca34a92df2f2ecdecbac890437b30d7b6f91fb42f25852"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "Models/CertificatePage.cs",
+      "sha256": "8eb2af39714e5a4bc1820d2e49934d2e730151939e9beecfbedff5b111ae404c"
+    },
+    {
+      "path": "Models/CertificateResponse.cs",
+      "sha256": "ef8736ab4c65fe4127ec4ee6b14ba8854c1e2d01bed5a7cf4dc4e97ba4847c7a"
+    },
+    {
+      "path": "Models/CreateCertificateRequest.cs",
+      "sha256": "749e22ddae076ec1adf4977b44c06e22b427c881ce0d6937fe8290a0e64b98c8"
+    },
+    {
+      "path": "Models/CreateDeploymentRequest.cs",
+      "sha256": "b9cc12bc1d5ff39f2e3bf72807c2c711c6dc5c1b2ea9b6024b7ffe11c6390993"
+    },
+    {
+      "path": "Models/CreateDomainRequest.cs",
+      "sha256": "36c1fd35eb0959ec4eea8977055c741a3ec272c8240e3c37a4f9d93a83ef3401"
+    },
+    {
+      "path": "Models/CreateEnvVariableRequest.cs",
+      "sha256": "f27b10664912b1c9cb9b96b32720832812859d9f1e2c0b05851cdfcf23a58a5d"
+    },
+    {
+      "path": "Models/CreateHealthCheckRequest.cs",
+      "sha256": "ecb5430ba9b361d76b106b3a8ae950f174e18e9dce60edbd35e6dc6ca867fbe0"
+    },
+    {
+      "path": "Models/CreateSiteRequest.cs",
+      "sha256": "ba63bc87b9bd761248f7c004fd28189ba379cf3ffd4adc7a55d7a83648cafa2a"
+    },
+    {
+      "path": "Models/DeploymentPage.cs",
+      "sha256": "8386785ee32ed5b9b84fd2c98bdedaac19102648c6602bba320d2a1f9f65e5fc"
+    },
+    {
+      "path": "Models/DeploymentResponse.cs",
+      "sha256": "5d342741aa30a0bcd8090a25697eea85ae473f49c664a0a760f5c58ea9583113"
+    },
+    {
+      "path": "Models/DomainPage.cs",
+      "sha256": "76cb4ce3c5a1d3f0c09271a04461f232f4f1862dd12e978f2a1b5c251bd8b358"
+    },
+    {
+      "path": "Models/DomainResponse.cs",
+      "sha256": "1ca5c86dcdcf7901d50b5c0d3af6fff428f4429c3108ced7421e0984c954f0a5"
+    },
+    {
+      "path": "Models/DomainVerifyResponse.cs",
+      "sha256": "6c551d1f58a631ad597f7e64c448974ac8db7ec11bebdab8b4c36a50abdc98a1"
+    },
+    {
+      "path": "Models/EnvVariablePage.cs",
+      "sha256": "98791bbb4cf4062da76dd542f628b9e5dd725a10d36a56852b3a5f3cf468ff44"
+    },
+    {
+      "path": "Models/EnvVariableResponse.cs",
+      "sha256": "3cf8e66c3d8e2670b4e1372bf77a72ff78e897ce1fec378ed3e5403c66a5aeea"
+    },
+    {
+      "path": "Models/HealthCheckPage.cs",
+      "sha256": "ed96840378045d1b683190579745fd3b4b7929d259bc331d8cc5ac9a98db0835"
+    },
+    {
+      "path": "Models/HealthCheckResponse.cs",
+      "sha256": "1a50ca4fa5686d6d73774d1c0623023e40326bd3f3f969b46876d4d07eea1b5d"
+    },
+    {
+      "path": "Models/ProblemDetail.cs",
+      "sha256": "34358980c3780d9abc895e6a8d2e5d6cf152e099c1b8b9c82d02b16adb436b53"
+    },
+    {
+      "path": "Models/SitePage.cs",
+      "sha256": "4f39263efa68b8da90f7150b5983c6588c0b7a31e9d08d843ca0ec881c7bcc1e"
+    },
+    {
+      "path": "Models/SiteResponse.cs",
+      "sha256": "ef1b214e26513c4f5b8bcae54f43ee87de97585961200348b6539a4fd0808574"
+    },
+    {
+      "path": "Models/UpdateSiteRequest.cs",
+      "sha256": "192f413998081ac879bb1ec16cde62c9711b56d5995de77c134871e73775aa5a"
+    },
+    {
+      "path": "README.md",
+      "sha256": "357bf3dce0801d8f6dafac71abdb9651d9a04c24f9a5c33394152914351b3cc7"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "2290a47ca517e533fb84a2fd564abf878bfbc1ea4f7f8d5047d4f556c965f1af"
+    },
+    {
+      "path": "SDKWork.Web.AppSdk.csproj",
+      "sha256": "68a54d5305979db351ba06ae5d58979fbe9cd9555e41546036144edbb8ff4266"
+    },
+    {
+      "path": "SdkworkAppClient.cs",
+      "sha256": "61fb49a84a986edb400838c3c66d271c88ec064d5fd49df0ef821ebd735d994c"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

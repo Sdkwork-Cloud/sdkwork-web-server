@@ -1,0 +1,397 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "artifacts": {
+    "stateDir": ".sdkwork",
+    "manifestPath": ".sdkwork/sdkwork-generator-manifest.json",
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "executionReportPath": ".sdkwork/sdkwork-generator-report.json",
+    "manualBackupDir": ".sdkwork/manual-backups"
+  },
+  "status": "ok",
+  "mode": "apply",
+  "hasChanges": true,
+  "hasDestructiveChanges": false,
+  "changeFingerprint": "0b78be5a4b5cf53072cb6728d65e6fd996a9edfda075bc1d22963a40158d8bcd",
+  "changeImpact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "Api/Api.cs",
+          "Api/ApiPaths.cs",
+          "Api/CertificateApi.cs",
+          "Api/DeploymentApi.cs",
+          "Api/DomainApi.cs",
+          "Api/EnvVariableApi.cs",
+          "Api/MonitorApi.cs",
+          "Api/SiteApi.cs",
+          "SdkworkAppClient.cs"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "Models/CertificatePage.cs",
+          "Models/CertificateResponse.cs",
+          "Models/CreateCertificateRequest.cs",
+          "Models/CreateDeploymentRequest.cs",
+          "Models/CreateDomainRequest.cs",
+          "Models/CreateEnvVariableRequest.cs",
+          "Models/CreateHealthCheckRequest.cs",
+          "Models/CreateSiteRequest.cs",
+          "Models/DeploymentPage.cs",
+          "Models/DeploymentResponse.cs",
+          "Models/DomainPage.cs",
+          "Models/DomainResponse.cs",
+          "Models/DomainVerifyResponse.cs",
+          "Models/EnvVariablePage.cs",
+          "Models/EnvVariableResponse.cs",
+          "Models/HealthCheckPage.cs",
+          "Models/HealthCheckResponse.cs",
+          "Models/ProblemDetail.cs",
+          "Models/SitePage.cs",
+          "Models/SiteResponse.cs",
+          "Models/UpdateSiteRequest.cs"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "Http/HttpClient.cs"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "sdkwork-sdk.json",
+          "SDKWork.Web.AppSdk.csproj"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "executionHandoff": {
+    "schemaVersion": 1,
+    "summary": "Run the required verification commands now.",
+    "steps": [
+      {
+        "id": "verify-check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-app-sdk\\sdkwork-web-app-sdk-csharp\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "csharp",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+      }
+    ]
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-app-sdk\\sdkwork-web-app-sdk-csharp\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "csharp",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+      }
+    ]
+  },
+  "sdk": {
+    "name": "sdkwork-web-app-sdk",
+    "version": "1.0.0",
+    "language": "csharp",
+    "sdkType": "app",
+    "protocol": "http",
+    "outputPath": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-app-sdk\\sdkwork-web-app-sdk-csharp\\generated\\server-openapi",
+    "packageName": "SDKWork.Web.AppSdk"
+  },
+  "versioning": {
+    "resolvedVersion": "1.0.0",
+    "localVersions": []
+  },
+  "stats": {
+    "totalFiles": 40,
+    "models": 21,
+    "apis": 6,
+    "types": 0
+  },
+  "warnings": [],
+  "syncSummary": {
+    "dryRun": false,
+    "controlPlaneEnabled": true,
+    "writtenFiles": 40,
+    "skippedScaffoldFiles": 0,
+    "skippedUnchangedGeneratedFiles": 0,
+    "deletedGeneratedFiles": 0,
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "changeFingerprint": "0b78be5a4b5cf53072cb6728d65e6fd996a9edfda075bc1d22963a40158d8bcd",
+    "changes": {
+      "createdGeneratedFiles": [
+        "Api/Api.cs",
+        "Api/ApiPaths.cs",
+        "Api/CertificateApi.cs",
+        "Api/DeploymentApi.cs",
+        "Api/DomainApi.cs",
+        "Api/EnvVariableApi.cs",
+        "Api/MonitorApi.cs",
+        "Api/SiteApi.cs",
+        "bin/publish-core.mjs",
+        "bin/publish.ps1",
+        "bin/publish.sh",
+        "CHANGELOG.md",
+        "Http/HttpClient.cs",
+        "LICENSE",
+        "Models/CertificatePage.cs",
+        "Models/CertificateResponse.cs",
+        "Models/CreateCertificateRequest.cs",
+        "Models/CreateDeploymentRequest.cs",
+        "Models/CreateDomainRequest.cs",
+        "Models/CreateEnvVariableRequest.cs",
+        "Models/CreateHealthCheckRequest.cs",
+        "Models/CreateSiteRequest.cs",
+        "Models/DeploymentPage.cs",
+        "Models/DeploymentResponse.cs",
+        "Models/DomainPage.cs",
+        "Models/DomainResponse.cs",
+        "Models/DomainVerifyResponse.cs",
+        "Models/EnvVariablePage.cs",
+        "Models/EnvVariableResponse.cs",
+        "Models/HealthCheckPage.cs",
+        "Models/HealthCheckResponse.cs",
+        "Models/ProblemDetail.cs",
+        "Models/SitePage.cs",
+        "Models/SiteResponse.cs",
+        "Models/UpdateSiteRequest.cs",
+        "README.md",
+        "sdkwork-sdk.json",
+        "SDKWork.Web.AppSdk.csproj",
+        "SdkworkAppClient.cs"
+      ],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [],
+      "deletedGeneratedFiles": [],
+      "scaffoldedFiles": [
+        "custom/README.md"
+      ],
+      "preservedScaffoldFiles": [],
+      "backedUpFiles": []
+    },
+    "impact": {
+      "schemaVersion": 1,
+      "areas": [
+        "api-surface",
+        "models",
+        "runtime",
+        "build-metadata",
+        "publish-workflow",
+        "documentation",
+        "custom-scaffold",
+        "unknown"
+      ],
+      "details": [
+        {
+          "area": "api-surface",
+          "paths": [
+            "Api/Api.cs",
+            "Api/ApiPaths.cs",
+            "Api/CertificateApi.cs",
+            "Api/DeploymentApi.cs",
+            "Api/DomainApi.cs",
+            "Api/EnvVariableApi.cs",
+            "Api/MonitorApi.cs",
+            "Api/SiteApi.cs",
+            "SdkworkAppClient.cs"
+          ]
+        },
+        {
+          "area": "models",
+          "paths": [
+            "Models/CertificatePage.cs",
+            "Models/CertificateResponse.cs",
+            "Models/CreateCertificateRequest.cs",
+            "Models/CreateDeploymentRequest.cs",
+            "Models/CreateDomainRequest.cs",
+            "Models/CreateEnvVariableRequest.cs",
+            "Models/CreateHealthCheckRequest.cs",
+            "Models/CreateSiteRequest.cs",
+            "Models/DeploymentPage.cs",
+            "Models/DeploymentResponse.cs",
+            "Models/DomainPage.cs",
+            "Models/DomainResponse.cs",
+            "Models/DomainVerifyResponse.cs",
+            "Models/EnvVariablePage.cs",
+            "Models/EnvVariableResponse.cs",
+            "Models/HealthCheckPage.cs",
+            "Models/HealthCheckResponse.cs",
+            "Models/ProblemDetail.cs",
+            "Models/SitePage.cs",
+            "Models/SiteResponse.cs",
+            "Models/UpdateSiteRequest.cs"
+          ]
+        },
+        {
+          "area": "runtime",
+          "paths": [
+            "Http/HttpClient.cs"
+          ]
+        },
+        {
+          "area": "build-metadata",
+          "paths": [
+            "sdkwork-sdk.json",
+            "SDKWork.Web.AppSdk.csproj"
+          ]
+        },
+        {
+          "area": "publish-workflow",
+          "paths": [
+            "bin/publish-core.mjs",
+            "bin/publish.ps1",
+            "bin/publish.sh"
+          ]
+        },
+        {
+          "area": "documentation",
+          "paths": [
+            "CHANGELOG.md",
+            "custom/README.md",
+            "README.md"
+          ]
+        },
+        {
+          "area": "custom-scaffold",
+          "paths": [
+            "custom/README.md"
+          ]
+        },
+        {
+          "area": "unknown",
+          "paths": [
+            "LICENSE"
+          ]
+        }
+      ],
+      "requiresVerification": true,
+      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    },
+    "verificationPlan": {
+      "shouldRun": true,
+      "runPhase": "now",
+      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "steps": [
+        {
+          "id": "check",
+          "title": "Unified package check",
+          "required": true,
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+          "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-app-sdk\\sdkwork-web-app-sdk-csharp\\generated\\server-openapi",
+          "command": "node",
+          "args": [
+            "./bin/publish-core.mjs",
+            "--language",
+            "csharp",
+            "--project-dir",
+            ".",
+            "--action",
+            "check"
+          ],
+          "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+        }
+      ]
+    },
+    "executionDecision": {
+      "schemaVersion": 1,
+      "riskLevel": "high",
+      "nextAction": "verify",
+      "requiresManualReview": false,
+      "applyRequiresExpectedFingerprint": false,
+      "summary": "Changes have been applied. Run the required verification plan now.",
+      "reasons": [
+        "manual-review-required",
+        "preserved-legacy-files",
+        "unknown-impact",
+        "verification-required"
+      ]
+    },
+    "backedUpFiles": [],
+    "preservedLegacyFiles": true
+  }
+}

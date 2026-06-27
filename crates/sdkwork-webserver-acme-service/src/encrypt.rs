@@ -1,44 +1,19 @@
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Nonce,
-};
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use rand::RngCore;
+//! 机密加解密薄包装，委托到 sdkwork-utils-rust 的 AES-256-GCM 实现。
+//!
+//! 保留本模块以维持 `AcmeServiceError` 错误类型契约，
+//! 同时消除与 utils crate 的重复加密逻辑。
+
+use sdkwork_utils_rust::{aes_gcm_decrypt, aes_gcm_encrypt};
 
 use crate::{AcmeServiceError, AcmeServiceResult};
 
-const NONCE_LEN: usize = 12;
-
 pub fn encrypt_secret(key: &[u8], plaintext: &[u8]) -> AcmeServiceResult<String> {
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))?;
-    let mut nonce_bytes = [0_u8; NONCE_LEN];
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
-    let nonce = Nonce::from_slice(&nonce_bytes);
-    let ciphertext = cipher
-        .encrypt(nonce, plaintext)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))?;
-    let mut payload = Vec::with_capacity(NONCE_LEN + ciphertext.len());
-    payload.extend_from_slice(&nonce_bytes);
-    payload.extend_from_slice(&ciphertext);
-    Ok(STANDARD.encode(payload))
+    aes_gcm_encrypt(key, plaintext)
+        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))
 }
 
 pub fn decrypt_secret(key: &[u8], encoded: &str) -> AcmeServiceResult<Vec<u8>> {
-    let payload = STANDARD
-        .decode(encoded)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))?;
-    if payload.len() <= NONCE_LEN {
-        return Err(AcmeServiceError::Encryption(
-            "encrypted payload too short".to_string(),
-        ));
-    }
-    let (nonce_bytes, ciphertext) = payload.split_at(NONCE_LEN);
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))?;
-    let nonce = Nonce::from_slice(nonce_bytes);
-    cipher
-        .decrypt(nonce, ciphertext)
+    aes_gcm_decrypt(key, encoded)
         .map_err(|error| AcmeServiceError::Encryption(error.to_string()))
 }
 

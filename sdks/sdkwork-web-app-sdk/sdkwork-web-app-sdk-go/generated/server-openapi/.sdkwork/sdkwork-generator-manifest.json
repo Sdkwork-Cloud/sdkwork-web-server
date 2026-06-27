@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-app-sdk",
+    "version": "1.0.0",
+    "language": "go",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "github.com/sdkwork/sdkwork-web-app-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "api/base.go",
+      "sha256": "70c87fc9e65a0e544357e276ed857a734a49750ab5e4160c0f2f16250fed97b2"
+    },
+    {
+      "path": "api/certificate.go",
+      "sha256": "8b054f23da16e96ecf4d34dc6ac29ec65ec9f8212be2e3ea66176fda3d9bd93c"
+    },
+    {
+      "path": "api/deployment.go",
+      "sha256": "8d66e811a8f4357972400a0464238f4cc9b80c83c59a3ede7161629f6b5e86c6"
+    },
+    {
+      "path": "api/doc.go",
+      "sha256": "ad22e61c24bec8d99a14c6422c5b65b77643d9c6412b51b1d8dbd5625b3f9415"
+    },
+    {
+      "path": "api/domain.go",
+      "sha256": "2a09aff5f0a748c714a90602a64ca484e4cd28f650f86a37b6d5cd6da0d64b62"
+    },
+    {
+      "path": "api/env_variable.go",
+      "sha256": "20e8bcc517bbe6c55b2227b5e9cec92b4491f116d4507ba5f076bd728836168e"
+    },
+    {
+      "path": "api/monitor.go",
+      "sha256": "dbe9c5737fa269327dcc8035043037e3f4c0ff21f47b681726152663d7f1b8e0"
+    },
+    {
+      "path": "api/paths.go",
+      "sha256": "28a40834c366f1d794724493eef66c4fd0516b565a4274f1862438244d137b0b"
+    },
+    {
+      "path": "api/site.go",
+      "sha256": "1a89f0c59c526ff0932f5d7c82d3bb6e9966adc3ea4c2d9417abaee6b416c967"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "b86912c73f0f0e62915246690fbb006213bcaf7e612729a59403d5893903e003"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "bb05183d134a4057090fcc04e51d2e06d191d43a3e5e133f9451bd7552a961d7"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "doc.go",
+      "sha256": "d47415fab6eed03e9d5692c3c985e774002dacce5a727fd720f634ab9f924514"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "894847998a09c9cc10e97dd4671ba676ce6159694169e3a58f8ea760f7b90a6a"
+    },
+    {
+      "path": "http/client.go",
+      "sha256": "5574d28592e72078ae744ce20c0930fa7825b32ab3e2b18ed3de16652df50b0e"
+    },
+    {
+      "path": "http/doc.go",
+      "sha256": "1c3e9ba7ba4893f2c340f6b05b3a57b8b93afda325d8374a8e7661b87882b2f9"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "4152f70549beac1802fe7859e7343c3abf23166cca468c9db60eb62b0bd6a23b"
+    },
+    {
+      "path": "sdk.go",
+      "sha256": "bf8356747898bcf75496f52390e4aa405ab862d6477c8a17c7bc9ace5f7b8b20"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "34ebb0394c282c93d68140a4f9a5aaa977435cb6a10ed9de5c66cf504a074e48"
+    },
+    {
+      "path": "types/certificate_page.go",
+      "sha256": "7e48c1f38547c1a8b371b315004abac369848841f06d2573ed5e230be4d9d17d"
+    },
+    {
+      "path": "types/certificate_response.go",
+      "sha256": "5ba6741ed28f90cf58d9d040fd49910d66357693058ac5bb8c179183097be52e"
+    },
+    {
+      "path": "types/common.go",
+      "sha256": "6e7e501a9c98d11b736cae0ee81c729da6273ebdb0fb0f2c15a0b13d6bce47c0"
+    },
+    {
+      "path": "types/create_certificate_request.go",
+      "sha256": "04db313463e2f4d9984b898b84e78f1829811608a900637544d9cd78eabd8536"
+    },
+    {
+      "path": "types/create_deployment_request.go",
+      "sha256": "5a0b8ae19da2400a665c7951ba4053c16a8f0e3d5ea4a527757db4ea5e5e600c"
+    },
+    {
+      "path": "types/create_domain_request.go",
+      "sha256": "d66847aa21d74378a8370f2e96fcd7c44a71895e3f0370f5b43927743bf0d11c"
+    },
+    {
+      "path": "types/create_env_variable_request.go",
+      "sha256": "fe8d5964cb3c05f1e0a19be1c0efb2daff091559e0c3b70dcedff9a522c6b1a6"
+    },
+    {
+      "path": "types/create_health_check_request.go",
+      "sha256": "2c48a564543671d470afc54290d04a69ba3e33795e8769e7bbc00cd0195908d0"
+    },
+    {
+      "path": "types/create_site_request.go",
+      "sha256": "82f42864def885f9857e79c9e1fec0a92719a520f762b8d0cb486cb6e68d2e09"
+    },
+    {
+      "path": "types/deployment_page.go",
+      "sha256": "2805ef5b708349906616d1b18e7f5628f2137fce683d2b3ef267c03bf6279075"
+    },
+    {
+      "path": "types/deployment_response.go",
+      "sha256": "6f09e5426ec02d989fe5dbea776e6b2432a0df0ba7dfa940265faa9484047c64"
+    },
+    {
+      "path": "types/doc.go",
+      "sha256": "a698378f96e081f347a8bb8bf97d4c4c9eeb2423b58bdc3cdf2aadfb97a864a4"
+    },
+    {
+      "path": "types/domain_page.go",
+      "sha256": "e9fc1aaa2882b330c1f22f6d79c1c394e5f6c39885deb36371b722b204e95ae3"
+    },
+    {
+      "path": "types/domain_response.go",
+      "sha256": "33e4c0250739741e8b16839c23d5ddb325e2b8cdc55154f9b1dbfc28662da1c8"
+    },
+    {
+      "path": "types/domain_verify_response.go",
+      "sha256": "4fafc65d756cdd780fc5450e8616bf73d2111c5821733c27e6ad375305413f7b"
+    },
+    {
+      "path": "types/env_variable_page.go",
+      "sha256": "64c4eaf5a38e1c389ed1b5fec1b4d2b1f71bac3e435518626d2dcfcd04776589"
+    },
+    {
+      "path": "types/env_variable_response.go",
+      "sha256": "710f69cb647a43bc51e9f24db63f9e0b7399f3b08f398fd4e9d4cd8d6370dd40"
+    },
+    {
+      "path": "types/health_check_page.go",
+      "sha256": "d4788076f5b79aa855928dbdadb4714810dc6f2bb9f97667db3ead4bde396e33"
+    },
+    {
+      "path": "types/health_check_response.go",
+      "sha256": "a2e77c6e373910baa83c39cbbd2682629ea14db0b20d4cb097b6c8a95890bc4e"
+    },
+    {
+      "path": "types/problem_detail.go",
+      "sha256": "7c91bb54bb90e14b849a966cfc7a8e69e5e3ef98e464e0413cfa00e67751ac24"
+    },
+    {
+      "path": "types/site_page.go",
+      "sha256": "bc2d59f316b942904ae77ae0a6107d12ec44672643a603aad9bc4da3b59f9034"
+    },
+    {
+      "path": "types/site_response.go",
+      "sha256": "6071cf9f6f33e7f25f16d33f1667d7e41bea0423a7fb4e01144b43ff5ed6495a"
+    },
+    {
+      "path": "types/update_site_request.go",
+      "sha256": "99273b84e5d11bd521e25ef3716863de9f93580c9452072210a6e71e26a41b42"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

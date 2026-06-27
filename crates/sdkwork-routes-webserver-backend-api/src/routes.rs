@@ -12,7 +12,7 @@ use sdkwork_webserver_contract::{
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::{auth::require_backend_context, paths};
+use crate::{agent_routes, auth::require_backend_context, paths};
 use sdkwork_routes_webserver_common::WebApiError;
 
 #[derive(Clone)]
@@ -43,6 +43,11 @@ pub fn build_router_with_shared_backend_api(api: Arc<dyn WebBackendApi>) -> Rout
         .route(paths::NGINX_STATUS, get(retrieve_nginx_status))
         .route(paths::SERVERS, get(list_servers).post(create_server))
         .route(paths::AUDIT_LOGS, get(list_audit_logs))
+        // Agent routes (C8-C9): authenticated via X-SDKWork-Agent-Token through
+        // the WebFrameworkLayer + AgentTokenResolverDecorator. Handlers retrieve
+        // Arc<WebService> and WebBackendRequestContext from Extension layers.
+        .route(paths::AGENT_HEARTBEAT, post(agent_routes::agent_heartbeat))
+        .route(paths::AGENT_SYNC, get(agent_routes::agent_sync))
         .with_state(BackendState { api })
 }
 

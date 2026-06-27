@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "go",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "github.com/sdkwork/sdkwork-web-backend-sdk"
+  },
+  "changeFingerprint": "96924637a6b1f288b6a1ac45455bd2ca3b788720cc9da6e34da92ffbca16ffaf",
+  "changes": {
+    "createdGeneratedFiles": [
+      "api/agent.go",
+      "api/audit.go",
+      "api/base.go",
+      "api/doc.go",
+      "api/nginx.go",
+      "api/paths.go",
+      "api/server.go",
+      "bin/publish-core.mjs",
+      "bin/publish.ps1",
+      "bin/publish.sh",
+      "CHANGELOG.md",
+      "doc.go",
+      "go.mod",
+      "http/client.go",
+      "http/doc.go",
+      "LICENSE",
+      "README.md",
+      "sdk.go",
+      "sdkwork-sdk.json",
+      "types/agent_certificate_bundle.go",
+      "types/agent_heartbeat_request.go",
+      "types/agent_heartbeat_response.go",
+      "types/agent_nginx_config_bundle.go",
+      "types/agent_sync_response.go",
+      "types/audit_log_page.go",
+      "types/audit_log_response.go",
+      "types/common.go",
+      "types/create_nginx_config_request.go",
+      "types/create_server_request.go",
+      "types/create_server_response.go",
+      "types/doc.go",
+      "types/nginx_config_page.go",
+      "types/nginx_config_response.go",
+      "types/nginx_deploy_response.go",
+      "types/nginx_reload_response.go",
+      "types/nginx_status_response.go",
+      "types/nginx_validate_response.go",
+      "types/problem_detail.go",
+      "types/server_page.go",
+      "types/server_response.go",
+      "types/update_nginx_config_request.go"
+    ],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [],
+    "deletedGeneratedFiles": [],
+    "scaffoldedFiles": [
+      "custom/README.md"
+    ],
+    "preservedScaffoldFiles": [],
+    "backedUpFiles": []
+  },
+  "impact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "api/agent.go",
+          "api/audit.go",
+          "api/base.go",
+          "api/doc.go",
+          "api/nginx.go",
+          "api/paths.go",
+          "api/server.go",
+          "http/client.go"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "types/agent_certificate_bundle.go",
+          "types/agent_heartbeat_request.go",
+          "types/agent_heartbeat_response.go",
+          "types/agent_nginx_config_bundle.go",
+          "types/agent_sync_response.go",
+          "types/audit_log_page.go",
+          "types/audit_log_response.go",
+          "types/common.go",
+          "types/create_nginx_config_request.go",
+          "types/create_server_request.go",
+          "types/create_server_response.go",
+          "types/doc.go",
+          "types/nginx_config_page.go",
+          "types/nginx_config_response.go",
+          "types/nginx_deploy_response.go",
+          "types/nginx_reload_response.go",
+          "types/nginx_status_response.go",
+          "types/nginx_validate_response.go",
+          "types/problem_detail.go",
+          "types/server_page.go",
+          "types/server_response.go",
+          "types/update_nginx_config_request.go"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "http/client.go",
+          "http/doc.go"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "go.mod",
+          "sdkwork-sdk.json"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "doc.go",
+          "LICENSE",
+          "sdk.go"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-go\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "go",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language go --project-dir . --action check"
+      }
+    ]
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "preservedLegacyFiles": true
+}

@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "d0cba74a6e8f90ac011031addfadfb9e8dcfca251e122d053874159983e510cd"
+    },
+    {
+      "path": "README.md",
+      "sha256": "7cc194e49871d15cd38bb84cd61d756fc945d8db6ec988080ca32d8f2997f6ee"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "10a3813de5518e3949779bc9b95a6fdc0fc8cc8c3648a23642eac90297a41f6b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/AgentApi.java",
+      "sha256": "fb45e2ced76e19ce255321bf620e274adcd664c783760beccd2e5c008554fda5"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/ApiPaths.java",
+      "sha256": "2e3b94f10706d57d59a0a75769ed0633451eb2e2fdae2c70c45353dea182518b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/AuditApi.java",
+      "sha256": "9bd345c1bad22de9bb53b0d8bba3a01b78c50f7c1d5465f4d54f87436ffa5cf0"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/NginxApi.java",
+      "sha256": "15c45afa30fdef6c0626c5d444778183dc9a2aa9f9cbe226aa7e2320b3e6836e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/package-info.java",
+      "sha256": "0550b2280548ea4d29700634ec1491d5103ea611fa30296593617e77bd990af9"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/api/ServerApi.java",
+      "sha256": "b5c6634a700d538fd808fc14fc19d140c7201234b699d84d9a9432c18887122f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/http/HttpClient.java",
+      "sha256": "421bc7362be2d5c889d6d3612221f750301740d88686981c8a5745e85e53c5c1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AgentCertificateBundle.java",
+      "sha256": "904449fe8b01ce3920803bacffb7934c9c30c4c03b25091afc56fc9ffe5f7f74"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatRequest.java",
+      "sha256": "1fd8abedf23bdf4cedf1693e2b5a21a692b9b514b65efc0186283ab572c01d6a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatResponse.java",
+      "sha256": "b125fe1828a1b73dc7306802f2ad07ef2e663113e67837f227930fd3f46a0e89"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AgentNginxConfigBundle.java",
+      "sha256": "f9514c38588e28338662745d1ecd39515ff1201cab9dfb14dabec77d21f50eaf"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AgentSyncResponse.java",
+      "sha256": "d42b014eb011627dd90931652a74871812b7c9230992ed8fe830d1b5bfe25661"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogPage.java",
+      "sha256": "fa08c9f1fa8f038585faaaaed62c09ce9875590ef4576d5bb08225d3153ff4a4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogResponse.java",
+      "sha256": "2403dea8b372982247930e74bcaca0a7d751d2c6c3821f7ed1066379af82da3a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/CreateNginxConfigRequest.java",
+      "sha256": "acfd67ed16ccc7fc33e1e8d8b70c5fd8f1b51c532e5d4fb746470ec0d7bc8c85"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerRequest.java",
+      "sha256": "3219f60cf2bcb19490525702a078d15aafae07eee4237836c7b4cd9c103a8e02"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerResponse.java",
+      "sha256": "fa7200ae1b2af01fe7ffbadbceb70dcee5afa23cf2d835e88b96335d65845c83"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigPage.java",
+      "sha256": "277c7cf8064263cb6a27eac12d6e229d9ccedf34c9ed0a03700f2c01cb8c62b9"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigResponse.java",
+      "sha256": "cc2d308f4817e1b4c0b7fa8919720da581c51daa131566553acb7b832056e087"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxDeployResponse.java",
+      "sha256": "3af692132f72a5c0e67eeaa7bc438506ad1e439fc35ab3f18181c8729f197ac0"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxReloadResponse.java",
+      "sha256": "2b6db5ef96a018382b60a123ecd6d625baf5a390142066dda29cb4a27bed430a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxStatusResponse.java",
+      "sha256": "1b94e4a7a02ba38dfdc2eb3d9a6c99ca84d2be526cdfd8ca22d4b8c3f6d1585f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/NginxValidateResponse.java",
+      "sha256": "ad42bc9189f12442c1b9ab68797fe599065b925dee44f6d516245005856ac065"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/ProblemDetail.java",
+      "sha256": "fad564913931e1deb1dace9432a75a24cb15fa2a37e6627f2ac5098f497cacfe"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/ServerPage.java",
+      "sha256": "c01a408a999444259a657af2a2673d9fb5d4a004cdb67667d53bd3dda4b7688a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/ServerResponse.java",
+      "sha256": "a4b5c0262912ecb4262d4637cce8e94c9d52d62aafac70ef0dd104c0a5ac8317"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/model/UpdateNginxConfigRequest.java",
+      "sha256": "7c6d2469ce8c6a29c98047b90d4786643eee57fbfc8ef3943dfbcdf85807bd3e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/backend/sdk/SdkworkBackendClient.java",
+      "sha256": "d3300572a5a129c9f6542598f53b505f883ff20f14203731fbfc8443bd46d5e7"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

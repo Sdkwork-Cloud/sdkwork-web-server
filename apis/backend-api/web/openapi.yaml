@@ -1,4 +1,4 @@
-﻿openapi: 3.1.2
+openapi: 3.1.2
 info:
   title: SDKWork Web Backend API
   description: SDKWork Web Server 管理后台 API
@@ -22,6 +22,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -53,6 +59,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -82,6 +95,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -98,6 +117,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -129,6 +155,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 校验结果
@@ -152,6 +184,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       responses:
         '200':
           description: 部署成功
@@ -170,6 +210,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 热加载结果
@@ -186,6 +233,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.nginx.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -202,6 +255,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.servers.read
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -219,6 +278,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.servers.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       requestBody:
         required: true
         content:
@@ -238,9 +305,15 @@ paths:
       operationId: agent.heartbeat
       summary: 边缘节点心跳
       tags: [agent]
-      x-sdkwork-auth-mode: agent-token
       security:
         - AgentToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: api-key
+      x-sdkwork-route-auth: agent-token
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       requestBody:
         required: true
         content:
@@ -262,9 +335,15 @@ paths:
       operationId: agent.sync
       summary: 拉取 nginx 配置与证书 bundle
       tags: [agent]
-      x-sdkwork-auth-mode: agent-token
       security:
         - AgentToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: api-key
+      x-sdkwork-route-auth: agent-token
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       parameters:
         - name: ifSyncVersion
           in: query
@@ -289,6 +368,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: backend-api
+      x-sdkwork-api-authority: sdkwork-web.backend
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.auditLogs.read
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -303,8 +388,11 @@ paths:
         - name: operatorId
           in: query
           schema:
-            type: integer
+            type: string
             format: int64
+            pattern: '^[0-9]+$'
+            x-sdkwork-int64-string: true
+            x-sdkwork-rust-type: i64
         - name: startDate
           in: query
           schema:
@@ -439,8 +527,12 @@ components:
           items:
             $ref: '#/components/schemas/NginxConfigResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     NginxValidateResponse:
       type: object
@@ -568,8 +660,12 @@ components:
         nginxEnabled:
           type: boolean
         activeConfigs:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Number of active nginx configs reported by the agent as a string.
         lastSyncVersion:
           type: string
           description: Last successfully applied syncVersion reported by the edge agent.
@@ -621,8 +717,12 @@ components:
           type: string
           description: SHA-256 hex digest of configContent.
         version:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Config revision number as a string to avoid JavaScript precision loss.
 
     AgentCertificateBundle:
       type: object
@@ -647,8 +747,12 @@ components:
           items:
             $ref: '#/components/schemas/ServerResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     AuditLogResponse:
       type: object
@@ -657,8 +761,12 @@ components:
           type: string
           format: uuid
         operatorId:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Operator user id as a string to avoid JavaScript precision loss.
         operatorType:
           type: string
         action:
@@ -666,8 +774,12 @@ components:
         targetType:
           type: string
         targetId:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Target snowflake id as a string to avoid JavaScript precision loss.
         targetUuid:
           type: string
         requestId:
@@ -688,8 +800,12 @@ components:
           items:
             $ref: '#/components/schemas/AuditLogResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
   responses:
     BadRequest:

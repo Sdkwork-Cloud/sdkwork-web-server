@@ -68,6 +68,14 @@ impl WebRepository {
         let now = now_rfc3339();
         let verify_token = new_uuid();
 
+        // 事务边界：清除旧 primary + 插入新 domain 必须原子完成，
+        // 避免清除成功但插入失败导致站点丢失主域名。
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| store_error("begin create web_domain transaction", error))?;
+
         if request.is_primary {
             sqlx::query(
                 "UPDATE web_domain SET is_primary = 0, updated_at = $3
@@ -76,7 +84,7 @@ impl WebRepository {
             .bind(tenant_id)
             .bind(site_internal_id)
             .bind(&now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|error| store_error("clear primary web_domain", error))?;
         }
@@ -99,9 +107,13 @@ impl WebRepository {
         .bind(request.ssl_enabled)
         .bind(&request.ssl_provider)
         .bind(&now)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|error| store_error("insert web_domain", error))?;
+
+        tx.commit()
+            .await
+            .map_err(|error| store_error("commit create web_domain transaction", error))?;
 
         self.retrieve_domain_repo(tenant_id, site_id, &uuid).await
     }

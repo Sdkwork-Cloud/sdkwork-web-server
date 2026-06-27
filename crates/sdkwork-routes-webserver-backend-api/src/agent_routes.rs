@@ -1,59 +1,49 @@
-//! Agent API routes authenticated via X-SDKWork-Agent-Token (outside IAM dual-token).
+//! Agent API routes integrated into the backend-api WebFrameworkLayer pipeline (C8-C9).
+//!
+//! Agent routes (`/backend/v3/api/agent/heartbeat`, `/backend/v3/api/agent/sync`) are
+//! declared with `RouteAuth::AgentToken` in the route manifest. The framework
+//! authenticates `X-SDKWork-Agent-Token` via `AgentTokenResolverDecorator::resolve_api_key`
+//! and injects `WebBackendRequestContext` with `tenant_id` and `subject_id` (server UUID).
+//! Handlers retrieve `Arc<WebService>` from `Extension` (applied in `web_bootstrap.rs`).
 
 use axum::{
-    extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    extract::{Extension, Query},
+    http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
-    Json, Router,
+    Json,
 };
 use sdkwork_intelligence_webserver_service::WebService;
 use sdkwork_routes_webserver_common::WebApiError;
-use sdkwork_webserver_contract::{AgentHeartbeatRequest, WebServiceError, WebServiceResult};
+use sdkwork_webserver_contract::{AgentHeartbeatRequest, WebBackendRequestContext, WebServiceError};
+use serde::Deserialize;
 use std::sync::Arc;
 
-pub const AGENT_HEARTBEAT: &str = "/backend/v3/api/agent/heartbeat";
-pub const AGENT_SYNC: &str = "/backend/v3/api/agent/sync";
-const AGENT_TOKEN_HEADER: &str = "x-sdkwork-agent-token";
-
-#[derive(Debug, serde::Deserialize)]
-struct AgentSyncQuery {
+#[derive(Debug, Deserialize)]
+pub(crate) struct AgentSyncQuery {
     #[serde(rename = "ifSyncVersion")]
     if_sync_version: Option<String>,
 }
 
-#[derive(Clone)]
-struct AgentState {
-    service: Arc<WebService>,
-}
-
-pub fn build_agent_router(service: Arc<WebService>) -> Router {
-    Router::new()
-        .route(AGENT_HEARTBEAT, post(agent_heartbeat))
-        .route(AGENT_SYNC, get(agent_sync))
-        .with_state(AgentState { service })
-}
-
-async fn agent_heartbeat(
-    State(state): State<AgentState>,
-    headers: HeaderMap,
+pub(crate) async fn agent_heartbeat(
+    Extension(service): Extension<Arc<WebService>>,
+    Extension(context): Extension<WebBackendRequestContext>,
     Json(request): Json<AgentHeartbeatRequest>,
 ) -> Result<Response, WebApiError> {
-    let token = extract_agent_token(&headers)?;
-    ok_json(state.service.agent_heartbeat(&token, &request).await)
+    let (server_id, tenant_id) = require_agent_context(&context)?;
+    ok_json(service.agent_heartbeat(server_id, tenant_id, &request).await)
 }
 
-async fn agent_sync(
-    State(state): State<AgentState>,
-    headers: HeaderMap,
+pub(crate) async fn agent_sync(
+    Extension(service): Extension<Arc<WebService>>,
+    Extension(context): Extension<WebBackendRequestContext>,
     Query(query): Query<AgentSyncQuery>,
 ) -> Result<Response, WebApiError> {
-    let token = extract_agent_token(&headers)?;
+    let (server_id, tenant_id) = require_agent_context(&context)?;
     ok_json(
-        state
-            .service
+        service
             .agent_sync(
-                &token,
+                server_id,
+                tenant_id,
                 query
                     .if_sync_version
                     .as_deref()
@@ -63,23 +53,31 @@ async fn agent_sync(
     )
 }
 
-fn extract_agent_token(headers: &HeaderMap) -> Result<String, WebApiError> {
-    headers
-        .get(AGENT_TOKEN_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| {
-            WebApiError::new(
-                StatusCode::UNAUTHORIZED,
-                "missing_agent_token",
-                "X-SDKWork-Agent-Token header is required",
-            )
-        })
+/// Extracts `(server_uuid, tenant_id)` from the framework-injected backend context.
+///
+/// `subject_id` holds the principal's `user_id` (server UUID for agent-token routes).
+/// `tenant_id` is guaranteed by the fail-closed injector.
+fn require_agent_context(
+    context: &WebBackendRequestContext,
+) -> Result<(&str, i64), WebApiError> {
+    let server_id = context.subject_id.as_deref().ok_or_else(|| {
+        WebApiError::new(
+            StatusCode::UNAUTHORIZED,
+            "missing_agent_subject",
+            "agent route requires an authenticated server subject",
+        )
+    })?;
+    let tenant_id = context.tenant_id.ok_or_else(|| {
+        WebApiError::new(
+            StatusCode::UNAUTHORIZED,
+            "missing_agent_tenant",
+            "agent route requires tenant isolation context",
+        )
+    })?;
+    Ok((server_id, tenant_id))
 }
 
-fn ok_json<T>(result: WebServiceResult<T>) -> Result<Response, WebApiError>
+fn ok_json<T>(result: Result<T, WebServiceError>) -> Result<Response, WebApiError>
 where
     T: serde::Serialize,
 {
@@ -88,7 +86,7 @@ where
         Err(WebServiceError::Forbidden) => Err(WebApiError::new(
             StatusCode::UNAUTHORIZED,
             "invalid_agent_token",
-            "agent token is invalid",
+            "agent token is invalid or has been revoked",
         )),
         Err(error) => Err(error.into()),
     }

@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "kotlin",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "03ef495eada118c1ba5af194b39b5618aba38913a152c9f5f3e034a9b802f311"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "a48e2bb6b62fcea3b0c9915aa9c07bcb2de33f96c8b973bfa3b859b8c01e3c81"
+    },
+    {
+      "path": "build.gradle.kts",
+      "sha256": "711c581b3040d3cdf7ce51412b7c460e5b622831dc9ac26d5993863256dda2d4"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "e30b0080126cc319341a003d7b485464e9a50a5c4a1c8c01dbf036cdc853ae21"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "76066b8c158199d3451f8074d3c03891b9b297a7c12625604024080881d38350"
+    },
+    {
+      "path": "settings.gradle.kts",
+      "sha256": "d95e0fb2cbbda30df1336eb5d09f1540a1a335777a0dfa1fcbcc36375a728985"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentCertificateBundle.kt",
+      "sha256": "c3c4da6f2af8e8bd78ea446532952d4d2fbcefee25ee32d5b979812727531793"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatRequest.kt",
+      "sha256": "3f8fcbd3b12ad5d8a84175518a8da1f769a4601f3998aaef9802285f2e202cf3"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatResponse.kt",
+      "sha256": "e99b7981298a5909ce720580ba81d613c6e3ffffa25b2e0d86afd939388e1c7e"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentNginxConfigBundle.kt",
+      "sha256": "0c5202e672402c40b189b1de041701c05e15fdb1058661d0c1ae4340a9a1a944"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentSyncResponse.kt",
+      "sha256": "2ce399c1a61d194e27be455ccf2ccae8fcd92b8c62d51f7c29b30d7dd35bd6f4"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AgentApi.kt",
+      "sha256": "00b6d528154646c2858a78eeb00a435d04cfbc3687e2b3775a86dc5fa3e2a37a"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/Api.kt",
+      "sha256": "7c4ae0b67c7adf98e2e3a0dcde4f7ce82bdbe334e8e9c22a26034b0d3f659226"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ApiPaths.kt",
+      "sha256": "2e0fd52c24c3890c0255cb2576b41555cd7f1a64592406389c066cccb309f24b"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AuditApi.kt",
+      "sha256": "f5493bb0d995ecb75fffa6b740a2d6005a422ac8edae72c3fb7c1fb750f6f72e"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/NginxApi.kt",
+      "sha256": "0286df473906b2eea393fdb18c52bc59f823bae8c1696c88f9f0f2593a9c7d82"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ServerApi.kt",
+      "sha256": "0fc7fae9c7111e150790e5898055073d886571c28de26d101f73b59583db77a8"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogPage.kt",
+      "sha256": "eea86e964defe80a6b482ac5116a3659b6e3b2fc40b367734d58d8f4f32a4a31"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogResponse.kt",
+      "sha256": "51992c6ba5afdaf59d62c81fff96afe7f83ad9e6c6b9f510ce002ff8fbdfe841"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateNginxConfigRequest.kt",
+      "sha256": "8d53b1e9aed8308e6fee33d5f0727bc8bd9b7149ba3ebe464c0e593d13c90c68"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerRequest.kt",
+      "sha256": "3766a708e878ae638cf12eaa3c800492e4fad2c9666f7929dea8247f37d92f19"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerResponse.kt",
+      "sha256": "d446a0ef79313032b677aa1a927170c1f238eb2bb51ccd4a2e56bc8525316c9d"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/http/HttpClient.kt",
+      "sha256": "bc4e30f908cd3825bc0364ab5c5438c63c16cd43d94816330151893856fa084f"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigPage.kt",
+      "sha256": "03ac1ab73c5473483a83187a40c5a55d2749f288823ab09cfbd84c8ca3e81d2a"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigResponse.kt",
+      "sha256": "d5263478f215d1c1a57511bac619242fb8f1fc1e9032fc404bf7688d7c2ebd3b"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxDeployResponse.kt",
+      "sha256": "3f0f93eb2632959265989f0515bd77eed2b95fc3b70965530c34762b2230d29a"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxReloadResponse.kt",
+      "sha256": "66c9df39acab7a170294216ffddf4d9fff4f6835613802f2905e1ee156971558"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxStatusResponse.kt",
+      "sha256": "4a3ec729a782dfbe89e262c32826023c095363ea40f9eae14d582d9c0d531a7e"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxValidateResponse.kt",
+      "sha256": "3a464cac943df946489be02d1441bff28901b0239d2e649eae82584f9a3baf38"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/ProblemDetail.kt",
+      "sha256": "c4fa6d1712e6ea62a0889d2e34bd4a447ade93a9400eead82b57b1299cb4ae87"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/SdkworkBackendClient.kt",
+      "sha256": "98154b1758836ff27fdad95f2efbd78ad9835d42bd201f87ead25c1fbc1d5401"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerPage.kt",
+      "sha256": "08bfeff9acbeb78d00ea244a3c5758df4bc447ea326b306223af0ecef26946ef"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerResponse.kt",
+      "sha256": "e84dd52ac6e6e4cb5ac06610b038ced878cc5209d5b58e21e3956eb8de24e2bd"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/web/backend/sdk/UpdateNginxConfigRequest.kt",
+      "sha256": "de81c516b436ca6e3572782d0d66094b8593c2c5448362f20ed93a0b75de5b72"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

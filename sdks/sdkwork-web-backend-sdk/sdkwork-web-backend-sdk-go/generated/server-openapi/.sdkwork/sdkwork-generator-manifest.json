@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "go",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "github.com/sdkwork/sdkwork-web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "api/agent.go",
+      "sha256": "c438e404179eb9fad3797ddcd16c48c9b490caa2e9215196fa9265f1adb1f9e2"
+    },
+    {
+      "path": "api/audit.go",
+      "sha256": "beeb271084cc19e29b3a5feb5188d5a02499bf4cbe72a6f4c499525f6f446a7a"
+    },
+    {
+      "path": "api/base.go",
+      "sha256": "1b657ff39712de80449ebcd8bde533c0de60fe6eed233d1215785692ae87bd30"
+    },
+    {
+      "path": "api/doc.go",
+      "sha256": "41d33ffa2bacf89a13480c29578a68900d8df695b20c3de0e83413cd00e8d9f0"
+    },
+    {
+      "path": "api/nginx.go",
+      "sha256": "1cbfac94376574e95063534af91bf83fa3e7c504b5cded7d8642a823358a3e6b"
+    },
+    {
+      "path": "api/paths.go",
+      "sha256": "d837f8f1212389f20412298bed5f829cd35ee325e5b5d498c73bc2b1f7d399ea"
+    },
+    {
+      "path": "api/server.go",
+      "sha256": "9859ad3de3e130eaa293412f9b74cd4845ce399d21689d322bb57db35a75609c"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "b86912c73f0f0e62915246690fbb006213bcaf7e612729a59403d5893903e003"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "bb05183d134a4057090fcc04e51d2e06d191d43a3e5e133f9451bd7552a961d7"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "doc.go",
+      "sha256": "b66ce39ce830c92d591de559035e92bab834c435ec5e9f246530843b86b31b2c"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "6a4b0e640ed861d5e661f4e6bf8808879261eb1536b28862b6a79de70fa9495e"
+    },
+    {
+      "path": "http/client.go",
+      "sha256": "5574d28592e72078ae744ce20c0930fa7825b32ab3e2b18ed3de16652df50b0e"
+    },
+    {
+      "path": "http/doc.go",
+      "sha256": "cb64ed103150c53cac83fc021a550729d7726c2b15b4553821522098c8692bb7"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "eee21c56df06369c20667b2452b29826e3e4a3b55f61022d71daed2fd0827dcd"
+    },
+    {
+      "path": "sdk.go",
+      "sha256": "50cbf85a6612173ccec1b6f18cba34ff2e7e4d56401e36e41aa8e7018ef9f575"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "a01c409b8dd7228f69d78ce9caae76270907d89938e3176f24ea20654e654312"
+    },
+    {
+      "path": "types/agent_certificate_bundle.go",
+      "sha256": "59308eb6926302d8d852e35399452dd225699133d8f0ccb4c477d4d3f2b24697"
+    },
+    {
+      "path": "types/agent_heartbeat_request.go",
+      "sha256": "88db2ba9e967d7dac56106bbef5725843055d63df6142d15e8200f21dd2d3852"
+    },
+    {
+      "path": "types/agent_heartbeat_response.go",
+      "sha256": "da79287d7adda59d01858453597d514d1b80f8b7e1de5c2cbbf1c6205a7b4861"
+    },
+    {
+      "path": "types/agent_nginx_config_bundle.go",
+      "sha256": "c53471a3ec05452c94e2a1daf92f49ce4ba631979ad3a5a893e2a9eaa8c9dcb2"
+    },
+    {
+      "path": "types/agent_sync_response.go",
+      "sha256": "730df07d4a219ca0aff8b63e14762e791380c16174fc89bb6cd6f865beb03dcb"
+    },
+    {
+      "path": "types/audit_log_page.go",
+      "sha256": "9950a0b2926be867ef44aa012c0e96e5d8795c9338466dec8832e0c08f9cd400"
+    },
+    {
+      "path": "types/audit_log_response.go",
+      "sha256": "4ef785213a970039647c314da583a53e5e1c0bfee2d509eb1290da2f77d677c1"
+    },
+    {
+      "path": "types/common.go",
+      "sha256": "6e7e501a9c98d11b736cae0ee81c729da6273ebdb0fb0f2c15a0b13d6bce47c0"
+    },
+    {
+      "path": "types/create_nginx_config_request.go",
+      "sha256": "577895075d88f90544f8ed459b03eb423a8cebcf3cb640977609b03e8b910f7d"
+    },
+    {
+      "path": "types/create_server_request.go",
+      "sha256": "31deceaa52d41c9f88ca5438871a8e2fa6353c2c7d0c6ecf78e9cb2b5488a60d"
+    },
+    {
+      "path": "types/create_server_response.go",
+      "sha256": "b85abd91ac8b4819f79425aa4adcf9a5b5b1864da25b1ab7be18834fe8e31a64"
+    },
+    {
+      "path": "types/doc.go",
+      "sha256": "1f1b498c45e150895704917ca8f9b0e68d388e938fa59e57ed15f1f04b0cbfd1"
+    },
+    {
+      "path": "types/nginx_config_page.go",
+      "sha256": "b9deed281e4b629f1f4352c0bc23a2f1a082314849c117029dd3c88aaa7b7186"
+    },
+    {
+      "path": "types/nginx_config_response.go",
+      "sha256": "576d3c11172ae89f5b8b6d94078d1fa240c075af6441e5df3045b169be50c025"
+    },
+    {
+      "path": "types/nginx_deploy_response.go",
+      "sha256": "025cbaa45ef6db73e1e9dfa47b1344488a4508755f9241c00431e19b292b1e85"
+    },
+    {
+      "path": "types/nginx_reload_response.go",
+      "sha256": "cc71931bf3a5ad681bb6a20594977a08692193a2528b64b4d17f9630b08487dd"
+    },
+    {
+      "path": "types/nginx_status_response.go",
+      "sha256": "d309a26c4ea05caec2009f6113c3ea37258947127667ca2cddcbb1fb15597469"
+    },
+    {
+      "path": "types/nginx_validate_response.go",
+      "sha256": "82f58575d1f0dbdf964624afd1966095ffbca3dec7dd4db79498a9a02c25cf9b"
+    },
+    {
+      "path": "types/problem_detail.go",
+      "sha256": "7c91bb54bb90e14b849a966cfc7a8e69e5e3ef98e464e0413cfa00e67751ac24"
+    },
+    {
+      "path": "types/server_page.go",
+      "sha256": "d108c213282f46fe922cdbdab375106fb96a0bbd67d4d7bf45060091c926088d"
+    },
+    {
+      "path": "types/server_response.go",
+      "sha256": "c4fabee0dcecf4c2a20784bad0efa622390388e61696b64ba34440419d00414c"
+    },
+    {
+      "path": "types/update_nginx_config_request.go",
+      "sha256": "fd1f1d2b48e18e5eedfd740071be6ca795c6aed7b41fd41ce588795a92142ac7"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

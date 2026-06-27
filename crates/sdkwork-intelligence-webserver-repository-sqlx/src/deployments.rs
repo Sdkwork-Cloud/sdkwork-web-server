@@ -105,6 +105,24 @@ impl WebRepository {
         request: &CreateDeploymentRequest,
     ) -> WebServiceResult<DeploymentResponse> {
         let site_internal_id = resolve_site_internal_id(&self.pool, tenant_id, site_id).await?;
+
+        // 幂等性：如果客户端提供了非空 idempotency_key，
+        // 先查找是否已存在相同 (tenant_id, idempotency_key) 的 deployment。
+        // 存在则直接返回已创建的记录，保证网络重试不会产生重复部署。
+        let idempotency_key = request
+            .idempotency_key
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        if let Some(key) = idempotency_key {
+            if let Some(existing) = self
+                .find_deployment_by_idempotency_repo(tenant_id, site_internal_id, key)
+                .await?
+            {
+                return Ok(existing);
+            }
+        }
+
         let id = next_id(self.id_generator())?;
         let uuid = new_uuid();
         let now = now_rfc3339();
@@ -117,9 +135,9 @@ impl WebRepository {
         sqlx::query(
             "INSERT INTO web_deployment (
                 id, uuid, tenant_id, user_id, site_id, deploy_type, environment, status,
-                metadata, created_at, updated_at, version
+                idempotency_key, metadata, created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, 0, '{}', $8, $8, 0
+                $1, $2, $3, $4, $5, $6, $7, 0, $8, '{}', $9, $9, 0
              )",
         )
         .bind(id)
@@ -129,6 +147,7 @@ impl WebRepository {
         .bind(site_internal_id)
         .bind(request.deploy_type)
         .bind(environment)
+        .bind(idempotency_key)
         .bind(&now)
         .execute(&self.pool)
         .await
@@ -136,6 +155,38 @@ impl WebRepository {
 
         self.retrieve_deployment_repo(tenant_id, site_id, &uuid)
             .await
+    }
+
+    /// 通过 (tenant_id, site_id, idempotency_key) 查找已存在的 deployment。
+    /// 用于 create_deployment 的幂等性检查。
+    async fn find_deployment_by_idempotency_repo(
+        &self,
+        tenant_id: i64,
+        site_internal_id: i64,
+        idempotency_key: &str,
+    ) -> WebServiceResult<Option<DeploymentResponse>> {
+        let row = sqlx::query(
+            "SELECT uuid, site_id, status, deploy_type, created_at
+             FROM web_deployment
+             WHERE tenant_id = $1 AND site_id = $2 AND idempotency_key = $3",
+        )
+        .bind(tenant_id)
+        .bind(site_internal_id)
+        .bind(idempotency_key)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| store_error("find web_deployment by idempotency_key", error))?;
+
+        match row {
+            Some(row) => Ok(Some(
+                map_deployment_row(&self.pool, tenant_id, &row)
+                    .await
+                    .map_err(|error| {
+                        WebServiceError::Internal(format!("map web_deployment row: {error}"))
+                    })?,
+            )),
+            None => Ok(None),
+        }
     }
 
     pub(super) async fn retrieve_deployment_repo(
@@ -193,6 +244,16 @@ impl WebRepository {
             .try_get("environment")
             .map_err(|error| store_error("rollback web_deployment environment", error))?;
         let now = now_rfc3339();
+        let id = next_id(self.id_generator())?;
+        let uuid = new_uuid();
+
+        // 事务边界：标记源 deployment 为已回滚 + 创建 rollback 记录必须原子完成，
+        // 避免标记成功但记录创建失败导致状态不一致。
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| store_error("begin rollback web_deployment transaction", error))?;
 
         sqlx::query(
             "UPDATE web_deployment
@@ -203,12 +264,10 @@ impl WebRepository {
         .bind(site_internal_id)
         .bind(deployment_id)
         .bind(&now)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|error| store_error("mark web_deployment rolled back", error))?;
 
-        let id = next_id(self.id_generator())?;
-        let uuid = new_uuid();
         sqlx::query(
             "INSERT INTO web_deployment (
                 id, uuid, tenant_id, user_id, site_id, deploy_type, environment, status,
@@ -226,9 +285,13 @@ impl WebRepository {
         .bind(&environment)
         .bind(source_id)
         .bind(&now)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|error| store_error("insert rollback web_deployment", error))?;
+
+        tx.commit()
+            .await
+            .map_err(|error| store_error("commit rollback web_deployment transaction", error))?;
 
         self.retrieve_deployment_repo(tenant_id, site_id, &uuid)
             .await

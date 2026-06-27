@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "rust",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork-web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "eb779f44a5ba8879a9d79c708d0ba4bd412221f102e4430b953f0449327827bf"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "ae8a89ddb314afce79fe910de28017951c3c31f24a67d72915c4153711173b23"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "bc609381d833d9686fec390a41c8cae5b55391ff2b5cb5a3517831761a0fb21c"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "2e662f33698686080e4d4061a36289b113a4d93ea3d55efc56468982f223ed96"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "ce6792de19d7e662fa3d200891ec992724b321c21f2d49a633ee7d7a8db34e76"
+    },
+    {
+      "path": "src/api/agent.rs",
+      "sha256": "eb056b084e9da8582ed19bedb4fb2bc2184e9ef71355ed55217dbb9e9379eadd"
+    },
+    {
+      "path": "src/api/audit.rs",
+      "sha256": "e7d981632fb55ca95ff915adb601ccc084d920befd4b4f7d3f74dd3aeb535b8e"
+    },
+    {
+      "path": "src/api/base.rs",
+      "sha256": "ee2ea14f6d7b94d196d2d4d7934ce89e4991c3490f4b3d3246aa238af0c5fbef"
+    },
+    {
+      "path": "src/api/mod.rs",
+      "sha256": "a7da65546810cdcda20342524dcbf79af852da99891af9e40861862c644751df"
+    },
+    {
+      "path": "src/api/nginx.rs",
+      "sha256": "d72fd13b2097a0137f4ba7546221709f299fe2886f1a1228a23a4d543c3d0ad7"
+    },
+    {
+      "path": "src/api/paths.rs",
+      "sha256": "571bc21d9e8c1458979a5bb00adb6ba50a7645837196a4b82a2bcfb87f1ef046"
+    },
+    {
+      "path": "src/api/server.rs",
+      "sha256": "dc7b5f464d1cb2aaea94227a2d45095c2e31eea44b7e75ee416d82e0108835e4"
+    },
+    {
+      "path": "src/client.rs",
+      "sha256": "8c36c6503eaced08f228d00a20ba6ddbdede74eb48431f7479dbb246a86c8ea8"
+    },
+    {
+      "path": "src/http/client.rs",
+      "sha256": "ffd88587750661cd174b1d0bae02a876d24f8537acdccaa67e297a549d0a927e"
+    },
+    {
+      "path": "src/http/mod.rs",
+      "sha256": "fdf16d487ebd9180fb423d5630d4401ff18180721b86636dec085ad83940bb3d"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "c67abc7a6cddaf423548f19a294220412e073b3595fcdb4052f57afc1bc12e8f"
+    },
+    {
+      "path": "src/models/agent_certificate_bundle.rs",
+      "sha256": "0529c55bacccca62f1062a21aba96f009001210b0b2f5a80c372ad3731eabd39"
+    },
+    {
+      "path": "src/models/agent_heartbeat_request.rs",
+      "sha256": "17dddf6d9662430d4beed54aafc824fefeb91109ee51363341b2b0f64aa512c6"
+    },
+    {
+      "path": "src/models/agent_heartbeat_response.rs",
+      "sha256": "0222703cd50f7ce384c9d94084852bfee138baa822feda9dff3960f5982f47c2"
+    },
+    {
+      "path": "src/models/agent_nginx_config_bundle.rs",
+      "sha256": "4552ee70d796984b142c3a0d73e415ef3a78ad063e257042cf35a683b33eb58f"
+    },
+    {
+      "path": "src/models/agent_sync_response.rs",
+      "sha256": "0e4784e7696898193408e008940d1107de6941f52a610d49dddc5f1fe0b73589"
+    },
+    {
+      "path": "src/models/audit_log_page.rs",
+      "sha256": "66263bcf6275bc745a77b7e80e830471d1073c3846fb989318ba913f79e102cd"
+    },
+    {
+      "path": "src/models/audit_log_response.rs",
+      "sha256": "644ca8d37a2ad9952bf9e85263a48f8d64c639da18db8b4dc7d906959136be1a"
+    },
+    {
+      "path": "src/models/common.rs",
+      "sha256": "fce0239d85066b1c42435ab8c96676ea2d5300e5dcb87c52fd3e33d29a603a5e"
+    },
+    {
+      "path": "src/models/create_nginx_config_request.rs",
+      "sha256": "4b44141fa08aa0797b1a59a281fffd778e39d53d26f25f916b54ba0883eb7795"
+    },
+    {
+      "path": "src/models/create_server_request.rs",
+      "sha256": "a05f36f8363c3e6b6877c4969a7af9cf8b1eb76a7e829ca5fa876e78ac777b5c"
+    },
+    {
+      "path": "src/models/create_server_response.rs",
+      "sha256": "323e0b1034056637b7fccbbe4b06adfae6ed2f66ffcc3a25338b63e4b14dd216"
+    },
+    {
+      "path": "src/models/mod.rs",
+      "sha256": "6667422227129312b610c961dfb3de1dec144cc1440e31896bcc260853326fed"
+    },
+    {
+      "path": "src/models/nginx_config_page.rs",
+      "sha256": "6aa575e9269d5a09ce281fd7087e3f2f884748a8e40040676313a30025055cd2"
+    },
+    {
+      "path": "src/models/nginx_config_response.rs",
+      "sha256": "ace9bc9dd45f867978baf78953f979e81cdcc66004f513370a9cec8ea91d6bac"
+    },
+    {
+      "path": "src/models/nginx_deploy_response.rs",
+      "sha256": "0cf1054248d8db9760edc2dfd0d2c270d4d27794e4395636f9d7d9966bcac0bc"
+    },
+    {
+      "path": "src/models/nginx_reload_response.rs",
+      "sha256": "5975c566b20f2ed12e9315e7e6f5bffa4c644bffaaed6223aa4bac47f9da631b"
+    },
+    {
+      "path": "src/models/nginx_status_response.rs",
+      "sha256": "b4ec205b649dd287cfa4d0cea8a9bbc6c2efe40852dc29117266c302d693494f"
+    },
+    {
+      "path": "src/models/nginx_validate_response.rs",
+      "sha256": "7ac30b897def6258805bdcdc96aa3833002f040beef85e13328c3adbd427b4d2"
+    },
+    {
+      "path": "src/models/problem_detail.rs",
+      "sha256": "984a12df01705b7927f78c70d1a97e91cd6b21994bcb1881447bfab3a82caef9"
+    },
+    {
+      "path": "src/models/server_page.rs",
+      "sha256": "9fc99d47fa95772f88cc7496c2b08059b8c5c37c352cb78d1e264b7a27c626c9"
+    },
+    {
+      "path": "src/models/server_response.rs",
+      "sha256": "13116c8dd982d5f2cc60ced28d9b649d2a2f9b9bb0d774b572b89df08e7ae4fc"
+    },
+    {
+      "path": "src/models/update_nginx_config_request.rs",
+      "sha256": "c8c9501c6ea5cb3d2fc1fd16a4f0c5289420ecffef5fa92f2178f3272ebbb1ef"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

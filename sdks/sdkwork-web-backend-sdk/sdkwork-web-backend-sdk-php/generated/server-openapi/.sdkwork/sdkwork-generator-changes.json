@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "php",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork/web-backend-sdk"
+  },
+  "changeFingerprint": "c9d7ccac8d841c9754e79d39d4d1fa548c5e8a89ef3dafb0cc9d4a9c4aa13d9b",
+  "changes": {
+    "createdGeneratedFiles": [
+      "bin/publish-core.mjs",
+      "bin/publish.ps1",
+      "bin/publish.sh",
+      "CHANGELOG.md",
+      "composer.json",
+      "LICENSE",
+      "README.md",
+      "sdkwork-sdk.json",
+      "src/Api/Agent.php",
+      "src/Api/Audit.php",
+      "src/Api/BaseApi.php",
+      "src/Api/Nginx.php",
+      "src/Api/Server.php",
+      "src/Http/HttpClient.php",
+      "src/Models/AgentCertificateBundle.php",
+      "src/Models/AgentHeartbeatRequest.php",
+      "src/Models/AgentHeartbeatResponse.php",
+      "src/Models/AgentNginxConfigBundle.php",
+      "src/Models/AgentSyncResponse.php",
+      "src/Models/AuditLogPage.php",
+      "src/Models/AuditLogResponse.php",
+      "src/Models/CreateNginxConfigRequest.php",
+      "src/Models/CreateServerRequest.php",
+      "src/Models/CreateServerResponse.php",
+      "src/Models/NginxConfigPage.php",
+      "src/Models/NginxConfigResponse.php",
+      "src/Models/NginxDeployResponse.php",
+      "src/Models/NginxReloadResponse.php",
+      "src/Models/NginxStatusResponse.php",
+      "src/Models/NginxValidateResponse.php",
+      "src/Models/ProblemDetail.php",
+      "src/Models/ServerPage.php",
+      "src/Models/ServerResponse.php",
+      "src/Models/UpdateNginxConfigRequest.php",
+      "src/SdkConfig.php",
+      "src/SdkworkBackendClient.php"
+    ],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [],
+    "deletedGeneratedFiles": [],
+    "scaffoldedFiles": [
+      "custom/README.md"
+    ],
+    "preservedScaffoldFiles": [],
+    "backedUpFiles": []
+  },
+  "impact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/Api/Agent.php",
+          "src/Api/Audit.php",
+          "src/Api/BaseApi.php",
+          "src/Api/Nginx.php",
+          "src/Api/Server.php",
+          "src/SdkworkBackendClient.php"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "src/Models/AgentCertificateBundle.php",
+          "src/Models/AgentHeartbeatRequest.php",
+          "src/Models/AgentHeartbeatResponse.php",
+          "src/Models/AgentNginxConfigBundle.php",
+          "src/Models/AgentSyncResponse.php",
+          "src/Models/AuditLogPage.php",
+          "src/Models/AuditLogResponse.php",
+          "src/Models/CreateNginxConfigRequest.php",
+          "src/Models/CreateServerRequest.php",
+          "src/Models/CreateServerResponse.php",
+          "src/Models/NginxConfigPage.php",
+          "src/Models/NginxConfigResponse.php",
+          "src/Models/NginxDeployResponse.php",
+          "src/Models/NginxReloadResponse.php",
+          "src/Models/NginxStatusResponse.php",
+          "src/Models/NginxValidateResponse.php",
+          "src/Models/ProblemDetail.php",
+          "src/Models/ServerPage.php",
+          "src/Models/ServerResponse.php",
+          "src/Models/UpdateNginxConfigRequest.php"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "src/Http/HttpClient.php"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "composer.json",
+          "sdkwork-sdk.json"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE",
+          "src/SdkConfig.php"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-php\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "php",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language php --project-dir . --action check"
+      }
+    ]
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "preservedLegacyFiles": true
+}

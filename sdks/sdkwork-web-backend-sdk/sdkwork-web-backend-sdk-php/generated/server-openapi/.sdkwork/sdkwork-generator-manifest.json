@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "php",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork/web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "edca14015bf24f9bdec4c764706134cb4a803df587d392a0d45a23244573aebc"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "c2df10df8f75dbcbb22896af23ed4d0c2ac6afbc3f220ce731188529ac4eac98"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "composer.json",
+      "sha256": "a5ac1e73996b241f6636ca58b04b9a850ed1db02361b7943f57bb01fb51c3aaa"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "b95144735455b37be3d82c66021ceff3c5d15c8558c8c7545f61f1e099dabac3"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "353407518182d0ff9ac92f0164f47643573ce07996e83987ee0492d8de1ab7b4"
+    },
+    {
+      "path": "src/Api/Agent.php",
+      "sha256": "26677687076f09deac6265c3f589e463979a0ff3e46e76fd3476d7bcb3fd21ff"
+    },
+    {
+      "path": "src/Api/Audit.php",
+      "sha256": "50cac654a5f4bdd28e71d33be8a46cd033cfa3781ff39332bfb6780576408dad"
+    },
+    {
+      "path": "src/Api/BaseApi.php",
+      "sha256": "2b930bed1ec357ead5f4aad3637b983c26500b01313679bd9bc1692d11f85caf"
+    },
+    {
+      "path": "src/Api/Nginx.php",
+      "sha256": "7012f75402d1f4325ad612e6752817f63187c75d9e361ca47ce96f6759e5f768"
+    },
+    {
+      "path": "src/Api/Server.php",
+      "sha256": "85ac3ffd13f54c84bc757ad83554e027b45153e5f5bbe0b079c76f2994254fb0"
+    },
+    {
+      "path": "src/Http/HttpClient.php",
+      "sha256": "1b5db075abfdd6e3fd23b4f0f1e46ba44da9da724a37cfac103407c613d77b6a"
+    },
+    {
+      "path": "src/Models/AgentCertificateBundle.php",
+      "sha256": "b9afa4a7398881395213c2aac0b16c854d7c07f62608f1df9bcaf53526d0feee"
+    },
+    {
+      "path": "src/Models/AgentHeartbeatRequest.php",
+      "sha256": "bd4801ebe44a109aa4b007824d39b957d4f42e3da106669a298fc35da1db0ca9"
+    },
+    {
+      "path": "src/Models/AgentHeartbeatResponse.php",
+      "sha256": "a73bc45579d24ab3400971194ffe37f7a222a9df4d7182c35720287889cbb981"
+    },
+    {
+      "path": "src/Models/AgentNginxConfigBundle.php",
+      "sha256": "027064076057fd21c3dee715c65f87c27cad744ea09b00e27119332ea27617f6"
+    },
+    {
+      "path": "src/Models/AgentSyncResponse.php",
+      "sha256": "44454923e3df7aae63755246560e3317cd43d97dd8dc4610b4773586532ad484"
+    },
+    {
+      "path": "src/Models/AuditLogPage.php",
+      "sha256": "157e0cd23540d7954f25dc1926b64683c898651195d4692327628ffe63b44d4a"
+    },
+    {
+      "path": "src/Models/AuditLogResponse.php",
+      "sha256": "078ac599feed013893c028821278c4e84a64ece0a12e92ea532088e172798284"
+    },
+    {
+      "path": "src/Models/CreateNginxConfigRequest.php",
+      "sha256": "654030a373737ad399c8eb58379644ed1232345008f17d80789fda426c968e12"
+    },
+    {
+      "path": "src/Models/CreateServerRequest.php",
+      "sha256": "728664dfa4239b0b5a32184e10140cf699abc3a29457b9265be1317b2ec3aacf"
+    },
+    {
+      "path": "src/Models/CreateServerResponse.php",
+      "sha256": "5d6dfbcc7a2936c9201c9ca3a7715032aafdeacba6e08017674f0f48862d0ac9"
+    },
+    {
+      "path": "src/Models/NginxConfigPage.php",
+      "sha256": "f5bf3604c2aad40bfc8750213224f5527cddda331503039d46a57afb1d6ef57d"
+    },
+    {
+      "path": "src/Models/NginxConfigResponse.php",
+      "sha256": "23eb475dbc2c5a3232938d10e3f2f8912258a3d68a6e62a0c3b6beaf24add7d8"
+    },
+    {
+      "path": "src/Models/NginxDeployResponse.php",
+      "sha256": "f20b12ed1c06770e43997752c777eb7979566a2f238e584c179b9a5fa9f5127a"
+    },
+    {
+      "path": "src/Models/NginxReloadResponse.php",
+      "sha256": "a1adb9b6b1b0bf8db321a82f6c876c7a254458dea34882ae60614ebc43e5ae6d"
+    },
+    {
+      "path": "src/Models/NginxStatusResponse.php",
+      "sha256": "81d7cf3c2d24ce3f755ac6cca1da8796df68d3738603624dd083822be8765379"
+    },
+    {
+      "path": "src/Models/NginxValidateResponse.php",
+      "sha256": "71f7064039c3529d9e51a4ed874fe466c2e2c765806ccb5ecb5fedb03f4d7f61"
+    },
+    {
+      "path": "src/Models/ProblemDetail.php",
+      "sha256": "4df317512f6cd5587d516f9e2cd46fb5822e22fd49b0c7df5ec4193c76c564c9"
+    },
+    {
+      "path": "src/Models/ServerPage.php",
+      "sha256": "fd5ffe71ceea6c2ed509ae443c7f4e896e461a8d16bba0dac8efb4f55bad45c3"
+    },
+    {
+      "path": "src/Models/ServerResponse.php",
+      "sha256": "0656f7faa177db80c80ce23c2201f3bd83257233812f76b162a78b6013e31f93"
+    },
+    {
+      "path": "src/Models/UpdateNginxConfigRequest.php",
+      "sha256": "2ad2079e05611c0964a3d72e4a274b29c0f4585da8bf5d65f2eb6d3358030974"
+    },
+    {
+      "path": "src/SdkConfig.php",
+      "sha256": "2cf195a25444821f03a0e5ddab9aca14441ba160ee7a1394fd11cbe03e8dfc28"
+    },
+    {
+      "path": "src/SdkworkBackendClient.php",
+      "sha256": "6161382226b04e252770360b14015ddae0bdc3f42cdc08c74a2fb847119b37e9"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

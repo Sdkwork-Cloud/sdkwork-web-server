@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-app-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-web-app-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "711a953771030ddd53419108c07c3920eacb4be270e6a9dcb58d211d7175c0bc"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8004aa917647a003c6878657b1dfe3838a50b8d5331a038f2cefc902750b521e"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "88ed4657f04f240529fc587b275ec855d1c7fc5201d363a0e1a9f6f481fda720"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/ApiPaths.java",
+      "sha256": "6a32b7efca818a0ea38c9ffab069d51dbcbf73afbb1acedfd6c12149d823b46e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/CertificateApi.java",
+      "sha256": "b21e57e238030b419f80077cdbf31b07c0ff046ce00b4bd58ade70f1d0c5c519"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/DeploymentApi.java",
+      "sha256": "3e4708ae22c990a74756b8fe7437cf32b6cf52deba1141fc4d974f9e2ff758ba"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/DomainApi.java",
+      "sha256": "4bd82fcf780ea7c3878a5c01ae0a47621e78dcd439a2072772ae87fd47924165"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/EnvVariableApi.java",
+      "sha256": "421800e1a9f4b04dc032453c8614c3e0f111a10160bf158bb61e559fe5c64dcf"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/MonitorApi.java",
+      "sha256": "58178702b68fa2e46c7cdb4e17f1f8862be16e61f5b3750ef16701ded43e8db7"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/package-info.java",
+      "sha256": "3f9087d7f852fd4706434461ae92a3a958e785ccd22380bdd9c79afc688a351a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/api/SiteApi.java",
+      "sha256": "af8823a8d91d2741bae75a6e5c06042d034f40ce6dde5ed1b73d80477805af44"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/http/HttpClient.java",
+      "sha256": "84f496deb878376ef1871850fa93a731c83731014278616f4506f7099bb6f174"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CertificatePage.java",
+      "sha256": "200799c0ee791e4ab5e852fe1e1dc30f258ec4202ab45e5ac1043b6da00d60dc"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CertificateResponse.java",
+      "sha256": "178fe1529ed48c921476d42a758c40cb61c29dd58fc236225c61c8d967d753b1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateCertificateRequest.java",
+      "sha256": "7ba142d2f160eba49596ee5a9bcf3441001baefda57167ec3ec90967872a20d1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateDeploymentRequest.java",
+      "sha256": "e984db02fdff574b2623eedee2638ced5527653a7ec47db33641aa607e702d22"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateDomainRequest.java",
+      "sha256": "4de8ce096c92fdbbe344c5f6721325826fa9fffbbe04b134cb5d844b84efcbfe"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateEnvVariableRequest.java",
+      "sha256": "958e2310aab4de6679d095cd1b660a2967d45c51518a9f5cbac92ea2ab3a2397"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateHealthCheckRequest.java",
+      "sha256": "903b576353ca8246e9c5fc76e0b09d883173549afba46cb459680a89946b5683"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/CreateSiteRequest.java",
+      "sha256": "26dffcc10e23b3bc0a36af259d5e59af9662b3a1f5c1fe3d0d3e45baf119b56f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/DeploymentPage.java",
+      "sha256": "7d1c74ee48cb4f31a72d79cefdfd83f38112d43407c59fc4c20fee37eede10ea"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/DeploymentResponse.java",
+      "sha256": "ed7a4626dafa6504394aa246d8dc5b7d7ca985e801608f32d76acaeb94879ff4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/DomainPage.java",
+      "sha256": "083982af62820523a459c8f0455f3e919ac98f7877ff80b9158b86d8977ad2f4"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/DomainResponse.java",
+      "sha256": "6a66ddead184d66928e2973bb734dc15d6af4313a7a7c206e88a49904edbd6e3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/DomainVerifyResponse.java",
+      "sha256": "e13dd96874aafd0b4e43fe87e26e39645bfdd1fad722b237f32a7b0125b9e62c"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/EnvVariablePage.java",
+      "sha256": "c7b85855ce7b424ad21079bf9286b01f1e5d668a3f6873652b97bb7aa49908fe"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/EnvVariableResponse.java",
+      "sha256": "26b760dcd26499e7f310372e1e8658904dfc5150bafb0fb0c8112ebfefa5dddb"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/HealthCheckPage.java",
+      "sha256": "32745111edb47ca8739d900569bc772d9f3c61f1e9c07fa706a9ddbc91474909"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/HealthCheckResponse.java",
+      "sha256": "4848d64a6a6f6e087983f4152c8ef98505e5f52d8cf03bdc95e2d6c349802a6b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/ProblemDetail.java",
+      "sha256": "46cd12703f1f45cf74799aff92444d8e0e0794cf5b02586bd55b78f1a48a6f6a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/SitePage.java",
+      "sha256": "8d357d367d7f7773502636c55ee1dc0a3748135a3390e2f4e1021ca0f249464d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/SiteResponse.java",
+      "sha256": "d3faec216b99fd2854d647269ccf7e53ad8c95b6a32891153a0252e791815e77"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/model/UpdateSiteRequest.java",
+      "sha256": "7f6a0bfe07c16fc5a201c896ac816652c019beadf283439dfde5127577015a87"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/web/app/sdk/SdkworkAppClient.java",
+      "sha256": "0c1a697a2262781742d6e8ee5026539b50b50f1aa9989663620de964c8fafe62"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

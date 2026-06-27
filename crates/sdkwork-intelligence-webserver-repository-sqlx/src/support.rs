@@ -1,5 +1,5 @@
-use chrono::{DateTime, SecondsFormat, Utc};
-use sdkwork_id_core::SnowflakeIdGenerator;
+use chrono::{SecondsFormat, Utc};
+use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_webserver_contract::WebServiceError;
 use sha2::{Digest, Sha256};
 use sqlx::any::AnyRow;
@@ -34,7 +34,7 @@ pub(crate) fn next_id(generator: &SnowflakeIdGenerator) -> Result<i64, WebServic
 }
 
 pub(crate) fn new_uuid() -> String {
-    sdkwork_id_core::uuid_v4()
+    sdkwork_database_id::uuid_v4()
 }
 
 pub(crate) fn sha256_hex(content: &str) -> String {
@@ -56,12 +56,6 @@ pub(crate) fn json_from_row(
 ) -> Result<Option<serde_json::Value>, SqlxError> {
     let raw: Option<String> = row.try_get(column)?;
     Ok(raw.and_then(|text| serde_json::from_str(&text).ok()))
-}
-
-pub(crate) fn parse_rfc3339(value: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(value)
-        .ok()
-        .map(|parsed| parsed.with_timezone(&Utc))
 }
 
 pub(crate) async fn resolve_site_internal_id(
@@ -100,11 +94,4 @@ pub(crate) async fn resolve_site_uuid(
 
     row.and_then(|row| row.try_get::<String, _>("uuid").ok())
         .ok_or_else(|| WebServiceError::not_found("site not found"))
-}
-
-pub(crate) fn tenant_filter_clause(tenant_id: Option<i64>, base: &str) -> String {
-    match tenant_id {
-        Some(_) => format!("{base} AND tenant_id = $1"),
-        None => base.to_string(),
-    }
 }

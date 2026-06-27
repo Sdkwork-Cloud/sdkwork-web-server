@@ -8,26 +8,41 @@ use sdkwork_webserver_contract::{
 use crate::WebService;
 
 impl WebService {
-    pub async fn agent_heartbeat(
+    /// Authenticates an agent bootstrap token and returns `(server_uuid, tenant_id)`.
+    ///
+    /// Called by `AgentTokenResolverDecorator` during the framework authentication stage
+    /// (C8-C9) to resolve `X-SDKWork-Agent-Token` into a `WebRequestPrincipal`.
+    pub async fn try_authenticate_agent_token(
         &self,
         token: &str,
+    ) -> WebServiceResult<(String, i64)> {
+        self.repository.authenticate_agent_token(token).await
+    }
+
+    /// Records an edge-agent heartbeat after the framework has already authenticated the token
+    /// and resolved `server_id` + `tenant_id` via the `AgentTokenResolverDecorator` (C8-C9).
+    pub async fn agent_heartbeat(
+        &self,
+        server_id: &str,
+        tenant_id: i64,
         request: &AgentHeartbeatRequest,
     ) -> WebServiceResult<AgentHeartbeatResponse> {
-        let (server_id, tenant_id) = self.repository.authenticate_agent_token(token).await?;
         self.repository
-            .record_agent_heartbeat(&server_id, tenant_id, request)
+            .record_agent_heartbeat(server_id, tenant_id, request)
             .await
     }
 
+    /// Builds the agent sync manifest after the framework has already authenticated the token
+    /// and resolved `server_id` + `tenant_id` via the `AgentTokenResolverDecorator` (C8-C9).
     pub async fn agent_sync(
         &self,
-        token: &str,
+        server_id: &str,
+        tenant_id: i64,
         if_sync_version: Option<&str>,
     ) -> WebServiceResult<AgentSyncResponse> {
-        let (server_id, tenant_id) = self.repository.authenticate_agent_token(token).await?;
         let (mut manifest, encrypted_private_keys) = self
             .repository
-            .build_agent_sync_manifest(&server_id, tenant_id, if_sync_version)
+            .build_agent_sync_manifest(server_id, tenant_id, if_sync_version)
             .await?;
 
         if !manifest.unchanged {

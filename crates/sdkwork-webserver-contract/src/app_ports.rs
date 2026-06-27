@@ -1,4 +1,4 @@
-﻿use async_trait::async_trait;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::dto::*;
@@ -16,6 +16,10 @@ pub struct WebAppRequestContext {
 pub struct WebBackendRequestContext {
     pub operator_id: Option<i64>,
     pub tenant_id: Option<i64>,
+    /// Raw principal subject identifier (server UUID for agent-token routes, user_id string for dual-token).
+    /// Present when the framework resolves a principal; absent for anonymous/public contexts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

@@ -170,7 +170,6 @@ impl WebService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use chrono::{Duration, Utc};
 
     fn certificate_due_for_renewal(not_after: &str, renew_before_days: u32) -> bool {

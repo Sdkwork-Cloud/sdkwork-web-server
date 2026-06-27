@@ -1,4 +1,4 @@
-﻿openapi: 3.1.2
+openapi: 3.1.2
 info:
   title: SDKWork Web App API
   description: SDKWork Web Server 应用端 API，供前端应用客户端调用
@@ -24,6 +24,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.read
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -59,6 +65,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -91,6 +104,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.read
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -109,6 +128,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -135,6 +160,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '204':
           description: 删除成功
@@ -153,6 +184,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 激活成功
@@ -175,6 +212,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 暂停成功
@@ -197,6 +240,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -216,6 +265,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -245,6 +301,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -261,6 +323,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '204':
           description: 删除成功
@@ -278,6 +346,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       responses:
         '200':
           description: 验证成功
@@ -300,6 +376,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -324,6 +406,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       requestBody:
         required: true
         content:
@@ -353,6 +443,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -374,6 +470,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       responses:
         '200':
           description: 回滚成功
@@ -394,6 +498,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - name: environment
           in: query
@@ -414,6 +524,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -436,6 +553,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.certificates.read
+      x-sdkwork-owner: sdkwork-web-server
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/PageSizeParam'
@@ -453,6 +576,14 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.certificates.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
+      x-sdkwork-rate-limit-tier: auth-critical
       requestBody:
         required: true
         content:
@@ -477,6 +608,12 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
           description: 成功
@@ -491,6 +628,13 @@ paths:
       security:
         - AuthToken: []
           AccessToken: []
+      x-sdkwork-api-surface: app-api
+      x-sdkwork-api-authority: sdkwork-web.app
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: dual-token
+      x-sdkwork-permission: web.sites.write
+      x-sdkwork-idempotent: true
+      x-sdkwork-owner: sdkwork-web-server
       requestBody:
         required: true
         content:
@@ -655,8 +799,12 @@ components:
           items:
             $ref: '#/components/schemas/SiteResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
         page:
           type: integer
         pageSize:
@@ -709,8 +857,12 @@ components:
           items:
             $ref: '#/components/schemas/DomainResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     DomainVerifyResponse:
       type: object
@@ -765,8 +917,12 @@ components:
           type: string
           format: date-time
         durationMs:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Deployment duration in milliseconds as a string to avoid JavaScript precision loss.
         createdAt:
           type: string
           format: date-time
@@ -779,8 +935,12 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     CreateEnvVariableRequest:
       type: object
@@ -822,8 +982,12 @@ components:
           items:
             $ref: '#/components/schemas/EnvVariableResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     CreateCertificateRequest:
       type: object
@@ -873,8 +1037,12 @@ components:
           items:
             $ref: '#/components/schemas/CertificateResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
     CreateHealthCheckRequest:
       type: object
@@ -922,8 +1090,12 @@ components:
           items:
             $ref: '#/components/schemas/HealthCheckResponse'
         total:
-          type: integer
+          type: string
           format: int64
+          pattern: '^[0-9]+$'
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
 
   responses:
     BadRequest:

@@ -38,6 +38,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.read",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "parameters": [
           {
             "$ref": "#/components/parameters/PageParam"
@@ -93,17 +99,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "请求过于频繁",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.read"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "sites.create",
@@ -117,6 +133,13 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
         "requestBody": {
           "required": true,
           "content": {
@@ -139,24 +162,47 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "请求参数错误",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "资源冲突",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "422": {
-            "$ref": "#/components/responses/ValidationError"
+            "description": "校验错误",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}": {
@@ -177,6 +223,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.read",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "成功",
@@ -189,17 +241,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.read"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "patch": {
         "operationId": "sites.update",
@@ -213,6 +275,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "requestBody": {
           "required": true,
           "content": {
@@ -235,20 +303,37 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "422": {
-            "$ref": "#/components/responses/ValidationError"
+            "description": "校验错误",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "delete": {
         "operationId": "sites.delete",
@@ -262,22 +347,38 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "204": {
             "description": "删除成功"
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/activate": {
@@ -298,6 +399,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "激活成功",
@@ -310,17 +417,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/pause": {
@@ -341,6 +458,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "暂停成功",
@@ -353,17 +476,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/domains": {
@@ -384,6 +517,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "parameters": [
           {
             "$ref": "#/components/parameters/PageParam"
@@ -404,14 +543,17 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "sites.domains.create",
@@ -425,6 +567,13 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
         "requestBody": {
           "required": true,
           "content": {
@@ -447,18 +596,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "资源冲突",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/domains/{domainId}": {
@@ -482,6 +640,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "成功",
@@ -494,14 +658,17 @@
             }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "delete": {
         "operationId": "sites.domains.delete",
@@ -515,19 +682,28 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "204": {
             "description": "删除成功"
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/domains/{domainId}/verify": {
@@ -551,6 +727,14 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
+        "x-sdkwork-rate-limit-tier": "auth-critical",
         "responses": {
           "200": {
             "description": "验证成功",
@@ -563,18 +747,27 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/BadRequest"
+            "description": "请求参数错误",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/deployments": {
@@ -595,6 +788,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "parameters": [
           {
             "$ref": "#/components/parameters/PageParam"
@@ -630,14 +829,17 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "sites.deployments.create",
@@ -651,6 +853,14 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
+        "x-sdkwork-rate-limit-tier": "auth-critical",
         "requestBody": {
           "required": true,
           "content": {
@@ -673,18 +883,27 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "未认证",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "资源冲突",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/deployments/{deploymentId}": {
@@ -708,6 +927,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "成功",
@@ -720,14 +945,17 @@
             }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/deployments/{deploymentId}/rollback": {
@@ -751,6 +979,14 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
+        "x-sdkwork-rate-limit-tier": "auth-critical",
         "responses": {
           "200": {
             "description": "回滚成功",
@@ -763,15 +999,17 @@
             }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "资源不存在",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/env_variables": {
@@ -792,6 +1030,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "parameters": [
           {
             "name": "environment",
@@ -814,11 +1058,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "sites.envVariables.create",
@@ -832,6 +1072,13 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
         "requestBody": {
           "required": true,
           "content": {
@@ -854,12 +1101,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/certificates": {
@@ -875,6 +1117,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.certificates.read",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "parameters": [
           {
             "$ref": "#/components/parameters/PageParam"
@@ -895,11 +1143,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.certificates.read"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "certificates.create",
@@ -913,6 +1157,14 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.certificates.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
+        "x-sdkwork-rate-limit-tier": "auth-critical",
         "requestBody": {
           "required": true,
           "content": {
@@ -935,12 +1187,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.certificates.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     },
     "/app/v3/api/sites/{siteId}/health_checks": {
@@ -961,6 +1208,12 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
             "description": "成功",
@@ -973,11 +1226,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write"
+        "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
         "operationId": "sites.healthChecks.create",
@@ -991,6 +1240,13 @@
             "AccessToken": []
           }
         ],
+        "x-sdkwork-api-surface": "app-api",
+        "x-sdkwork-api-authority": "sdkwork-web.app",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-auth-mode": "dual-token",
+        "x-sdkwork-permission": "web.sites.write",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-owner": "sdkwork-web-server",
         "requestBody": {
           "required": true,
           "content": {
@@ -1013,12 +1269,7 @@
             }
           }
         },
-        "x-sdkwork-api-surface": "app-api",
-        "x-sdkwork-api-authority": "sdkwork-web.app",
-        "x-sdkwork-request-context": "WebRequestContext",
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-permission": "web.sites.write",
-        "x-sdkwork-idempotent": true
+        "x-sdkwork-route-auth": "dual-token"
       }
     }
   },
@@ -1230,8 +1481,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           },
           "page": {
             "type": "integer"
@@ -1310,8 +1565,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           }
         }
       },
@@ -1393,8 +1652,12 @@
             "format": "date-time"
           },
           "durationMs": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Deployment duration in milliseconds as a string to avoid JavaScript precision loss."
           },
           "createdAt": {
             "type": "string",
@@ -1412,8 +1675,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           }
         }
       },
@@ -1473,8 +1740,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           }
         }
       },
@@ -1549,8 +1820,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           }
         }
       },
@@ -1621,8 +1896,12 @@
             }
           },
           "total": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64",
+            "description": "Total item count as a string to avoid JavaScript precision loss."
           }
         }
       }

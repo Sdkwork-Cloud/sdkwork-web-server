@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-web-backend-sdk"
+  },
+  "changeFingerprint": "70dc39208a527735f2a5ec20d775ea5da4d5c4fe8a8fdd49de1c658fe7ef3112",
+  "changes": {
+    "createdGeneratedFiles": [
+      "bin/publish-core.mjs",
+      "bin/publish.ps1",
+      "bin/publish.sh",
+      "CHANGELOG.md",
+      "LICENSE",
+      "pom.xml",
+      "README.md",
+      "sdkwork-sdk.json",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/AgentApi.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/ApiPaths.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/AuditApi.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/NginxApi.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/package-info.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/api/ServerApi.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/http/HttpClient.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AgentCertificateBundle.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatRequest.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AgentNginxConfigBundle.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AgentSyncResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogPage.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/CreateNginxConfigRequest.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerRequest.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigPage.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxDeployResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxReloadResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxStatusResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/NginxValidateResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/ProblemDetail.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/ServerPage.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/ServerResponse.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/model/UpdateNginxConfigRequest.java",
+      "src/main/java/com/sdkwork/web/backend/sdk/SdkworkBackendClient.java"
+    ],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [],
+    "deletedGeneratedFiles": [],
+    "scaffoldedFiles": [
+      "custom/README.md"
+    ],
+    "preservedScaffoldFiles": [],
+    "backedUpFiles": []
+  },
+  "impact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/main/java/com/sdkwork/web/backend/sdk/api/AgentApi.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/api/ApiPaths.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/api/AuditApi.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/api/NginxApi.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/api/package-info.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/api/ServerApi.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/SdkworkBackendClient.java"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AgentCertificateBundle.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatRequest.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AgentHeartbeatResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AgentNginxConfigBundle.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AgentSyncResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogPage.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/AuditLogResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/CreateNginxConfigRequest.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerRequest.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/CreateServerResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigPage.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxConfigResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxDeployResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxReloadResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxStatusResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/NginxValidateResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/ProblemDetail.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/ServerPage.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/ServerResponse.java",
+          "src/main/java/com/sdkwork/web/backend/sdk/model/UpdateNginxConfigRequest.java"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "src/main/java/com/sdkwork/web/backend/sdk/http/HttpClient.java"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "pom.xml",
+          "sdkwork-sdk.json"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-java\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "java",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+      }
+    ]
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "preservedLegacyFiles": true
+}

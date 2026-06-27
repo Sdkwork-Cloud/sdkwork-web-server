@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "csharp",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "SDKWork.Web.BackendSdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "Api/AgentApi.cs",
+      "sha256": "5cdd5cf1e8a5ef7a6ec39cb03ff6e8622a4efc2758d8b4fb354bbeb087fa8d70"
+    },
+    {
+      "path": "Api/Api.cs",
+      "sha256": "ab872fd0b42741dc256729d8bf26713bcc6e0f47c82b5e78a758d4ac0341bdbe"
+    },
+    {
+      "path": "Api/ApiPaths.cs",
+      "sha256": "4643cd6f05d0aa987e1e4aa60ad03881176f3495e866103d05346caef8f1fc9f"
+    },
+    {
+      "path": "Api/AuditApi.cs",
+      "sha256": "e871ef6cf4e27fff295fb074eb371c3a2a2a5c83d6f1d6ce51ba12bc3ee6444c"
+    },
+    {
+      "path": "Api/NginxApi.cs",
+      "sha256": "afa3a5a98f48e92dfbf5f2a8efa817d9d4b3acd3426cebcdc0662409068ca701"
+    },
+    {
+      "path": "Api/ServerApi.cs",
+      "sha256": "419683ad8fe44286e36750b635b15a996bb9a83aef113b90f76687da0d88933e"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "64a1727613d4b6b088129400427b90dd4b37047f48beacade665a76418398740"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "9f2030a8a491d26598cbd3a1b858d55e4f8e7bb70c9bf4b6024cd8c425a84e0b"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "Http/HttpClient.cs",
+      "sha256": "6b98bee9b82359cfba7e4324bb7f211c29e14bad362f5e54bcf146f076c1e82a"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "Models/AgentCertificateBundle.cs",
+      "sha256": "e69fe25f18e506bf25114f47e57ba554f1be26fa2534021dadcd78edf298d02d"
+    },
+    {
+      "path": "Models/AgentHeartbeatRequest.cs",
+      "sha256": "24d9ede97a3e95bbfa4c4156bfb14621a5471928fd35f642aded5ffa306386e7"
+    },
+    {
+      "path": "Models/AgentHeartbeatResponse.cs",
+      "sha256": "c94fae07c51f0013a3aac38bb7a3d070f1cecfa065b8c954480215faa7d2209a"
+    },
+    {
+      "path": "Models/AgentNginxConfigBundle.cs",
+      "sha256": "b94da8750b2efcc73fa05862ceff50cafbd9665f552ae714baca17d8f5d250a1"
+    },
+    {
+      "path": "Models/AgentSyncResponse.cs",
+      "sha256": "8d773e9a7f31da4565c2f3033376db9a5dda4407cce9cc61cc0e9d810d88a1c6"
+    },
+    {
+      "path": "Models/AuditLogPage.cs",
+      "sha256": "f8b9be5bf184b9a410f87bbc4cec6f5bbdaeb4a306d64786034c14735591cd4f"
+    },
+    {
+      "path": "Models/AuditLogResponse.cs",
+      "sha256": "548adbf3635148eb25a7cda2dd1b11dacfa928ce5f123026d3fe26add2f19029"
+    },
+    {
+      "path": "Models/CreateNginxConfigRequest.cs",
+      "sha256": "b46c1e289a74ffee37baca065ab6d3ee628a2cf54710738936e38134a5ccb076"
+    },
+    {
+      "path": "Models/CreateServerRequest.cs",
+      "sha256": "225cfe6c5577bfdf62b00c37abf238dd2de10068352da63e2c2c2af86e46b8d7"
+    },
+    {
+      "path": "Models/CreateServerResponse.cs",
+      "sha256": "4491cbdade09f57466f2f034a1969b5fd214d897229f793740f29d0db09ad14d"
+    },
+    {
+      "path": "Models/NginxConfigPage.cs",
+      "sha256": "e827ea030f28dbb2d5117a2d46cb304459ac850a702b8351b2c43f102c1a11d3"
+    },
+    {
+      "path": "Models/NginxConfigResponse.cs",
+      "sha256": "ca3989ecc83e68ba1a6c66a8f525fef162c0633c405ad4ef8fa20fda951810fb"
+    },
+    {
+      "path": "Models/NginxDeployResponse.cs",
+      "sha256": "4eac75ede84675870f0fb1f75e4ff4c51ae9a2e5f21fd3f564feb6413bc47223"
+    },
+    {
+      "path": "Models/NginxReloadResponse.cs",
+      "sha256": "6148003bd78da3cb5be866124c2a0e60c0202cb8eb460aae9ae660d1fabf6f67"
+    },
+    {
+      "path": "Models/NginxStatusResponse.cs",
+      "sha256": "af187d2f8876a7b68d2cd02d9751f5cd2002e7b8e5bb4479cbae676499f6f44f"
+    },
+    {
+      "path": "Models/NginxValidateResponse.cs",
+      "sha256": "4210b61dbc3afcd74050c44252d7da21456f80d6e44b5d5613ebc2e838ac22c5"
+    },
+    {
+      "path": "Models/ProblemDetail.cs",
+      "sha256": "b2425226db3d5124dd8013f9b7e534698b78ad098285858e755074c4e6fa6acb"
+    },
+    {
+      "path": "Models/ServerPage.cs",
+      "sha256": "7dfd5f37c3a65f3d93579cb085487322d214a116ad80465b0fa0cabc217f2df2"
+    },
+    {
+      "path": "Models/ServerResponse.cs",
+      "sha256": "4ed6f5416729c9ccf1f988fb605855989fc416ba994cecc300d34069f32c55c8"
+    },
+    {
+      "path": "Models/UpdateNginxConfigRequest.cs",
+      "sha256": "55a2e065ee60932c92a2587cbac766aebf1ab480e3d2fa91acbd01bb39d6a9ad"
+    },
+    {
+      "path": "README.md",
+      "sha256": "7cad4a14a6dbf9bfc96a5851d9216d899f265049c9c667cc96d1ad2a2896b774"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "f33817cf59542c9e8b885954797bd6d648cf2c05f5d3370a1da44e8ed080e2a1"
+    },
+    {
+      "path": "SDKWork.Web.BackendSdk.csproj",
+      "sha256": "eb16e7ce2170b84116d6c4c0c2f6633d361c216939f38c6765416fe88a448a21"
+    },
+    {
+      "path": "SdkworkBackendClient.cs",
+      "sha256": "cc696c605ec78b0d4f7fa1377d4bf0855d24221ac226cf551a7c40544c303e7b"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

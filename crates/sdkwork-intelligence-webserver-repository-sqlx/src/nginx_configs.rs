@@ -326,13 +326,21 @@ impl WebRepository {
             resolve_site_internal_id(&self.pool, tenant_id.unwrap_or(0), &existing.site_id).await?;
         let now = now_rfc3339();
 
+        // 事务边界：停用旧 active config + 激活目标 config 必须原子完成，
+        // 避免停用成功但激活失败导致站点丢失生效配置。
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| store_error("begin deploy web_nginx_config transaction", error))?;
+
         sqlx::query(
             "UPDATE web_nginx_config SET is_active = 0, updated_at = $2, version = version + 1
              WHERE site_id = $1 AND is_active = 1",
         )
         .bind(site_internal_id)
         .bind(&now)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|error| store_error("deactivate web_nginx_config", error))?;
 
@@ -345,7 +353,7 @@ impl WebRepository {
             .bind(tenant_id)
             .bind(config_id)
             .bind(&now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|error| store_error("Web web_nginx_config", error))?
         } else {
@@ -356,10 +364,14 @@ impl WebRepository {
             )
             .bind(config_id)
             .bind(&now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|error| store_error("Web web_nginx_config", error))?
         };
+
+        tx.commit()
+            .await
+            .map_err(|error| store_error("commit deploy web_nginx_config transaction", error))?;
 
         if result.rows_affected() == 0 {
             return Err(WebServiceError::not_found("nginx config not found"));

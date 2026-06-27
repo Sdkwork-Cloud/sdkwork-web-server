@@ -22,6 +22,7 @@ pub struct SiteResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SitePage {
     pub items: Vec<SiteResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
     #[serde(rename = "pageSize")]
@@ -71,6 +72,7 @@ pub struct DomainResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct DomainPage {
     pub items: Vec<DomainResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
 }
 
@@ -119,6 +121,7 @@ pub struct DeploymentResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct DeploymentPage {
     pub items: Vec<DeploymentResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
     #[serde(rename = "pageSize")]
@@ -131,6 +134,10 @@ pub struct CreateDeploymentRequest {
     pub deploy_type: i32,
     #[serde(default)]
     pub environment: Option<String>,
+    /// 客户端提供的幂等键。相同 (tenant_id, idempotency_key) 的请求会返回已创建的 deployment，
+    /// 保证网络重试场景下不会产生重复部署记录。
+    #[serde(rename = "idempotencyKey", default)]
+    pub idempotency_key: Option<String>,
 }
 
 fn default_deploy_type() -> i32 {
@@ -150,6 +157,7 @@ pub struct EnvVariableResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct EnvVariablePage {
     pub items: Vec<EnvVariableResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
 }
 
@@ -190,6 +198,7 @@ pub struct CertificateResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct CertificatePage {
     pub items: Vec<CertificateResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
 }
 
@@ -234,6 +243,7 @@ pub struct HealthCheckResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct HealthCheckPage {
     pub items: Vec<HealthCheckResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
 }
 
@@ -261,6 +271,7 @@ pub struct NginxConfigResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct NginxConfigPage {
     pub items: Vec<NginxConfigResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
     #[serde(rename = "pageSize")]
@@ -316,7 +327,7 @@ pub struct NginxReloadResponse {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NginxStatusResponse {
     pub running: bool,
-    #[serde(rename = "activeConfigs")]
+    #[serde(rename = "activeConfigs", with = "sdkwork_utils_rust::serde_int64")]
     pub active_configs: i64,
 }
 
@@ -345,6 +356,7 @@ pub struct CreateServerResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ServerPage {
     pub items: Vec<ServerResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
 }
 
@@ -384,7 +396,12 @@ pub struct AgentHeartbeatRequest {
     pub agent_version: Option<String>,
     #[serde(rename = "nginxEnabled", skip_serializing_if = "Option::is_none")]
     pub nginx_enabled: Option<bool>,
-    #[serde(rename = "activeConfigs", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "activeConfigs",
+        with = "sdkwork_utils_rust::serde_int64::option",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub active_configs: Option<i64>,
     #[serde(rename = "lastSyncVersion", skip_serializing_if = "Option::is_none")]
     pub last_sync_version: Option<String>,
@@ -425,6 +442,7 @@ pub struct AgentNginxConfigBundle {
     pub config_content: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub fingerprint: String,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub version: i64,
 }
 
@@ -453,8 +471,63 @@ pub struct AuditLogResponse {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AuditLogPage {
     pub items: Vec<AuditLogResponse>,
+    #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
     #[serde(rename = "pageSize")]
     pub page_size: i32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_totals_serialize_as_decimal_strings() {
+        let page = SitePage {
+            items: Vec::new(),
+            total: 1_234_567_890_123,
+            page: 1,
+            page_size: 20,
+        };
+        let json = serde_json::to_value(&page).unwrap();
+        assert_eq!(json["total"], serde_json::json!("1234567890123"));
+        assert_eq!(json["page"], serde_json::json!(1));
+    }
+
+    #[test]
+    fn agent_nginx_config_bundle_version_round_trips_as_string() {
+        let bundle = AgentNginxConfigBundle {
+            config_id: "cfg-1".into(),
+            domain: "example.com".into(),
+            config_content: "server {}".into(),
+            fingerprint: "abc".into(),
+            version: 9_876_543_210_987,
+        };
+        let json = serde_json::to_string(&bundle).unwrap();
+        assert!(json.contains(r#""version":"9876543210987""#));
+        let parsed: AgentNginxConfigBundle = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.version, bundle.version);
+    }
+
+    #[test]
+    fn agent_heartbeat_request_optional_int64_round_trips() {
+        let request = AgentHeartbeatRequest {
+            agent_version: Some("0.1".into()),
+            nginx_enabled: Some(true),
+            active_configs: Some(42),
+            last_sync_version: Some("v1".into()),
+        };
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains(r#""activeConfigs":"42""#));
+        let parsed: AgentHeartbeatRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.active_configs, Some(42));
+    }
+
+    #[test]
+    fn rejects_non_numeric_int64_string_input() {
+        let json = r#"{"items":[],"total":"not-a-number","page":1,"pageSize":20}"#;
+        let result: Result<SitePage, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
 }

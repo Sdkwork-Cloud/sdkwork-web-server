@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "swift",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork-web-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "65eb75fb276e53c0cc7cca96fd8d630515c132fc6a4cba6ae3a6e1f77fa9c471"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "1b078b9002190ca5d9f2c89b8de3e47cecf730f5a570992c383dad9f76362f40"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "Package.swift",
+      "sha256": "6a37d20c1da32387fd6ddada0fcd753154fc00510954d4b708a0e25ee85e7b6e"
+    },
+    {
+      "path": "README.md",
+      "sha256": "6e7acc1d93b41a83dfdc6d36d845127d2ad0f28dd5995f7b94908a3d3c2f81da"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "1039a8ea44d9f65a730b5cf1ecc313b81ba9b6884e4b87ebdd5d5de936776fad"
+    },
+    {
+      "path": "Sources/API/AgentApi.swift",
+      "sha256": "a82c06278f5a9481e8193866c97688b63db61ec41cdd35672d96cbf0e656342d"
+    },
+    {
+      "path": "Sources/API/API.swift",
+      "sha256": "637d43f68b3c6289553a4bb33e40881811f3a09827951c7b3b7457ccd65f20aa"
+    },
+    {
+      "path": "Sources/API/ApiPaths.swift",
+      "sha256": "de83398a4a354d026b9b8316b5d734c4e06a100ecaefb9a10a00b65b182e6334"
+    },
+    {
+      "path": "Sources/API/AuditApi.swift",
+      "sha256": "0e613b53468cf90c6f1e1f7e09fb9cdad95df805622c6791599caf3db66acebc"
+    },
+    {
+      "path": "Sources/API/NginxApi.swift",
+      "sha256": "84e2974dc03f07d2e45386d01f0a2e2d31cfb5d6b2ac06c29400972062f7f548"
+    },
+    {
+      "path": "Sources/API/ServerApi.swift",
+      "sha256": "0e652bfb7dd0d49b605cd92546985ccd8d5113a3f996e600e748d0d67c0055e2"
+    },
+    {
+      "path": "Sources/HTTP/HttpClient.swift",
+      "sha256": "1bf6cd5c7aa0964a38c0e701185540a129e8653987a6f11521055c9beb1d7b9a"
+    },
+    {
+      "path": "Sources/Models.swift",
+      "sha256": "cce132f615201bf5912e1595ce51961fffaf4f64d002f87e549dd2515e924883"
+    },
+    {
+      "path": "Sources/SdkworkBackendClient.swift",
+      "sha256": "0c32f5581ddc081ecf7af7da4ca6cb9f1ad6573e2a3be48cd71d53eba5ab4b9f"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

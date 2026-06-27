@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "artifacts": {
+    "stateDir": ".sdkwork",
+    "manifestPath": ".sdkwork/sdkwork-generator-manifest.json",
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "executionReportPath": ".sdkwork/sdkwork-generator-report.json",
+    "manualBackupDir": ".sdkwork/manual-backups"
+  },
+  "status": "ok",
+  "mode": "apply",
+  "hasChanges": true,
+  "hasDestructiveChanges": false,
+  "changeFingerprint": "28abcc5b5dd186d2bcde8ac6a3205af8b79116623c2106a47581d6b5965bca37",
+  "changeImpact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AgentApi.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/Api.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ApiPaths.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AuditApi.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/NginxApi.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ServerApi.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/SdkworkBackendClient.kt"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/http/HttpClient.kt"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "build.gradle.kts",
+          "sdkwork-sdk.json",
+          "settings.gradle.kts"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentCertificateBundle.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatRequest.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentNginxConfigBundle.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentSyncResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogPage.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateNginxConfigRequest.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerRequest.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigPage.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxDeployResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxReloadResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxStatusResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxValidateResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/ProblemDetail.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerPage.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerResponse.kt",
+          "src/main/kotlin/com/sdkwork/web/backend/sdk/UpdateNginxConfigRequest.kt"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "executionHandoff": {
+    "schemaVersion": 1,
+    "summary": "Run the required verification commands now.",
+    "steps": [
+      {
+        "id": "verify-check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-kotlin\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "kotlin",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language kotlin --project-dir . --action check"
+      }
+    ]
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-kotlin\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "kotlin",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language kotlin --project-dir . --action check"
+      }
+    ]
+  },
+  "sdk": {
+    "name": "sdkwork-web-backend-sdk",
+    "version": "1.0.0",
+    "language": "kotlin",
+    "sdkType": "backend",
+    "protocol": "http",
+    "outputPath": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-kotlin\\generated\\server-openapi",
+    "packageName": "com.sdkwork:sdkwork-web-backend-sdk"
+  },
+  "versioning": {
+    "resolvedVersion": "1.0.0",
+    "localVersions": []
+  },
+  "stats": {
+    "totalFiles": 38,
+    "models": 20,
+    "apis": 4,
+    "types": 0
+  },
+  "warnings": [],
+  "syncSummary": {
+    "dryRun": false,
+    "controlPlaneEnabled": true,
+    "writtenFiles": 38,
+    "skippedScaffoldFiles": 0,
+    "skippedUnchangedGeneratedFiles": 0,
+    "deletedGeneratedFiles": 0,
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "changeFingerprint": "28abcc5b5dd186d2bcde8ac6a3205af8b79116623c2106a47581d6b5965bca37",
+    "changes": {
+      "createdGeneratedFiles": [
+        "bin/publish-core.mjs",
+        "bin/publish.ps1",
+        "bin/publish.sh",
+        "build.gradle.kts",
+        "CHANGELOG.md",
+        "LICENSE",
+        "README.md",
+        "sdkwork-sdk.json",
+        "settings.gradle.kts",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentCertificateBundle.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatRequest.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentNginxConfigBundle.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentSyncResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AgentApi.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/Api.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ApiPaths.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AuditApi.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/NginxApi.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ServerApi.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogPage.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateNginxConfigRequest.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerRequest.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/http/HttpClient.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigPage.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxDeployResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxReloadResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxStatusResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxValidateResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/ProblemDetail.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/SdkworkBackendClient.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerPage.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerResponse.kt",
+        "src/main/kotlin/com/sdkwork/web/backend/sdk/UpdateNginxConfigRequest.kt"
+      ],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [],
+      "deletedGeneratedFiles": [],
+      "scaffoldedFiles": [
+        "custom/README.md"
+      ],
+      "preservedScaffoldFiles": [],
+      "backedUpFiles": []
+    },
+    "impact": {
+      "schemaVersion": 1,
+      "areas": [
+        "api-surface",
+        "runtime",
+        "build-metadata",
+        "publish-workflow",
+        "documentation",
+        "custom-scaffold",
+        "unknown"
+      ],
+      "details": [
+        {
+          "area": "api-surface",
+          "paths": [
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AgentApi.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/Api.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ApiPaths.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/AuditApi.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/NginxApi.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/api/ServerApi.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/SdkworkBackendClient.kt"
+          ]
+        },
+        {
+          "area": "runtime",
+          "paths": [
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/http/HttpClient.kt"
+          ]
+        },
+        {
+          "area": "build-metadata",
+          "paths": [
+            "build.gradle.kts",
+            "sdkwork-sdk.json",
+            "settings.gradle.kts"
+          ]
+        },
+        {
+          "area": "publish-workflow",
+          "paths": [
+            "bin/publish-core.mjs",
+            "bin/publish.ps1",
+            "bin/publish.sh"
+          ]
+        },
+        {
+          "area": "documentation",
+          "paths": [
+            "CHANGELOG.md",
+            "custom/README.md",
+            "README.md"
+          ]
+        },
+        {
+          "area": "custom-scaffold",
+          "paths": [
+            "custom/README.md"
+          ]
+        },
+        {
+          "area": "unknown",
+          "paths": [
+            "LICENSE",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentCertificateBundle.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatRequest.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentHeartbeatResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentNginxConfigBundle.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AgentSyncResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogPage.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/AuditLogResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateNginxConfigRequest.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerRequest.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/CreateServerResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigPage.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxConfigResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxDeployResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxReloadResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxStatusResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/NginxValidateResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/ProblemDetail.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerPage.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/ServerResponse.kt",
+            "src/main/kotlin/com/sdkwork/web/backend/sdk/UpdateNginxConfigRequest.kt"
+          ]
+        }
+      ],
+      "requiresVerification": true,
+      "summary": "Detected impact areas: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    },
+    "verificationPlan": {
+      "shouldRun": true,
+      "runPhase": "now",
+      "summary": "Detected impact areas: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "steps": [
+        {
+          "id": "check",
+          "title": "Unified package check",
+          "required": true,
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+          "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-kotlin\\generated\\server-openapi",
+          "command": "node",
+          "args": [
+            "./bin/publish-core.mjs",
+            "--language",
+            "kotlin",
+            "--project-dir",
+            ".",
+            "--action",
+            "check"
+          ],
+          "displayCommand": "node ./bin/publish-core.mjs --language kotlin --project-dir . --action check"
+        }
+      ]
+    },
+    "executionDecision": {
+      "schemaVersion": 1,
+      "riskLevel": "high",
+      "nextAction": "verify",
+      "requiresManualReview": false,
+      "applyRequiresExpectedFingerprint": false,
+      "summary": "Changes have been applied. Run the required verification plan now.",
+      "reasons": [
+        "manual-review-required",
+        "preserved-legacy-files",
+        "unknown-impact",
+        "verification-required"
+      ]
+    },
+    "backedUpFiles": [],
+    "preservedLegacyFiles": true
+  }
+}

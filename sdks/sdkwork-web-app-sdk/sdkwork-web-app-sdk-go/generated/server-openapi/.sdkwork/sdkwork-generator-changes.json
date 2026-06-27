@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-web-app-sdk",
+    "version": "1.0.0",
+    "language": "go",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "github.com/sdkwork/sdkwork-web-app-sdk"
+  },
+  "changeFingerprint": "427d4723c65d7b90288e722a85d098fa899b4b31f09c665da55f4942ed0bc9c4",
+  "changes": {
+    "createdGeneratedFiles": [
+      "api/base.go",
+      "api/certificate.go",
+      "api/deployment.go",
+      "api/doc.go",
+      "api/domain.go",
+      "api/env_variable.go",
+      "api/monitor.go",
+      "api/paths.go",
+      "api/site.go",
+      "bin/publish-core.mjs",
+      "bin/publish.ps1",
+      "bin/publish.sh",
+      "CHANGELOG.md",
+      "doc.go",
+      "go.mod",
+      "http/client.go",
+      "http/doc.go",
+      "LICENSE",
+      "README.md",
+      "sdk.go",
+      "sdkwork-sdk.json",
+      "types/certificate_page.go",
+      "types/certificate_response.go",
+      "types/common.go",
+      "types/create_certificate_request.go",
+      "types/create_deployment_request.go",
+      "types/create_domain_request.go",
+      "types/create_env_variable_request.go",
+      "types/create_health_check_request.go",
+      "types/create_site_request.go",
+      "types/deployment_page.go",
+      "types/deployment_response.go",
+      "types/doc.go",
+      "types/domain_page.go",
+      "types/domain_response.go",
+      "types/domain_verify_response.go",
+      "types/env_variable_page.go",
+      "types/env_variable_response.go",
+      "types/health_check_page.go",
+      "types/health_check_response.go",
+      "types/problem_detail.go",
+      "types/site_page.go",
+      "types/site_response.go",
+      "types/update_site_request.go"
+    ],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [],
+    "deletedGeneratedFiles": [],
+    "scaffoldedFiles": [
+      "custom/README.md"
+    ],
+    "preservedScaffoldFiles": [],
+    "backedUpFiles": []
+  },
+  "impact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "api/base.go",
+          "api/certificate.go",
+          "api/deployment.go",
+          "api/doc.go",
+          "api/domain.go",
+          "api/env_variable.go",
+          "api/monitor.go",
+          "api/paths.go",
+          "api/site.go",
+          "http/client.go"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "types/certificate_page.go",
+          "types/certificate_response.go",
+          "types/common.go",
+          "types/create_certificate_request.go",
+          "types/create_deployment_request.go",
+          "types/create_domain_request.go",
+          "types/create_env_variable_request.go",
+          "types/create_health_check_request.go",
+          "types/create_site_request.go",
+          "types/deployment_page.go",
+          "types/deployment_response.go",
+          "types/doc.go",
+          "types/domain_page.go",
+          "types/domain_response.go",
+          "types/domain_verify_response.go",
+          "types/env_variable_page.go",
+          "types/env_variable_response.go",
+          "types/health_check_page.go",
+          "types/health_check_response.go",
+          "types/problem_detail.go",
+          "types/site_page.go",
+          "types/site_response.go",
+          "types/update_site_request.go"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "http/client.go",
+          "http/doc.go"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "go.mod",
+          "sdkwork-sdk.json"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "doc.go",
+          "LICENSE",
+          "sdk.go"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-app-sdk\\sdkwork-web-app-sdk-go\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "go",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language go --project-dir . --action check"
+      }
+    ]
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "preservedLegacyFiles": true
+}

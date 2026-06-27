@@ -1,3 +1,4 @@
+use sdkwork_utils_rust::aes_gcm_encrypt;
 use sdkwork_webserver_contract::{
     CreateEnvVariableRequest, EnvVariablePage, EnvVariableResponse, WebServiceError,
     WebServiceResult,
@@ -8,6 +9,10 @@ use crate::support::{
     bool_from_row, new_uuid, next_id, now_rfc3339, resolve_site_internal_id, store_error,
 };
 use crate::WebRepository;
+
+/// 机密值在 list/retrieve 响应中的掩码占位符。
+/// 真实值仅通过 create 接口接收并加密落库，永不在查询响应中返回明文。
+const SECRET_VALUE_MASK: &str = "***";
 
 impl WebRepository {
     pub(super) async fn list_env_variables_repo(
@@ -92,6 +97,14 @@ impl WebRepository {
         let uuid = new_uuid();
         let now = now_rfc3339();
 
+        // 机密值必须加密后落库，非机密值原样存储以保持可读性与查询效率。
+        let stored_value = if request.is_secret {
+            aes_gcm_encrypt(self.secret_key(), request.value.as_bytes())
+                .map_err(|error| WebServiceError::Internal(format!("encrypt env variable: {error}")))?
+        } else {
+            request.value.clone()
+        };
+
         sqlx::query(
             "INSERT INTO web_env_variable (
                 id, uuid, tenant_id, site_id, environment, key, value_encrypted, is_secret,
@@ -106,17 +119,22 @@ impl WebRepository {
         .bind(site_internal_id)
         .bind(&request.environment)
         .bind(&request.key)
-        .bind(&request.value)
+        .bind(&stored_value)
         .bind(request.is_secret)
         .bind(&now)
         .execute(&self.pool)
         .await
         .map_err(|error| store_error("insert web_env_variable", error))?;
 
+        // 响应中机密值返回掩码，不回传明文/密文，避免泄漏。
         Ok(EnvVariableResponse {
             id: uuid,
             key: request.key.clone(),
-            value: request.value.clone(),
+            value: if request.is_secret {
+                SECRET_VALUE_MASK.to_string()
+            } else {
+                request.value.clone()
+            },
             environment: request.environment.clone(),
             is_secret: request.is_secret,
         })
@@ -124,11 +142,18 @@ impl WebRepository {
 }
 
 fn map_env_variable_row(row: &AnyRow) -> Result<EnvVariableResponse, sqlx::Error> {
+    let is_secret = bool_from_row(row, "is_secret")?;
     Ok(EnvVariableResponse {
         id: row.try_get("uuid")?,
         key: row.try_get("key")?,
-        value: row.try_get("value_encrypted")?,
+        // 机密值在查询响应中始终返回掩码，永不明文回传。
+        // value_encrypted 列对 is_secret=true 存储的是 base64(nonce||ciphertext)，不可直接展示。
+        value: if is_secret {
+            SECRET_VALUE_MASK.to_string()
+        } else {
+            row.try_get("value_encrypted")?
+        },
         environment: row.try_get("environment")?,
-        is_secret: bool_from_row(row, "is_secret")?,
+        is_secret,
     })
 }
