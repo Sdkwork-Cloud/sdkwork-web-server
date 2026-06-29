@@ -1,19 +1,21 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{get, post},
     Extension, Json, Router,
 };
 use sdkwork_webserver_contract::{
     CreateNginxConfigRequest, CreateServerRequest, ListNginxConfigsQuery, UpdateNginxConfigRequest,
-    WebBackendApi, WebBackendRequestContext, WebServiceResult,
+    WebBackendApi, WebBackendRequestContext,
 };
 use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::{agent_routes, auth::require_backend_context, paths};
-use sdkwork_routes_webserver_common::WebApiError;
+use sdkwork_routes_webserver_common::{
+    created_resource, ok_audit_log_page, ok_nginx_config_page, ok_resource, ok_server_page,
+    WebApiError,
+};
 
 #[derive(Clone)]
 struct BackendState {
@@ -73,7 +75,7 @@ async fn list_nginx_configs(
     Query(query): Query<ListNginxConfigsQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.list_nginx_configs(&context, &query).await)
+    ok_nginx_config_page(state.api.list_nginx_configs(&context, &query).await)
 }
 
 async fn create_nginx_config(
@@ -82,7 +84,7 @@ async fn create_nginx_config(
     Json(request): Json<CreateNginxConfigRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    created_json(state.api.create_nginx_config(&context, &request).await)
+    created_resource(state.api.create_nginx_config(&context, &request).await)
 }
 
 async fn retrieve_nginx_config(
@@ -91,7 +93,7 @@ async fn retrieve_nginx_config(
     Path(config_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.retrieve_nginx_config(&context, &config_id).await)
+    ok_resource(state.api.retrieve_nginx_config(&context, &config_id).await)
 }
 
 async fn update_nginx_config(
@@ -101,7 +103,7 @@ async fn update_nginx_config(
     Json(request): Json<UpdateNginxConfigRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(
+    ok_resource(
         state
             .api
             .update_nginx_config(&context, &config_id, &request)
@@ -115,7 +117,7 @@ async fn validate_nginx_config(
     Path(config_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.validate_nginx_config(&context, &config_id).await)
+    ok_resource(state.api.validate_nginx_config(&context, &config_id).await)
 }
 
 async fn deploy_nginx_config(
@@ -124,7 +126,7 @@ async fn deploy_nginx_config(
     Path(config_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.web_nginx_config(&context, &config_id).await)
+    ok_resource(state.api.web_nginx_config(&context, &config_id).await)
 }
 
 async fn reload_nginx(
@@ -132,7 +134,7 @@ async fn reload_nginx(
     context: Option<Extension<WebBackendRequestContext>>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.reload_nginx(&context).await)
+    ok_resource(state.api.reload_nginx(&context).await)
 }
 
 async fn retrieve_nginx_status(
@@ -140,7 +142,7 @@ async fn retrieve_nginx_status(
     context: Option<Extension<WebBackendRequestContext>>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(state.api.retrieve_nginx_status(&context).await)
+    ok_resource(state.api.retrieve_nginx_status(&context).await)
 }
 
 async fn list_servers(
@@ -149,11 +151,13 @@ async fn list_servers(
     Query(query): Query<PageQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(
+    ok_server_page(
         state
             .api
             .list_servers(&context, query.page, query.page_size)
             .await,
+        query.page,
+        query.page_size,
     )
 }
 
@@ -163,7 +167,7 @@ async fn create_server(
     Json(request): Json<CreateServerRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    created_json(state.api.create_server(&context, &request).await)
+    created_resource(state.api.create_server(&context, &request).await)
 }
 
 async fn list_audit_logs(
@@ -172,30 +176,10 @@ async fn list_audit_logs(
     Query(query): Query<PageQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_backend_context(context)?;
-    ok_json(
+    ok_audit_log_page(
         state
             .api
             .list_audit_logs(&context, query.page, query.page_size)
             .await,
     )
-}
-
-fn ok_json<T>(result: WebServiceResult<T>) -> Result<Response, WebApiError>
-where
-    T: serde::Serialize,
-{
-    match result {
-        Ok(value) => Ok((StatusCode::OK, Json(value)).into_response()),
-        Err(error) => Err(error.into()),
-    }
-}
-
-fn created_json<T>(result: WebServiceResult<T>) -> Result<Response, WebApiError>
-where
-    T: serde::Serialize,
-{
-    match result {
-        Ok(value) => Ok((StatusCode::CREATED, Json(value)).into_response()),
-        Err(error) => Err(error.into()),
-    }
 }

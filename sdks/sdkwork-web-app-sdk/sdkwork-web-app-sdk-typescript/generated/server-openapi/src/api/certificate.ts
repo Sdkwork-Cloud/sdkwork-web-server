@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CertificatePage, CertificateResponse, CreateCertificateRequest } from '../types';
+import type { CertificateResponse, CreateCertificateRequest, PageInfo } from '../types';
 
 
 export interface CertificateListParams {
@@ -18,12 +18,12 @@ export class CertificateApi {
 
 
 /** 获取证书列表 */
-  async list(params?: CertificateListParams): Promise<CertificatePage> {
+  async list(params?: CertificateListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<CertificatePage>(appendQueryString(appApiPath(`/certificates`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/certificates`), query));
   }
 
 /** 申请证书 */

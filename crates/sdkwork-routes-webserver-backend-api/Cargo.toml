@@ -13,3 +13,4 @@ sdkwork-iam-web-adapter.workspace = true
 sdkwork-routes-webserver-common.workspace = true
 sdkwork-web-axum.workspace = true
 sdkwork-web-core.workspace = true
+sdkwork-utils-rust.workspace = true

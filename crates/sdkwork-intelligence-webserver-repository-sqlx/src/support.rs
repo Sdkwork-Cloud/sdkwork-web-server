@@ -1,7 +1,7 @@
 use chrono::{SecondsFormat, Utc};
-use sdkwork_database_id::SnowflakeIdGenerator;
+use sdkwork_database_id::{uuid_v4, uuid_v4_with_prefix, SnowflakeIdGenerator};
+use sdkwork_utils_rust::crypto::sha256_hash;
 use sdkwork_webserver_contract::WebServiceError;
-use sha2::{Digest, Sha256};
 use sqlx::any::AnyRow;
 use sqlx::{AnyPool, Error as SqlxError, Row};
 
@@ -34,12 +34,15 @@ pub(crate) fn next_id(generator: &SnowflakeIdGenerator) -> Result<i64, WebServic
 }
 
 pub(crate) fn new_uuid() -> String {
-    sdkwork_database_id::uuid_v4()
+    uuid_v4()
+}
+
+pub(crate) fn new_agent_token() -> String {
+    uuid_v4_with_prefix("wagent_")
 }
 
 pub(crate) fn sha256_hex(content: &str) -> String {
-    let digest = Sha256::digest(content.as_bytes());
-    hex::encode(digest)
+    sha256_hash(content.as_bytes())
 }
 
 pub(crate) fn bool_from_row(row: &AnyRow, column: &str) -> Result<bool, SqlxError> {

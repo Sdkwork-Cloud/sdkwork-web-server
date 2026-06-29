@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use sdkwork_utils_rust::id::uuid;
+
 use crate::config::EdgeRuntimeConfig;
 use crate::paths::nginx_site_path;
 use crate::{EdgeRuntimeError, EdgeRuntimeResult};
@@ -48,10 +50,7 @@ pub fn validate_nginx_config(
         ));
     }
 
-    let temp_dir = std::env::temp_dir().join(format!(
-        "sdkwork-web-nginx-validate-{}",
-        uuid::Uuid::new_v4()
-    ));
+    let temp_dir = std::env::temp_dir().join(format!("sdkwork-web-nginx-validate-{}", uuid()));
     std::fs::create_dir_all(&temp_dir).map_err(|error| {
         EdgeRuntimeError::Filesystem(format!("create nginx validate temp dir: {error}"))
     })?;

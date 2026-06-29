@@ -99,8 +99,9 @@ impl WebRepository {
 
         // 机密值必须加密后落库，非机密值原样存储以保持可读性与查询效率。
         let stored_value = if request.is_secret {
-            aes_gcm_encrypt(self.secret_key(), request.value.as_bytes())
-                .map_err(|error| WebServiceError::Internal(format!("encrypt env variable: {error}")))?
+            aes_gcm_encrypt(self.secret_key(), request.value.as_bytes()).map_err(|error| {
+                WebServiceError::Internal(format!("encrypt env variable: {error}"))
+            })?
         } else {
             request.value.clone()
         };

@@ -2233,7 +2233,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "dotenvy",
- "hex",
  "sdkwork-database-config",
  "sdkwork-database-id",
  "sdkwork-database-sqlx",
@@ -2244,10 +2243,8 @@ dependencies = [
  "sdkwork-webserver-database-host",
  "sdkwork-webserver-edge-runtime",
  "serde_json",
- "sha2",
  "sqlx",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -2288,6 +2285,7 @@ dependencies = [
  "sdkwork-iam-web-adapter",
  "sdkwork-intelligence-webserver-service",
  "sdkwork-routes-webserver-common",
+ "sdkwork-utils-rust",
  "sdkwork-web-axum",
  "sdkwork-web-core",
  "sdkwork-webserver-contract",
@@ -2301,6 +2299,7 @@ dependencies = [
  "async-trait",
  "axum",
  "sdkwork-iam-web-adapter",
+ "sdkwork-utils-rust",
  "sdkwork-web-core",
  "sdkwork-webserver-contract",
  "serde",
@@ -2394,13 +2393,32 @@ dependencies = [
  "getrandom 0.2.17",
  "hmac",
  "http",
+ "percent-encoding",
  "rsa",
+ "sdkwork-utils-rust",
  "sdkwork-web-contract",
  "serde",
  "serde_json",
  "sha2",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "sdkwork-web-standalone-gateway"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "sdkwork-intelligence-webserver-repository-sqlx",
+ "sdkwork-intelligence-webserver-service",
+ "sdkwork-routes-webserver-app-api",
+ "sdkwork-routes-webserver-backend-api",
+ "sdkwork-routes-webserver-common",
+ "sdkwork-web-bootstrap",
+ "sdkwork-webserver-database-host",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2423,23 +2441,6 @@ dependencies = [
  "tokio",
  "tracing",
  "x509-parser 0.16.0",
-]
-
-[[package]]
-name = "sdkwork-webserver-api-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "sdkwork-intelligence-webserver-repository-sqlx",
- "sdkwork-intelligence-webserver-service",
- "sdkwork-routes-webserver-app-api",
- "sdkwork-routes-webserver-backend-api",
- "sdkwork-routes-webserver-common",
- "sdkwork-web-bootstrap",
- "sdkwork-webserver-database-host",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2490,6 +2491,7 @@ name = "sdkwork-webserver-edge-runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "sdkwork-utils-rust",
  "sdkwork-webserver-acme-service",
  "serde",
  "serde_json",
@@ -2498,7 +2500,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]

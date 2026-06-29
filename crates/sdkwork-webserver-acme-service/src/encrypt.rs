@@ -8,13 +8,11 @@ use sdkwork_utils_rust::{aes_gcm_decrypt, aes_gcm_encrypt};
 use crate::{AcmeServiceError, AcmeServiceResult};
 
 pub fn encrypt_secret(key: &[u8], plaintext: &[u8]) -> AcmeServiceResult<String> {
-    aes_gcm_encrypt(key, plaintext)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))
+    aes_gcm_encrypt(key, plaintext).map_err(|error| AcmeServiceError::Encryption(error.to_string()))
 }
 
 pub fn decrypt_secret(key: &[u8], encoded: &str) -> AcmeServiceResult<Vec<u8>> {
-    aes_gcm_decrypt(key, encoded)
-        .map_err(|error| AcmeServiceError::Encryption(error.to_string()))
+    aes_gcm_decrypt(key, encoded).map_err(|error| AcmeServiceError::Encryption(error.to_string()))
 }
 
 #[cfg(test)]

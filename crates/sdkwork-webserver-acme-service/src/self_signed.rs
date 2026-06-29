@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
-use sha2::{Digest, Sha256};
+use sdkwork_utils_rust::crypto::sha256_hash;
 
 use crate::model::IssuedCertificateMaterial;
 use crate::{AcmeServiceError, AcmeServiceResult};
@@ -52,8 +52,7 @@ pub fn issue_self_signed(
 }
 
 pub fn fingerprint_sha256_hex(pem_or_der: &[u8]) -> String {
-    let digest = Sha256::digest(pem_or_der);
-    hex::encode(digest)
+    sha256_hash(pem_or_der)
 }
 
 #[cfg(test)]

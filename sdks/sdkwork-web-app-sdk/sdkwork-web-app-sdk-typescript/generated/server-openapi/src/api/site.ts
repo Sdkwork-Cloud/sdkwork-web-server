@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateSiteRequest, SitePage, SiteResponse, UpdateSiteRequest } from '../types';
+import type { CreateSiteRequest, PageInfo, SiteResponse, UpdateSiteRequest } from '../types';
 
 
 export interface SiteListParams {
@@ -21,7 +21,7 @@ export class SiteApi {
 
 
 /** 获取站点列表 */
-  async list(params?: SiteListParams): Promise<SitePage> {
+  async list(params?: SiteListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -29,7 +29,7 @@ export class SiteApi {
       { name: 'siteType', value: params?.siteType, style: 'form', explode: true, allowReserved: false },
       { name: 'keyword', value: params?.keyword, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SitePage>(appendQueryString(appApiPath(`/sites`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/sites`), query));
   }
 
 /** 创建站点 */

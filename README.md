@@ -1,29 +1,29 @@
 # SDKWork Web Server
 
-SDKWork Web Server is a standards-aligned HTTP backend service with app-api and
-backend-api surfaces, integrated with `sdkwork-web-framework`, `sdkwork-database`, and
-`sdkwork-utils-rust`.
+Standards-aligned HTTP backend for site, domain, deployment, certificate, nginx, and edge-agent management. Exposes **app-api** and **backend-api** surfaces integrated with SDKWork platform frameworks.
 
-## Standards Alignment
+## Framework Integration
 
 | Framework | Status |
 | --- | --- |
 | `sdkwork-web-framework` | Integrated on app-api and backend-api routers |
 | `sdkwork-database` | Integrated through `database/` assets and `sdkwork-webserver-database-host` |
-| `sdkwork-utils-rust` | Used for env parsing and shared validation helpers |
-| `sdkwork-discovery` | Deferred until RPC services are introduced |
+| `sdkwork-utils-rust` | API envelope, crypto, env parsing, slugify, serde helpers |
+| `sdkwork-id-core` (via `sdkwork-database-id`) | Snowflake PKs and UUID resource identifiers |
+| `sdkwork-discovery` | Not required until RPC split-services are introduced |
+| `sdkwork-drive` | Not required until file-upload API operations are added |
 
 ## Root Layout
 
 | Directory | Purpose |
 | --- | --- |
 | `apis/` | Authoritative OpenAPI contracts |
-| `crates/` | Rust service, repository, route, and API server crates |
+| `crates/` | Rust service, repository, route, and gateway crates |
 | `database/` | Database contract, baseline DDL, migrations, seeds |
 | `specs/` | Component and topology contracts |
 | `configs/` | Topology profile env templates |
-| `deployments/` | Docker and release handoff descriptors |
-| `docs/` | PRD, architecture, ADRs |
+| `deployments/` | Docker and Kubernetes descriptors |
+| `docs/` | PRD, architecture, ADRs, standards alignment |
 | `tests/` | Cross-package contract tests |
 
 ## Development
@@ -37,10 +37,7 @@ pnpm verify
 ## Documentation
 
 - Standards entry: `../sdkwork-specs/README.md`
-- Alignment notes: `docs/standards-alignment.md`
-
-## Documentation Canon
-
+- Alignment status: [docs/standards-alignment.md](docs/standards-alignment.md)
 - [docs/README.md](docs/README.md)
 - [docs/product/prd/PRD.md](docs/product/prd/PRD.md)
 - [docs/architecture/tech/TECH_ARCHITECTURE.md](docs/architecture/tech/TECH_ARCHITECTURE.md)

@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AuditLogPage } from '../types';
+import type { AuditLogResponse, PageInfo } from '../types';
 
 
 export interface AuditAuditLogsListParams {
@@ -23,7 +23,7 @@ export class AuditAuditLogsApi {
 
 
 /** 获取审计日志列表 */
-  async list(params?: AuditAuditLogsListParams): Promise<AuditLogPage> {
+  async list(params?: AuditAuditLogsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -33,7 +33,7 @@ export class AuditAuditLogsApi {
       { name: 'startDate', value: params?.startDate, style: 'form', explode: true, allowReserved: false },
       { name: 'endDate', value: params?.endDate, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AuditLogPage>(appendQueryString(backendApiPath(`/audit_logs`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/audit_logs`), query));
   }
 }
 

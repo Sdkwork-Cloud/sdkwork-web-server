@@ -1,12 +1,12 @@
+use sdkwork_utils_rust::crypto::sha256_hash;
 use sdkwork_webserver_contract::{
     AgentCertificateBundle, AgentHeartbeatRequest, AgentHeartbeatResponse, AgentNginxConfigBundle,
     AgentSyncResponse, WebServiceError, WebServiceResult,
 };
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 use sqlx::{any::AnyRow, Row};
 
-use crate::support::{now_rfc3339, sha256_hex, store_error};
+use crate::support::{new_agent_token, now_rfc3339, sha256_hex, store_error};
 use crate::WebRepository;
 
 #[derive(Clone, Debug)]
@@ -16,11 +16,11 @@ pub(crate) struct AuthenticatedAgent {
 }
 
 pub(crate) fn hash_agent_token(token: &str) -> String {
-    hex::encode(Sha256::digest(token.as_bytes()))
+    sha256_hash(token.as_bytes())
 }
 
 pub(crate) fn generate_agent_token() -> String {
-    format!("wagent_{}", uuid::Uuid::new_v4())
+    new_agent_token()
 }
 
 impl WebRepository {
@@ -291,10 +291,7 @@ pub(crate) fn compute_agent_sync_version(
         ));
     }
     parts.sort_unstable();
-    format!(
-        "sv1:{}",
-        hex::encode(Sha256::digest(parts.join("\n").as_bytes()))
-    )
+    format!("sv1:{}", sha256_hash(parts.join("\n").as_bytes()))
 }
 
 #[cfg(test)]

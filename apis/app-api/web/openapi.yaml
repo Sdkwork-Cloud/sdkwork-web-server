@@ -10,17 +10,16 @@ servers:
     description: Production
   - url: http://localhost:3800
     description: Local Development
-
 security:
   - AuthToken: []
     AccessToken: []
-
 paths:
   /app/v3/api/sites:
     get:
       operationId: sites.list
       summary: 获取站点列表
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -31,37 +30,66 @@ paths:
       x-sdkwork-permission: web.sites.read
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
         - name: status
           in: query
           schema:
             type: integer
-            enum: [0, 1, 2, 3]
+            enum:
+              - 0
+              - 1
+              - 2
+              - 3
         - name: siteType
           in: query
           schema:
             type: integer
-            enum: [1, 2, 3, 4, 5, 6]
+            enum:
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
+              - 6
         - name: keyword
           in: query
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SitePage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/RateLimited'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a1
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/SiteResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     post:
       operationId: sites.create
       summary: 创建站点
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -77,30 +105,42 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSiteRequest'
+              $ref: "#/components/schemas/CreateSiteRequest"
       responses:
-        '201':
+        "201":
           description: 创建成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SiteResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/SiteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /app/v3/api/sites/{siteId}:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     get:
       operationId: sites.retrieve
       summary: 获取站点详情
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -111,20 +151,33 @@ paths:
       x-sdkwork-permission: web.sites.read
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SiteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/SiteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       operationId: sites.update
       summary: 更新站点
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -139,24 +192,37 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateSiteRequest'
+              $ref: "#/components/schemas/UpdateSiteRequest"
       responses:
-        '200':
+        "200":
           description: 更新成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SiteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/SiteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
     delete:
       operationId: sites.delete
       summary: 删除站点
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -167,20 +233,20 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '204':
+        "204":
           description: 删除成功
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/activate:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     post:
       operationId: sites.activate
       summary: 激活站点
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -191,24 +257,36 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 激活成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SiteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/SiteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/pause:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     post:
       operationId: sites.pause
       summary: 暂停站点
-      tags: [site]
+      tags:
+        - site
       security:
         - AuthToken: []
           AccessToken: []
@@ -219,24 +297,36 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 暂停成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SiteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/SiteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/domains:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     get:
       operationId: sites.domains.list
       summary: 获取站点域名列表
-      tags: [domain]
+      tags:
+        - domain
       security:
         - AuthToken: []
           AccessToken: []
@@ -247,21 +337,40 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomainPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a2
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/DomainResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     post:
       operationId: sites.domains.create
       summary: 绑定域名
-      tags: [domain]
+      tags:
+        - domain
       security:
         - AuthToken: []
           AccessToken: []
@@ -277,27 +386,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDomainRequest'
+              $ref: "#/components/schemas/CreateDomainRequest"
       responses:
-        '201':
+        "201":
           description: 创建成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomainResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DomainResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /app/v3/api/sites/{siteId}/domains/{domainId}:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
-      - $ref: '#/components/parameters/DomainIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
+      - $ref: "#/components/parameters/DomainIdParam"
     get:
       operationId: sites.domains.retrieve
       summary: 获取域名详情
-      tags: [domain]
+      tags:
+        - domain
       security:
         - AuthToken: []
           AccessToken: []
@@ -308,18 +429,31 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomainResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DomainResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       operationId: sites.domains.delete
       summary: 解绑域名
-      tags: [domain]
+      tags:
+        - domain
       security:
         - AuthToken: []
           AccessToken: []
@@ -330,19 +464,19 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '204':
+        "204":
           description: 删除成功
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/domains/{domainId}/verify:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
-      - $ref: '#/components/parameters/DomainIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
+      - $ref: "#/components/parameters/DomainIdParam"
     post:
       operationId: sites.domains.verify
       summary: 验证域名所有权
-      tags: [domain]
+      tags:
+        - domain
       security:
         - AuthToken: []
           AccessToken: []
@@ -355,24 +489,36 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       x-sdkwork-rate-limit-tier: auth-critical
       responses:
-        '200':
+        "200":
           description: 验证成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomainVerifyResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DomainVerifyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/deployments:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     get:
       operationId: sites.deployments.list
       summary: 获取部署历史
-      tags: [deployment]
+      tags:
+        - deployment
       security:
         - AuthToken: []
           AccessToken: []
@@ -383,26 +529,51 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
         - name: status
           in: query
           schema:
             type: integer
-            enum: [0, 1, 2, 3, 4, 5]
+            enum:
+              - 0
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeploymentPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a3
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/DeploymentResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     post:
       operationId: sites.deployments.create
       summary: 发起部署
-      tags: [deployment]
+      tags:
+        - deployment
       security:
         - AuthToken: []
           AccessToken: []
@@ -419,27 +590,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDeploymentRequest'
+              $ref: "#/components/schemas/CreateDeploymentRequest"
       responses:
-        '201':
+        "201":
           description: 部署已触发
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeploymentResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DeploymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /app/v3/api/sites/{siteId}/deployments/{deploymentId}:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
-      - $ref: '#/components/parameters/DeploymentIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
+      - $ref: "#/components/parameters/DeploymentIdParam"
     get:
       operationId: sites.deployments.retrieve
       summary: 获取部署详情
-      tags: [deployment]
+      tags:
+        - deployment
       security:
         - AuthToken: []
           AccessToken: []
@@ -450,23 +633,35 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeploymentResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DeploymentResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/deployments/{deploymentId}/rollback:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
-      - $ref: '#/components/parameters/DeploymentIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
+      - $ref: "#/components/parameters/DeploymentIdParam"
     post:
       operationId: sites.deployments.rollback
       summary: 回滚部署
-      tags: [deployment]
+      tags:
+        - deployment
       security:
         - AuthToken: []
           AccessToken: []
@@ -479,22 +674,34 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       x-sdkwork-rate-limit-tier: auth-critical
       responses:
-        '200':
+        "200":
           description: 回滚成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeploymentResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/DeploymentResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/v3/api/sites/{siteId}/env_variables:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     get:
       operationId: sites.envVariables.list
       summary: 获取环境变量列表
-      tags: [envVariable]
+      tags:
+        - envVariable
       security:
         - AuthToken: []
           AccessToken: []
@@ -511,16 +718,35 @@ paths:
             type: string
             default: production
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvVariablePage'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a4
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/EnvVariableResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
     post:
       operationId: sites.envVariables.create
       summary: 创建环境变量
-      tags: [envVariable]
+      tags:
+        - envVariable
       security:
         - AuthToken: []
           AccessToken: []
@@ -536,20 +762,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateEnvVariableRequest'
+              $ref: "#/components/schemas/CreateEnvVariableRequest"
       responses:
-        '201':
+        "201":
           description: 创建成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvVariableResponse'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/EnvVariableResponse"
   /app/v3/api/certificates:
     get:
       operationId: certificates.list
       summary: 获取证书列表
-      tags: [certificate]
+      tags:
+        - certificate
       security:
         - AuthToken: []
           AccessToken: []
@@ -560,19 +798,38 @@ paths:
       x-sdkwork-permission: web.certificates.read
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CertificatePage'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a5
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/CertificateResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
     post:
       operationId: certificates.create
       summary: 申请证书
-      tags: [certificate]
+      tags:
+        - certificate
       security:
         - AuthToken: []
           AccessToken: []
@@ -589,22 +846,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCertificateRequest'
+              $ref: "#/components/schemas/CreateCertificateRequest"
       responses:
-        '201':
+        "201":
           description: 证书申请已触发
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CertificateResponse'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/CertificateResponse"
   /app/v3/api/sites/{siteId}/health_checks:
     parameters:
-      - $ref: '#/components/parameters/SiteIdParam'
+      - $ref: "#/components/parameters/SiteIdParam"
     get:
       operationId: sites.healthChecks.list
       summary: 获取健康检查配置
-      tags: [monitor]
+      tags:
+        - monitor
       security:
         - AuthToken: []
           AccessToken: []
@@ -615,16 +884,35 @@ paths:
       x-sdkwork-permission: web.sites.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthCheckPage'
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - items
+                          - pageInfo
+                        properties:
+                          items: &a6
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/HealthCheckResponse"
+                          pageInfo:
+                            $ref: "#/components/schemas/PageInfo"
     post:
       operationId: sites.healthChecks.create
       summary: 创建健康检查
-      tags: [monitor]
+      tags:
+        - monitor
       security:
         - AuthToken: []
           AccessToken: []
@@ -640,15 +928,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateHealthCheckRequest'
+              $ref: "#/components/schemas/CreateHealthCheckRequest"
       responses:
-        '201':
+        "201":
           description: 创建成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthCheckResponse'
-
+                allOf:
+                  - $ref: "#/components/schemas/SdkWorkApiResponse"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - item
+                        properties:
+                          item:
+                            $ref: "#/components/schemas/HealthCheckResponse"
 components:
   securitySchemes:
     AuthToken:
@@ -663,7 +962,6 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
-
   parameters:
     PageParam:
       name: page
@@ -701,28 +999,45 @@ components:
       schema:
         type: string
         format: uuid
-
   schemas:
     ProblemDetail:
       type: object
+      additionalProperties: true
+      required:
+        - type
+        - title
+        - status
+        - code
+        - traceId
       properties:
         type:
           type: string
-          format: uri
+          format: uri-reference
         title:
           type: string
         status:
           type: integer
+          minimum: 100
+          maximum: 599
         detail:
           type: string
         instance:
           type: string
-        requestId:
+        code:
+          $ref: "#/components/schemas/SdkWorkPlatformErrorCode"
+        traceId:
           type: string
-
+          format: uuid
+          description: Server-owned request correlation id.
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
     CreateSiteRequest:
       type: object
-      required: [name, siteType]
+      required:
+        - name
+        - siteType
       properties:
         name:
           type: string
@@ -732,13 +1047,19 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-          pattern: '^[a-z0-9][a-z0-9\-]*[a-z0-9]$'
+          pattern: ^[a-z0-9][a-z0-9\-]*[a-z0-9]$
         description:
           type: string
           maxLength: 500
         siteType:
           type: integer
-          enum: [1, 2, 3, 4, 5, 6]
+          enum:
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
         runtimeConfig:
           type: object
           properties:
@@ -752,7 +1073,6 @@ components:
               type: string
             startCommand:
               type: string
-
     UpdateSiteRequest:
       type: object
       properties:
@@ -765,7 +1085,6 @@ components:
           maxLength: 500
         runtimeConfig:
           type: object
-
     SiteResponse:
       type: object
       properties:
@@ -790,18 +1109,14 @@ components:
         updatedAt:
           type: string
           format: date-time
-
     SitePage:
       type: object
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/SiteResponse'
+        items: *a1
         total:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
           description: Total item count as a string to avoid JavaScript precision loss.
@@ -809,10 +1124,10 @@ components:
           type: integer
         pageSize:
           type: integer
-
     CreateDomainRequest:
       type: object
-      required: [hostname]
+      required:
+        - hostname
       properties:
         hostname:
           type: string
@@ -825,8 +1140,10 @@ components:
           default: true
         sslProvider:
           type: string
-          enum: [letsencrypt, custom, none]
-
+          enum:
+            - letsencrypt
+            - custom
+            - none
     DomainResponse:
       type: object
       properties:
@@ -848,22 +1165,17 @@ components:
         createdAt:
           type: string
           format: date-time
-
     DomainPage:
       type: object
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/DomainResponse'
+        items: *a2
         total:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
           description: Total item count as a string to avoid JavaScript precision loss.
-
     DomainVerifyResponse:
       type: object
       properties:
@@ -873,14 +1185,18 @@ components:
           type: string
         token:
           type: string
-
     CreateDeploymentRequest:
       type: object
-      required: [deployType]
+      required:
+        - deployType
       properties:
         deployType:
           type: integer
-          enum: [1, 2, 3, 4]
+          enum:
+            - 1
+            - 2
+            - 3
+            - 4
         versionTag:
           type: string
           maxLength: 100
@@ -894,7 +1210,6 @@ components:
         idempotencyKey:
           type: string
           maxLength: 200
-
     DeploymentResponse:
       type: object
       properties:
@@ -919,32 +1234,30 @@ components:
         durationMs:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Deployment duration in milliseconds as a string to avoid JavaScript precision loss.
+          description: Deployment duration in milliseconds as a string to avoid JavaScript
+            precision loss.
         createdAt:
           type: string
           format: date-time
-
     DeploymentPage:
       type: object
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeploymentResponse'
+        items: *a3
         total:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
           description: Total item count as a string to avoid JavaScript precision loss.
-
     CreateEnvVariableRequest:
       type: object
-      required: [key, value]
+      required:
+        - key
+        - value
       properties:
         key:
           type: string
@@ -957,7 +1270,6 @@ components:
         isSecret:
           type: boolean
           default: true
-
     EnvVariableResponse:
       type: object
       properties:
@@ -973,36 +1285,35 @@ components:
         createdAt:
           type: string
           format: date-time
-
     EnvVariablePage:
       type: object
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnvVariableResponse'
+        items: *a4
         total:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
           description: Total item count as a string to avoid JavaScript precision loss.
-
     CreateCertificateRequest:
       type: object
-      required: [domainId, certType]
+      required:
+        - domainId
+        - certType
       properties:
         domainId:
           type: string
           format: uuid
         certType:
           type: integer
-          enum: [1, 2, 3]
+          enum:
+            - 1
+            - 2
+            - 3
         autoRenew:
           type: boolean
           default: true
-
     CertificateResponse:
       type: object
       properties:
@@ -1028,29 +1339,28 @@ components:
         createdAt:
           type: string
           format: date-time
-
     CertificatePage:
       type: object
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/CertificateResponse'
+        items: *a5
         total:
           type: string
           format: int64
-          pattern: '^[0-9]+$'
+          pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
           description: Total item count as a string to avoid JavaScript precision loss.
-
     CreateHealthCheckRequest:
       type: object
-      required: [checkType]
+      required:
+        - checkType
       properties:
         checkType:
           type: integer
-          enum: [1, 2, 3]
+          enum:
+            - 1
+            - 2
+            - 3
         checkUrl:
           type: string
           maxLength: 2000
@@ -1063,7 +1373,6 @@ components:
         retryCount:
           type: integer
           default: 3
-
     HealthCheckResponse:
       type: object
       properties:
@@ -1081,56 +1390,184 @@ components:
         createdAt:
           type: string
           format: date-time
-
     HealthCheckPage:
       type: object
+      properties:
+        items: *a6
+        total:
+          type: string
+          format: int64
+          pattern: ^[0-9]+$
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+          description: Total item count as a string to avoid JavaScript precision loss.
+    SdkWorkApiResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - data
+        - traceId
+      properties:
+        code:
+          type: integer
+          format: int32
+          enum:
+            - 0
+          default: 0
+          minimum: 0
+          maximum: 0
+        data:
+          description: Operation-specific payload typed per response schema.
+        traceId:
+          type: string
+          format: uuid
+          description: Server-owned request correlation id.
+    SdkWorkResourceData:
+      type: object
+      additionalProperties: false
+      required:
+        - item
+      properties:
+        item:
+          type: object
+          additionalProperties: true
+          description: Typed domain resource for the operation.
+    SdkWorkPageData:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - pageInfo
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/HealthCheckResponse'
-        total:
+            type: object
+            additionalProperties: true
+        pageInfo:
+          $ref: "#/components/schemas/PageInfo"
+    SdkWorkCommandData:
+      type: object
+      additionalProperties: false
+      required:
+        - accepted
+      properties:
+        accepted:
+          type: boolean
+          const: true
+        resourceId:
           type: string
-          format: int64
-          pattern: '^[0-9]+$'
-          x-sdkwork-int64-string: true
-          x-sdkwork-rust-type: i64
-          description: Total item count as a string to avoid JavaScript precision loss.
-
+        status:
+          type: string
+    PageInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+      properties:
+        mode:
+          type: string
+          enum:
+            - offset
+            - cursor
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 200
+        totalItems:
+          type: string
+          pattern: ^[0-9]+$
+        totalPages:
+          type: integer
+          minimum: 0
+        nextCursor:
+          type:
+            - string
+            - "null"
+        hasMore:
+          type: boolean
+    SdkWorkPlatformErrorCode:
+      type: integer
+      format: int32
+      minimum: 40001
+      maximum: 79999
+      description: Platform or domain error code per API_SPEC.md §15.3.
+    FieldError:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        code:
+          type: integer
+          format: int32
+          minimum: 40011
+          maximum: 40099
+    SdkWorkResourceResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/SdkWorkResourceData"
+    SdkWorkListResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/SdkWorkPageData"
+    SdkWorkCommandResponse:
+      allOf:
+        - $ref: "#/components/schemas/SdkWorkApiResponse"
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/SdkWorkCommandData"
   responses:
     BadRequest:
       description: 请求参数错误
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: &a7
+            $ref: "#/components/schemas/ProblemDetail"
     Unauthorized:
       description: 未认证
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: *a7
     NotFound:
       description: 资源不存在
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: *a7
     Conflict:
       description: 资源冲突
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: *a7
     ValidationError:
       description: 校验错误
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: *a7
     RateLimited:
       description: 请求过于频繁
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
+          schema: *a7

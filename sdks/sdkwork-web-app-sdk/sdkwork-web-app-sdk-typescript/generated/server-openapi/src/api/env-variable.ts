@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateEnvVariableRequest, EnvVariablePage, EnvVariableResponse } from '../types';
+import type { CreateEnvVariableRequest, EnvVariableResponse, PageInfo } from '../types';
 
 
 export interface EnvVariableSitesEnvVariablesListParams {
@@ -17,11 +17,11 @@ export class EnvVariableSitesEnvVariablesApi {
 
 
 /** 获取环境变量列表 */
-  async list(siteId: string, params?: EnvVariableSitesEnvVariablesListParams): Promise<EnvVariablePage> {
+  async list(siteId: string, params?: EnvVariableSitesEnvVariablesListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'environment', value: params?.environment, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<EnvVariablePage>(appendQueryString(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/env_variables`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/env_variables`), query));
   }
 
 /** 创建环境变量 */

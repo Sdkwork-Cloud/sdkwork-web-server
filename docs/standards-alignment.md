@@ -1,61 +1,63 @@
 # Standards Alignment
 
-SDKWork Web Server standards alignment status for `sdkwork-web-server`.
+SDKWork Web Server (`sdkwork-web-server`) alignment status against `sdkwork-specs`.
 
-## Integrated Frameworks
+Updated: 2026-06-29
+
+## Framework Integration
 
 | Framework | Status | Evidence |
 | --- | --- | --- |
-| `sdkwork-web-framework` | Integrated | `sdkwork-routes-webserver-*` web bootstrap, dual-token route manifests, auth context injection |
-| `sdkwork-database` | Integrated | `database/` assets, `sdkwork-webserver-database-host`, `pnpm db:*` |
-| `sdkwork-utils-rust` | Integrated | `sdkwork-webserver-core` env parsing, repository slugify |
-| `sdkwork-discovery` | Deferred | V1 is HTTP-only unified-process; add when split-services RPC is required |
+| `sdkwork-web-framework` | Integrated | `sdkwork-routes-webserver-*` dual-token/agent-token manifests, IAM resolver, `service_router` bootstrap |
+| `sdkwork-database` | Integrated | `database/` contract assets, `sdkwork-webserver-database-host`, full `pnpm db:*` lifecycle |
+| `sdkwork-utils-rust` | Integrated | API envelope, ProblemDetail, AES-GCM, SHA-256, env parsing, slugify, serde_int64 |
+| `sdkwork-id-core` (via `sdkwork-database-id`) | Integrated | Snowflake PKs, UUID v4 resource IDs, prefixed agent tokens (`wagent_`) |
+| `sdkwork-discovery` | Not required | HTTP unified-process only; adopt when split-services RPC is introduced |
+| `sdkwork-drive` | Not required | No file-upload operations in current API surface; adopt when upload features are added |
 
-## Implementation Status
+## Production Readiness
 
 | Layer | Status | Notes |
 | --- | --- | --- |
-| OpenAPI authorities | Complete | App + backend YAML materialized to JSON, route manifests, SDK assembly |
+| OpenAPI authorities | Complete | App + backend YAML, materialized JSON, route manifests, SDK assembly |
+| API envelope | Complete | `SdkWorkApiResponse` success + `ProblemDetail` errors on all L2+ routes |
 | Service layer | Complete | `WebAppApi` + `WebBackendApi` on `WebService` |
-| Repository SQLx | Complete | All `web_*` tables wired via `WebRepositoryPort` |
-| HTTP routes | Complete | 22 app + 11 backend operations aligned with OpenAPI paths |
-| Runtime bootstrap | Complete | `bootstrap_web_runtime_from_env()` with DB lifecycle + ACME issuer + edge runtime |
-| ACME / certificates | Complete | instant-acme (LE), rcgen (self-signed), AES-GCM encrypt, renewal worker |
+| Repository SQLx | Complete | All `web_*` tables via `WebRepositoryPort` |
+| HTTP routes | Complete | 22 app + 13 backend operations aligned with OpenAPI paths |
+| Runtime bootstrap | Complete | DB lifecycle, ACME issuer, edge runtime, readiness probe |
+| ACME / certificates | Complete | Let's Encrypt + self-signed, AES-GCM key storage, renewal worker |
 | Edge runtime | Complete | nginx deploy/validate/reload, cert bundle materialization |
-| Edge agent | Complete | heartbeat + conditional sync (`ifSyncVersion`); local state + offline compensation |
-| Certificate worker | Complete | `sdkwork-webserver-certificate-worker` scans `autoRenew` + `renewal_status` |
-| Server registration | Complete | `servers.create` returns one-time `agentToken`; heartbeat updates status |
-| Deployments | Complete | Docker + Kubernetes manifests under `deployments/` |
+| Edge agent | Complete | heartbeat + conditional sync (`ifSyncVersion`) |
+| IAM security | Complete | Production fail-closed; dual-token + agent-token auth modes |
+| Deployments | Complete | Docker + Kubernetes under `deployments/` |
+| Packaging / CI | Complete | `sdkwork.workflow.json`, `.github/workflows/package.yml` |
 
-## Certificate Stack (ADR-20260623)
+## Certificate Stack
 
-| Component | Choice | Status |
-| --- | --- | --- |
-| ACME client | `instant-acme` | Integrated |
-| CA (production) | Let's Encrypt | Integrated (HTTP-01, staging default in dev) |
-| Self-signed (dev) | `rcgen` (`certType=3`) | Integrated |
-| Private key storage | AES-256-GCM (env key; KMS in prod) | Integrated |
-| Auto renewal | Worker scan + `renewal_status` state machine | Integrated |
-| Cert distribution | Agent sync + stable `sv1:` fingerprint + `ifSyncVersion` conditional pull | Phase 2a (ADR-20260623-cert-distribution-topology) |
-| Incremental / push | Per-node delta queue + push notify | Phase 2b |
+| Component | Choice |
+| --- | --- |
+| ACME client | `instant-acme` |
+| Production CA | Let's Encrypt (HTTP-01) |
+| Development CA | `rcgen` self-signed (`certType=3`) |
+| Private key storage | AES-256-GCM (`SDKWORK_WEB_SECRET_ENCRYPTION_KEY`) |
+| Auto renewal | `sdkwork-webserver-certificate-worker` + `renewal_status` state machine |
+| Cert distribution | Agent sync + stable `sv1:` fingerprint + `ifSyncVersion` conditional pull |
 
 ## Verification
 
 ```powershell
 pnpm verify
-cargo test --workspace
-pnpm db:validate
-pnpm topology:validate
-pnpm api:materialize
+node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .
 node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .
 ```
 
-## Remaining Work (Phase 2+)
+## Optional Enhancements (post-launch)
 
-- Per-node cert delta queue and push notification (Phase 2b)
-- PC app UI implementation after `sdkgen` for `sdks/sdkwork-web-*-sdk` (scaffold under `apps/sdkwork-web-pc/`)
-- Client apps: H5 / Flutter management surfaces
-- Generate and publish SDK client packages from `sdks/sdkwork-web-*-sdk`
-- Production KMS integration for `SDKWORK_WEB_CERT_ENCRYPTION_KEY`
+These are not blockers for backend production deployment:
+
+- PC management UI under `apps/sdkwork-web-pc/` (requires published TypeScript SDK packages)
+- Per-node certificate delta queue and push notification
+- External KMS for certificate encryption keys
 - Per-tenant Let's Encrypt account persistence
-- ADR acceptance: nginx-agent, client-architecture
+- `sdkwork-discovery` when RPC split-services topology is adopted
+- `sdkwork-drive` when file-upload API operations are introduced

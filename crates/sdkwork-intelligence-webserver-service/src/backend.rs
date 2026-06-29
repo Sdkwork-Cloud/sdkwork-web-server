@@ -144,9 +144,7 @@ impl WebBackendApi for WebService {
         context: &WebBackendRequestContext,
     ) -> WebServiceResult<sdkwork_webserver_contract::NginxStatusResponse> {
         let tenant_id = Self::require_backend_tenant(context)?;
-        self.repository
-            .retrieve_nginx_status(Some(tenant_id))
-            .await
+        self.repository.retrieve_nginx_status(Some(tenant_id)).await
     }
 
     async fn list_servers(

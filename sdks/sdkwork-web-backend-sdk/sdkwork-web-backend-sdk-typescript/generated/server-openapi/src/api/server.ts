@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateServerRequest, CreateServerResponse, ServerPage } from '../types';
+import type { CreateServerRequest, CreateServerResponse, PageInfo, ServerResponse } from '../types';
 
 
 export interface ServerListParams {
@@ -18,12 +18,12 @@ export class ServerApi {
 
 
 /** 获取服务器列表 */
-  async list(params?: ServerListParams): Promise<ServerPage> {
+  async list(params?: ServerListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<ServerPage>(appendQueryString(backendApiPath(`/servers`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/servers`), query));
   }
 
 /** 注册服务器 */

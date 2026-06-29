@@ -1,20 +1,22 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{get, post},
     Extension, Json, Router,
 };
 use sdkwork_webserver_contract::{
     CreateCertificateRequest, CreateDeploymentRequest, CreateDomainRequest,
     CreateEnvVariableRequest, CreateHealthCheckRequest, CreateSiteRequest, ListSitesQuery,
-    UpdateSiteRequest, WebAppApi, WebAppRequestContext, WebServiceResult,
+    UpdateSiteRequest, WebAppApi, WebAppRequestContext,
 };
 use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::{auth::require_app_context, paths};
-use sdkwork_routes_webserver_common::WebApiError;
+use sdkwork_routes_webserver_common::{
+    created_resource, no_content, ok_certificate_page, ok_deployment_page, ok_domain_page,
+    ok_env_variable_page, ok_health_check_page, ok_resource, ok_site_page, WebApiError,
+};
 
 #[derive(Clone)]
 struct AppState {
@@ -100,7 +102,7 @@ async fn list_sites(
     Query(query): Query<ListSitesQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.list_sites(&context, &query).await)
+    ok_site_page(state.api.list_sites(&context, &query).await)
 }
 
 async fn create_site(
@@ -109,7 +111,7 @@ async fn create_site(
     Json(request): Json<CreateSiteRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(state.api.create_site(&context, &request).await)
+    created_resource(state.api.create_site(&context, &request).await)
 }
 
 async fn retrieve_site(
@@ -118,7 +120,7 @@ async fn retrieve_site(
     Path(site_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.retrieve_site(&context, &site_id).await)
+    ok_resource(state.api.retrieve_site(&context, &site_id).await)
 }
 
 async fn update_site(
@@ -128,7 +130,7 @@ async fn update_site(
     Json(request): Json<UpdateSiteRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.update_site(&context, &site_id, &request).await)
+    ok_resource(state.api.update_site(&context, &site_id, &request).await)
 }
 
 async fn delete_site(
@@ -146,7 +148,7 @@ async fn activate_site(
     Path(site_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.activate_site(&context, &site_id).await)
+    ok_resource(state.api.activate_site(&context, &site_id).await)
 }
 
 async fn pause_site(
@@ -155,7 +157,7 @@ async fn pause_site(
     Path(site_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.pause_site(&context, &site_id).await)
+    ok_resource(state.api.pause_site(&context, &site_id).await)
 }
 
 async fn list_domains(
@@ -165,11 +167,13 @@ async fn list_domains(
     Query(query): Query<PageQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_domain_page(
         state
             .api
             .list_domains(&context, &site_id, query.page, query.page_size)
             .await,
+        query.page,
+        query.page_size,
     )
 }
 
@@ -180,7 +184,7 @@ async fn create_domain(
     Json(request): Json<CreateDomainRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(state.api.create_domain(&context, &site_id, &request).await)
+    created_resource(state.api.create_domain(&context, &site_id, &request).await)
 }
 
 async fn retrieve_domain(
@@ -189,7 +193,7 @@ async fn retrieve_domain(
     Path((site_id, domain_id)): Path<(String, String)>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_resource(
         state
             .api
             .retrieve_domain(&context, &site_id, &domain_id)
@@ -217,7 +221,7 @@ async fn verify_domain(
     Path((site_id, domain_id)): Path<(String, String)>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_resource(
         state
             .api
             .verify_domain(&context, &site_id, &domain_id)
@@ -232,7 +236,7 @@ async fn list_deployments(
     Query(query): Query<DeploymentListQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_deployment_page(
         state
             .api
             .list_deployments(
@@ -253,7 +257,7 @@ async fn create_deployment(
     Json(request): Json<CreateDeploymentRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(
+    created_resource(
         state
             .api
             .create_deployment(&context, &site_id, &request)
@@ -267,7 +271,7 @@ async fn retrieve_deployment(
     Path((site_id, deployment_id)): Path<(String, String)>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_resource(
         state
             .api
             .retrieve_deployment(&context, &site_id, &deployment_id)
@@ -281,7 +285,7 @@ async fn rollback_deployment(
     Path((site_id, deployment_id)): Path<(String, String)>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_resource(
         state
             .api
             .rollback_deployment(&context, &site_id, &deployment_id)
@@ -296,7 +300,7 @@ async fn list_env_variables(
     Query(query): Query<EnvVariableListQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_env_variable_page(
         state
             .api
             .list_env_variables(&context, &site_id, query.environment.as_deref())
@@ -311,7 +315,7 @@ async fn create_env_variable(
     Json(request): Json<CreateEnvVariableRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(
+    created_resource(
         state
             .api
             .create_env_variable(&context, &site_id, &request)
@@ -325,11 +329,13 @@ async fn list_certificates(
     Query(query): Query<PageQuery>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(
+    ok_certificate_page(
         state
             .api
             .list_certificates(&context, query.page, query.page_size)
             .await,
+        query.page,
+        query.page_size,
     )
 }
 
@@ -339,7 +345,7 @@ async fn create_certificate(
     Json(request): Json<CreateCertificateRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(state.api.create_certificate(&context, &request).await)
+    created_resource(state.api.create_certificate(&context, &request).await)
 }
 
 async fn list_health_checks(
@@ -348,7 +354,7 @@ async fn list_health_checks(
     Path(site_id): Path<String>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    ok_json(state.api.list_health_checks(&context, &site_id).await)
+    ok_health_check_page(state.api.list_health_checks(&context, &site_id).await)
 }
 
 async fn create_health_check(
@@ -358,37 +364,10 @@ async fn create_health_check(
     Json(request): Json<CreateHealthCheckRequest>,
 ) -> Result<Response, WebApiError> {
     let context = require_app_context(context)?;
-    created_json(
+    created_resource(
         state
             .api
             .create_health_check(&context, &site_id, &request)
             .await,
     )
-}
-
-fn ok_json<T>(result: WebServiceResult<T>) -> Result<Response, WebApiError>
-where
-    T: serde::Serialize,
-{
-    match result {
-        Ok(value) => Ok((StatusCode::OK, Json(value)).into_response()),
-        Err(error) => Err(error.into()),
-    }
-}
-
-fn created_json<T>(result: WebServiceResult<T>) -> Result<Response, WebApiError>
-where
-    T: serde::Serialize,
-{
-    match result {
-        Ok(value) => Ok((StatusCode::CREATED, Json(value)).into_response()),
-        Err(error) => Err(error.into()),
-    }
-}
-
-fn no_content(result: WebServiceResult<()>) -> Result<Response, WebApiError> {
-    match result {
-        Ok(()) => Ok(StatusCode::NO_CONTENT.into_response()),
-        Err(error) => Err(error.into()),
-    }
 }

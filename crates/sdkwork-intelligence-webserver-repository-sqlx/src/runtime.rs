@@ -1,8 +1,8 @@
 //! Web runtime bootstrap: database lifecycle + repository + service assembly.
 
 use sdkwork_database_config::DatabaseConfig;
-use sdkwork_database_sqlx::create_any_pool_from_config;
 use sdkwork_database_id::SnowflakeIdGenerator;
+use sdkwork_database_sqlx::create_any_pool_from_config;
 use sdkwork_intelligence_webserver_service::WebService;
 use sdkwork_utils_rust::derive_aes_256_key;
 use sdkwork_webserver_acme_service::CertificateIssuer;
@@ -39,12 +39,10 @@ fn snowflake_from_env() -> Result<SnowflakeIdGenerator, String> {
         Ok(value) => value
             .parse::<u16>()
             .map_err(|error| format!("invalid SDKWORK_WEB_SNOWFLAKE_NODE_ID: {error}"))?,
-        Err(_) => {
-            return Err(
-                "SDKWORK_WEB_SNOWFLAKE_NODE_ID is required (multi-instance must set unique node id)"
-                    .to_string(),
-            )
-        }
+        Err(_) => return Err(
+            "SDKWORK_WEB_SNOWFLAKE_NODE_ID is required (multi-instance must set unique node id)"
+                .to_string(),
+        ),
     };
     SnowflakeIdGenerator::new(node_id).map_err(|error| error.to_string())
 }
@@ -63,7 +61,8 @@ fn secret_key_from_env() -> Result<SecretEncryptionKey, String> {
         }
         Err(_) => {
             return Err(
-                "SDKWORK_WEB_SECRET_ENCRYPTION_KEY is required in production environments".to_string(),
+                "SDKWORK_WEB_SECRET_ENCRYPTION_KEY is required in production environments"
+                    .to_string(),
             )
         }
     };

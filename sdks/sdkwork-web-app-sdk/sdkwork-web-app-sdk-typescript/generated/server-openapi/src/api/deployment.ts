@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateDeploymentRequest, DeploymentPage, DeploymentResponse } from '../types';
+import type { CreateDeploymentRequest, DeploymentResponse, PageInfo } from '../types';
 
 
 export interface DeploymentSitesDeploymentsListParams {
@@ -19,13 +19,13 @@ export class DeploymentSitesDeploymentsApi {
 
 
 /** 获取部署历史 */
-  async list(siteId: string, params?: DeploymentSitesDeploymentsListParams): Promise<DeploymentPage> {
+  async list(siteId: string, params?: DeploymentSitesDeploymentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<DeploymentPage>(appendQueryString(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/deployments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/deployments`), query));
   }
 
 /** 发起部署 */

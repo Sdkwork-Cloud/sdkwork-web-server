@@ -6,11 +6,8 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 chrono.workspace = true
-hex = "0.4"
 serde_json.workspace = true
-sha2 = "0.10"
 sqlx.workspace = true
-uuid.workspace = true
 
 sdkwork-database-config.workspace = true
 sdkwork-database-sqlx.workspace = true

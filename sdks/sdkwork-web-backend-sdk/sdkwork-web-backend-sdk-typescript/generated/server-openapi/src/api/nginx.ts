@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateNginxConfigRequest, NginxConfigPage, NginxConfigResponse, NginxDeployResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse, UpdateNginxConfigRequest } from '../types';
+import type { CreateNginxConfigRequest, NginxConfigResponse, NginxDeployResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse, PageInfo, UpdateNginxConfigRequest } from '../types';
 
 
 export class NginxStatusApi {
@@ -35,7 +35,7 @@ export class NginxConfigsApi {
 
 
 /** 获取 Nginx 配置列表 */
-  async list(params?: NginxConfigsListParams): Promise<NginxConfigPage> {
+  async list(params?: NginxConfigsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -43,7 +43,7 @@ export class NginxConfigsApi {
       { name: 'configType', value: params?.configType, style: 'form', explode: true, allowReserved: false },
       { name: 'isActive', value: params?.isActive, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<NginxConfigPage>(appendQueryString(backendApiPath(`/nginx/configs`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/nginx/configs`), query));
   }
 
 /** 创建 Nginx 配置 */

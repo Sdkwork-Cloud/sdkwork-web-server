@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { CreateHealthCheckRequest, HealthCheckPage, HealthCheckResponse } from '../types';
+import type { CreateHealthCheckRequest, HealthCheckResponse, PageInfo } from '../types';
 
 
 export class MonitorSitesHealthChecksApi {
@@ -13,8 +13,8 @@ export class MonitorSitesHealthChecksApi {
 
 
 /** 获取健康检查配置 */
-  async list(siteId: string): Promise<HealthCheckPage> {
-    return this.client.get<HealthCheckPage>(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/health_checks`));
+  async list(siteId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(appApiPath(`/sites/${serializePathParameter(siteId, { name: 'siteId', style: 'simple', explode: false })}/health_checks`));
   }
 
 /** 创建健康检查 */

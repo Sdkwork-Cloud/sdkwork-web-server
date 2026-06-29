@@ -8,13 +8,15 @@
 
 use axum::{
     extract::{Extension, Query},
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     Json,
 };
 use sdkwork_intelligence_webserver_service::WebService;
-use sdkwork_routes_webserver_common::WebApiError;
-use sdkwork_webserver_contract::{AgentHeartbeatRequest, WebBackendRequestContext, WebServiceError};
+use sdkwork_routes_webserver_common::{ok_resource, WebApiError};
+use sdkwork_utils_rust::SdkWorkResultCode;
+use sdkwork_webserver_contract::{
+    AgentHeartbeatRequest, WebBackendRequestContext, WebServiceError,
+};
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -30,7 +32,11 @@ pub(crate) async fn agent_heartbeat(
     Json(request): Json<AgentHeartbeatRequest>,
 ) -> Result<Response, WebApiError> {
     let (server_id, tenant_id) = require_agent_context(&context)?;
-    ok_json(service.agent_heartbeat(server_id, tenant_id, &request).await)
+    map_agent_result(
+        service
+            .agent_heartbeat(server_id, tenant_id, &request)
+            .await,
+    )
 }
 
 pub(crate) async fn agent_sync(
@@ -39,7 +45,7 @@ pub(crate) async fn agent_sync(
     Query(query): Query<AgentSyncQuery>,
 ) -> Result<Response, WebApiError> {
     let (server_id, tenant_id) = require_agent_context(&context)?;
-    ok_json(
+    map_agent_result(
         service
             .agent_sync(
                 server_id,
@@ -57,35 +63,24 @@ pub(crate) async fn agent_sync(
 ///
 /// `subject_id` holds the principal's `user_id` (server UUID for agent-token routes).
 /// `tenant_id` is guaranteed by the fail-closed injector.
-fn require_agent_context(
-    context: &WebBackendRequestContext,
-) -> Result<(&str, i64), WebApiError> {
+fn require_agent_context(context: &WebBackendRequestContext) -> Result<(&str, i64), WebApiError> {
     let server_id = context.subject_id.as_deref().ok_or_else(|| {
-        WebApiError::new(
-            StatusCode::UNAUTHORIZED,
-            "missing_agent_subject",
-            "agent route requires an authenticated server subject",
-        )
+        WebApiError::authentication_required("agent route requires an authenticated server subject")
     })?;
     let tenant_id = context.tenant_id.ok_or_else(|| {
-        WebApiError::new(
-            StatusCode::UNAUTHORIZED,
-            "missing_agent_tenant",
-            "agent route requires tenant isolation context",
-        )
+        WebApiError::authentication_required("agent route requires tenant isolation context")
     })?;
     Ok((server_id, tenant_id))
 }
 
-fn ok_json<T>(result: Result<T, WebServiceError>) -> Result<Response, WebApiError>
+fn map_agent_result<T>(result: Result<T, WebServiceError>) -> Result<Response, WebApiError>
 where
     T: serde::Serialize,
 {
     match result {
-        Ok(value) => Ok((StatusCode::OK, Json(value)).into_response()),
+        Ok(value) => ok_resource(Ok(value)),
         Err(WebServiceError::Forbidden) => Err(WebApiError::new(
-            StatusCode::UNAUTHORIZED,
-            "invalid_agent_token",
+            SdkWorkResultCode::InvalidToken,
             "agent token is invalid or has been revoked",
         )),
         Err(error) => Err(error.into()),

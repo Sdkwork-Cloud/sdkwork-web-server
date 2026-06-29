@@ -1,6 +1,6 @@
 # SDKWork Web PC Management Client
 
-Phase 2 browser/desktop management surface for **SDKWork Web Server** (`sdkwork-web`).
+Browser/desktop management surface for **SDKWork Web Server** (`sdkwork-web`). The backend API server is production-ready; this client root is reserved for the management UI.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ apps/sdkwork-web-pc/
   packages/sdkwork-web-pc-deployments/    # app-api: deployments
   packages/sdkwork-web-pc-console-nginx/  # backend-api: nginx configs
   packages/sdkwork-web-pc-console-servers/# backend-api: servers + agents
-  packages/sdkwork-web-pc-web/            # Vite browser host (Phase 2)
+  packages/sdkwork-web-pc-web/            # Vite browser host
 ```
 
 ## Prerequisites
@@ -28,13 +28,11 @@ apps/sdkwork-web-pc/
 
 | Package | Status |
 | --- | --- |
-| Component specs | Scaffolded (`specs/component.spec.json`) |
-| Generated SDK consumers | Blocked on `sdkgen` |
-| UI implementation | Not started |
+| Component specs | Defined (`specs/component.spec.json` per package) |
+| Generated SDK consumers | Pending SDK package publish |
+| UI implementation | Pending |
 
 ## Commands
-
-Placeholder until Vite host and SDK packages are wired:
 
 ```powershell
 pnpm verify

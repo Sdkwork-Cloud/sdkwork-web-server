@@ -11,7 +11,13 @@ use sdkwork_webserver_contract::{
 };
 
 pub use correlation::{with_problem_correlation, WebProblemCorrelation};
-pub use problem::{WebApiError, WebApiProblem, WebApiResult};
+pub mod response;
+pub use problem::{WebApiError, WebApiResult};
+pub use response::{
+    created_resource, no_content, ok_audit_log_page, ok_certificate_page, ok_deployment_page,
+    ok_domain_page, ok_env_variable_page, ok_health_check_page, ok_nginx_config_page, ok_resource,
+    ok_server_page, ok_site_page,
+};
 
 const PRODUCTION_AUTH_UNAVAILABLE: &str = "production Web auth requires IAM PostgreSQL database";
 
@@ -34,7 +40,9 @@ pub async fn web_auth_mode_from_env() -> WebAuthMode {
         return WebAuthMode::ProductionFailClosed;
     }
 
-    WebAuthMode::IamDatabase(sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env().await)
+    WebAuthMode::IamDatabase(
+        sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env().await,
+    )
 }
 
 #[derive(Clone, Default)]
