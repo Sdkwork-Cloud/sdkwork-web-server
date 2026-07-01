@@ -47,9 +47,9 @@ Updated: 2026-06-29
 
 ```powershell
 pnpm verify
-node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .
-node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .
 ```
+
+`pnpm verify` runs formatting, tests, API materialization, app composition, API envelope, repository docs, topology, database framework, and cloud gateway validation.
 
 ## Optional Enhancements (post-launch)
 

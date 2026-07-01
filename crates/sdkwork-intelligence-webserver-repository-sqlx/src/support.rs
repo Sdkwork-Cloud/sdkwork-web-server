@@ -1,12 +1,11 @@
-use chrono::{SecondsFormat, Utc};
 use sdkwork_database_id::{uuid_v4, uuid_v4_with_prefix, SnowflakeIdGenerator};
-use sdkwork_utils_rust::crypto::sha256_hash;
+use sdkwork_utils_rust::{crypto::sha256_hash, number::clamp};
 use sdkwork_webserver_contract::WebServiceError;
 use sqlx::any::AnyRow;
 use sqlx::{AnyPool, Error as SqlxError, Row};
 
 pub(crate) fn now_rfc3339() -> String {
-    Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
+    sdkwork_utils_rust::datetime::format_datetime(sdkwork_utils_rust::datetime::now(), None)
 }
 
 pub(crate) fn store_error(context: &str, error: SqlxError) -> WebServiceError {
@@ -22,7 +21,7 @@ pub(crate) fn store_error(context: &str, error: SqlxError) -> WebServiceError {
 
 pub(crate) fn pagination(page: i32, page_size: i32) -> (i32, i32, i64) {
     let page = page.max(1);
-    let page_size = page_size.clamp(1, 100);
+    let page_size = clamp(page_size, 1, 100);
     let offset = ((page - 1) * page_size) as i64;
     (page, page_size, offset)
 }

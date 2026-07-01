@@ -50,7 +50,7 @@
   ],
   "toolchains": {
     "node": "22",
-    "pnpm": "10.30.2",
+    "pnpm": "10.33.0",
     "rust": "stable"
   },
   "lifecycle": {
@@ -65,7 +65,7 @@
       {
         "name": "Validate web standards",
         "shell": "pwsh",
-        "run": "cargo test --workspace && pnpm check"
+        "run": "pnpm verify"
       }
     ]
   },
