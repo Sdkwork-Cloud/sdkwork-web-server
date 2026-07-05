@@ -1,7 +1,8 @@
 {
-  "name": "@sdkwork/web-app-sdk",
+  "name": "sdkwork-web-app-sdk-generated-typescript",
   "version": "1.0.0",
   "private": true,
+  "sdkworkRole": "transport",
   "description": "Generator-owned TypeScript transport SDK for sdkwork-web-app-sdk.",
   "author": "SDKWork Team",
   "license": "MIT",

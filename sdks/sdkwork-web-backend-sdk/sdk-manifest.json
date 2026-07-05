@@ -1,4 +1,15 @@
 {
+  "schemaVersion": 1,
+  "sdkFamily": "sdkwork-web-backend-sdk",
+  "sdkName": "sdkwork-web-backend-sdk",
+  "packageName": "@sdkwork/web-backend-sdk",
+  "transportPackageName": "sdkwork-web-backend-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-web-backend-sdk-typescript",
+    "composedEntry": "sdkwork-web-backend-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-web-backend-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-web-backend-sdk-typescript/generated/server-openapi/src/index.ts"
+  },
   "workspace": "sdkwork-web-backend-sdk",
   "title": "SDKWork Web Backend API SDK",
   "apiVersion": "1.0.0",
@@ -20,6 +31,10 @@
     ],
     "manualTransports": []
   },
+  "metadata": {
+    "managedBy": "tools/materialize_web_phase1_contracts.mjs",
+    "standardVersion": "2026-06-26"
+  },
   "languages": [
     {
       "language": "typescript",
@@ -28,10 +43,11 @@
       "releaseState": "not_published",
       "packagePath": "sdkwork-web-backend-sdk-typescript/generated/server-openapi",
       "manifestPath": "sdkwork-web-backend-sdk-typescript/generated/server-openapi/package.json",
-      "name": "@sdkwork/web-backend-sdk",
       "version": "1.0.0",
       "description": "Generator-owned typescript transport SDK for SDKWork Web Backend API.",
-      "generatedPath": "sdkwork-web-backend-sdk-typescript/generated/server-openapi"
+      "generatedPath": "sdkwork-web-backend-sdk-typescript/generated/server-openapi",
+      "consumerPackageName": "@sdkwork/web-backend-sdk",
+      "transportPackageName": "sdkwork-web-backend-sdk-generated-typescript"
     },
     {
       "language": "dart",
@@ -166,8 +182,5 @@
       "generatedPath": "sdkwork-web-backend-sdk-ruby/generated/server-openapi"
     }
   ],
-  "metadata": {
-    "managedBy": "tools/materialize_web_phase1_contracts.mjs",
-    "standardVersion": "2026-06-26"
-  }
+  "sdkDependencies": []
 }
