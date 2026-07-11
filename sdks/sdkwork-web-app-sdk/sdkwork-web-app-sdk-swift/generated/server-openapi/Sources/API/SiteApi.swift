@@ -11,7 +11,7 @@ public class SiteApi {
     public func sitesList(page: Int? = nil, pageSize: Int? = nil, status: Int? = nil, siteType: Int? = nil, keyword: String? = nil) async throws -> SitePage? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
-            QueryParameterSpec(name: "pageSize", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
+            QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "status", value: status, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "siteType", value: siteType, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "keyword", value: keyword, style: "form", explode: true, allowReserved: false, contentType: nil)

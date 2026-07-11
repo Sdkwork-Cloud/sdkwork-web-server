@@ -17,7 +17,7 @@ public class NginxApi {
     public NginxConfigPage configsList(Integer page, Integer pageSize, String siteId, Integer configType, Boolean isActive) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
-            new QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             new QueryParameterSpec("siteId", siteId, "form", true, false, null),
             new QueryParameterSpec("configType", configType, "form", true, false, null),
             new QueryParameterSpec("isActive", isActive, "form", true, false, null)

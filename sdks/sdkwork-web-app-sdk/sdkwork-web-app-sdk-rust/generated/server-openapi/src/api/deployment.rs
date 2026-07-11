@@ -19,7 +19,7 @@ impl DeploymentApi {
     pub async fn sites_deployments_list(&self, site_id: &str, page: Option<i64>, page_size: Option<i64>, status: Option<i64>) -> Result<DeploymentPage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("status", status, "form", true, false, None),
         ]);
         let path = append_query_string(app_path(&format!("/sites/{}/deployments", serialize_path_parameter(site_id, PathParameterSpec::new("siteId", "simple", false)))), &query);

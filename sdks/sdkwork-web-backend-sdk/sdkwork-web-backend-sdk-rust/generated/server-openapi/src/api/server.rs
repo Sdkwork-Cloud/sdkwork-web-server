@@ -19,7 +19,7 @@ impl ServerApi {
     pub async fn servers_list(&self, page: Option<i64>, page_size: Option<i64>) -> Result<ServerPage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
         ]);
         let path = append_query_string(backend_path(&"/servers".to_string()), &query);
         self.client.get(&path, None, None).await

@@ -17,7 +17,7 @@ public class DomainApi {
     public DomainPage sitesDomainsList(String siteId, Integer page, Integer pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
-            new QueryParameterSpec("pageSize", pageSize, "form", true, false, null)
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/sites/" + serializePathParameter(siteId, new PathParameterSpec("siteId", "simple", false)) + "/domains"), query));
         return client.convertValue(raw, new TypeReference<DomainPage>() {});

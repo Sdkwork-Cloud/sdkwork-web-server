@@ -1036,7 +1036,7 @@
         }
       },
       "PageSizeParam": {
-        "name": "pageSize",
+        "name": "page_size",
         "in": "query",
         "schema": {
           "type": "integer",

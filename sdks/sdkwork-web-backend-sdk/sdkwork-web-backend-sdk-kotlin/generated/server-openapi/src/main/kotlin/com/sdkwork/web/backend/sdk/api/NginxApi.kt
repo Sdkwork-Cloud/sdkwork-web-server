@@ -12,7 +12,7 @@ class NginxApi(private val client: HttpClient) {
     suspend fun configsList(page: Int? = null, pageSize: Int? = null, siteId: String? = null, configType: Int? = null, isActive: Boolean? = null): NginxConfigPage? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
-            QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+            QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             QueryParameterSpec("siteId", siteId, "form", true, false, null),
             QueryParameterSpec("configType", configType, "form", true, false, null),
             QueryParameterSpec("isActive", isActive, "form", true, false, null)

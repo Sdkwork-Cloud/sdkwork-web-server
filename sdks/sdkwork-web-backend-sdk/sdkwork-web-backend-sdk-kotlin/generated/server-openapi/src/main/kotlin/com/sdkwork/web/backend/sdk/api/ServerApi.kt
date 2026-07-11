@@ -12,7 +12,7 @@ class ServerApi(private val client: HttpClient) {
     suspend fun serversList(page: Int? = null, pageSize: Int? = null): ServerPage? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
-            QueryParameterSpec("pageSize", pageSize, "form", true, false, null)
+            QueryParameterSpec("page_size", pageSize, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.backendPath("/servers"), query))
         return client.convertValue(raw, object : TypeReference<ServerPage>() {})

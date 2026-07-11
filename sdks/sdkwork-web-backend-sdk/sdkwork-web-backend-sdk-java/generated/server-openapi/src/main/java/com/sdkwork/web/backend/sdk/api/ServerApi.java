@@ -17,7 +17,7 @@ public class ServerApi {
     public ServerPage serversList(Integer page, Integer pageSize) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
-            new QueryParameterSpec("pageSize", pageSize, "form", true, false, null)
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.backendPath("/servers"), query));
         return client.convertValue(raw, new TypeReference<ServerPage>() {});

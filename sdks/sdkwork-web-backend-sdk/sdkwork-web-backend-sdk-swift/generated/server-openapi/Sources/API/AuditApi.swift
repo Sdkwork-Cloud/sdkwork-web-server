@@ -11,7 +11,7 @@ public class AuditApi {
     public func logsList(page: Int? = nil, pageSize: Int? = nil, targetType: String? = nil, action: String? = nil, operatorId: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> AuditLogPage? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
-            QueryParameterSpec(name: "pageSize", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
+            QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "targetType", value: targetType, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "action", value: action, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "operatorId", value: operatorId, style: "form", explode: true, allowReserved: false, contentType: nil),

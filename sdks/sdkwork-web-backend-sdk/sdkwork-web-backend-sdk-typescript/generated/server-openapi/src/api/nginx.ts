@@ -38,7 +38,7 @@ export class NginxConfigsApi {
   async list(params?: NginxConfigsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
-      { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'siteId', value: params?.siteId, style: 'form', explode: true, allowReserved: false },
       { name: 'configType', value: params?.configType, style: 'form', explode: true, allowReserved: false },
       { name: 'isActive', value: params?.isActive, style: 'form', explode: true, allowReserved: false },

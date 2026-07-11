@@ -142,7 +142,7 @@ class AuditAuditLogsApi:
         """获取审计日志列表"""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'pageSize', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'targetType', 'value': target_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'action', 'value': action, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'operatorId', 'value': operator_id, 'style': 'form', 'explode': True, 'allow_reserved': False},

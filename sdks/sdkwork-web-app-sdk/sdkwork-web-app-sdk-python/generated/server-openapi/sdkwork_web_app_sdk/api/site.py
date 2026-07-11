@@ -195,7 +195,7 @@ class SiteApi:
         """获取站点列表"""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'pageSize', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'status', 'value': status, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'siteType', 'value': site_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'keyword', 'value': keyword, 'style': 'form', 'explode': True, 'allow_reserved': False},

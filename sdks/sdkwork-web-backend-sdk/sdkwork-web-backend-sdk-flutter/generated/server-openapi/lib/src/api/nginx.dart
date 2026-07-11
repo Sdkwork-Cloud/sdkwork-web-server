@@ -15,7 +15,7 @@ class NginxApi {
   Future<NginxConfigPage?> configsList([int? page, int? pageSize, String? siteId, int? configType, bool? isActive]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
-      QueryParameterSpec('pageSize', pageSize, 'form', true, false, null),
+      QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
       QueryParameterSpec('siteId', siteId, 'form', true, false, null),
       QueryParameterSpec('configType', configType, 'form', true, false, null),
       QueryParameterSpec('isActive', isActive, 'form', true, false, null)

@@ -23,7 +23,7 @@ namespace SDKWork.Web.AppSdk.Api
             var queryString = BuildQueryString(new[]
             {
                 new QueryParameterSpec("page", page, "form", true, false, null),
-                new QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+                new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             });
             return await _client.GetAsync<SDKWork.Web.AppSdk.Models.DomainPage>(ApiPaths.AppendQueryString(ApiPaths.AppPath($"/sites/{SerializePathParameter(siteId, new PathParameterSpec("siteId", "simple", false))}/domains"), queryString));
         }

@@ -23,7 +23,7 @@ namespace SDKWork.Web.BackendSdk.Api
             var queryString = BuildQueryString(new[]
             {
                 new QueryParameterSpec("page", page, "form", true, false, null),
-                new QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+                new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
                 new QueryParameterSpec("targetType", targetType, "form", true, false, null),
                 new QueryParameterSpec("action", action, "form", true, false, null),
                 new QueryParameterSpec("operatorId", operatorId, "form", true, false, null),

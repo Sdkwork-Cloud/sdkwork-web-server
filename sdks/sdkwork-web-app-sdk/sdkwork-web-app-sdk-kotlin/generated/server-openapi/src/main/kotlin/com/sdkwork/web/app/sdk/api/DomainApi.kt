@@ -12,7 +12,7 @@ class DomainApi(private val client: HttpClient) {
     suspend fun sitesDomainsList(siteId: String, page: Int? = null, pageSize: Int? = null): DomainPage? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
-            QueryParameterSpec("pageSize", pageSize, "form", true, false, null)
+            QueryParameterSpec("page_size", pageSize, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/sites/${serializePathParameter(siteId, PathParameterSpec("siteId", "simple", false))}/domains"), query))
         return client.convertValue(raw, object : TypeReference<DomainPage>() {})

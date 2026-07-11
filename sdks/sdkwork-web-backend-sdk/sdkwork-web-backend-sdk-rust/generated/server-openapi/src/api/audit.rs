@@ -19,7 +19,7 @@ impl AuditApi {
     pub async fn logs_list(&self, page: Option<i64>, page_size: Option<i64>, target_type: Option<&str>, action: Option<&str>, operator_id: Option<&str>, start_date: Option<&str>, end_date: Option<&str>) -> Result<AuditLogPage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("targetType", target_type, "form", true, false, None),
             QueryParameterSpec::new("action", action, "form", true, false, None),
             QueryParameterSpec::new("operatorId", operator_id, "form", true, false, None),

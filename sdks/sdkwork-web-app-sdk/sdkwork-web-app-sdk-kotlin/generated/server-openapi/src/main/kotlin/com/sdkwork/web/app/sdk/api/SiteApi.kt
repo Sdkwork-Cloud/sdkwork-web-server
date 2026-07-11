@@ -12,7 +12,7 @@ class SiteApi(private val client: HttpClient) {
     suspend fun sitesList(page: Int? = null, pageSize: Int? = null, status: Int? = null, siteType: Int? = null, keyword: String? = null): SitePage? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
-            QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+            QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             QueryParameterSpec("status", status, "form", true, false, null),
             QueryParameterSpec("siteType", siteType, "form", true, false, null),
             QueryParameterSpec("keyword", keyword, "form", true, false, null)

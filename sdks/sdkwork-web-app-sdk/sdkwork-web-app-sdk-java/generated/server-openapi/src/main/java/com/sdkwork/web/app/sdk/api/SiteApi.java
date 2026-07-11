@@ -17,7 +17,7 @@ public class SiteApi {
     public SitePage sitesList(Integer page, Integer pageSize, Integer status, Integer siteType, String keyword) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
-            new QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+            new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             new QueryParameterSpec("status", status, "form", true, false, null),
             new QueryParameterSpec("siteType", siteType, "form", true, false, null),
             new QueryParameterSpec("keyword", keyword, "form", true, false, null)

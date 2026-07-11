@@ -19,7 +19,7 @@ impl NginxApi {
     pub async fn configs_list(&self, page: Option<i64>, page_size: Option<i64>, site_id: Option<&str>, config_type: Option<i64>, is_active: Option<bool>) -> Result<NginxConfigPage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("siteId", site_id, "form", true, false, None),
             QueryParameterSpec::new("configType", config_type, "form", true, false, None),
             QueryParameterSpec::new("isActive", is_active, "form", true, false, None),

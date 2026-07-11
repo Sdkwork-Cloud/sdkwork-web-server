@@ -11,7 +11,7 @@ public class DeploymentApi {
     public func sitesDeploymentsList(siteId: String, page: Int? = nil, pageSize: Int? = nil, status: Int? = nil) async throws -> DeploymentPage? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
-            QueryParameterSpec(name: "pageSize", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
+            QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "status", value: status, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
         return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/sites/\(serializePathParameter(siteId, PathParameterSpec(name: "siteId", style: "simple", explode: false)))/deployments"), query), responseType: DeploymentPage.self)

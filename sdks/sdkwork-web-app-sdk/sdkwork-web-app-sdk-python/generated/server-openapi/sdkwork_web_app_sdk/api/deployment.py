@@ -211,7 +211,7 @@ class DeploymentSitesDeploymentsApi:
         """获取部署历史"""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'pageSize', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'status', 'value': status, 'style': 'form', 'explode': True, 'allow_reserved': False},
         ])
         return self._client.get(_append_query_string(f"/app/v3/api/sites/{serialize_path_parameter(site_id, {'name': 'siteId', 'style': 'simple', 'explode': False})}/deployments", query))

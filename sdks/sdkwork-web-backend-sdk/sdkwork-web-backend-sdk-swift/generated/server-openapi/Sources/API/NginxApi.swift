@@ -11,7 +11,7 @@ public class NginxApi {
     public func configsList(page: Int? = nil, pageSize: Int? = nil, siteId: String? = nil, configType: Int? = nil, isActive: Bool? = nil) async throws -> NginxConfigPage? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
-            QueryParameterSpec(name: "pageSize", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
+            QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "siteId", value: siteId, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "configType", value: configType, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "isActive", value: isActive, style: "form", explode: true, allowReserved: false, contentType: nil)

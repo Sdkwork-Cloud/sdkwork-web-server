@@ -12,7 +12,7 @@ class AuditApi(private val client: HttpClient) {
     suspend fun logsList(page: Int? = null, pageSize: Int? = null, targetType: String? = null, action: String? = null, operatorId: String? = null, startDate: String? = null, endDate: String? = null): AuditLogPage? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
-            QueryParameterSpec("pageSize", pageSize, "form", true, false, null),
+            QueryParameterSpec("page_size", pageSize, "form", true, false, null),
             QueryParameterSpec("targetType", targetType, "form", true, false, null),
             QueryParameterSpec("action", action, "form", true, false, null),
             QueryParameterSpec("operatorId", operatorId, "form", true, false, null),

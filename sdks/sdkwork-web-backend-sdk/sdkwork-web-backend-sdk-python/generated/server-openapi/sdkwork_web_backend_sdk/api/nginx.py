@@ -208,7 +208,7 @@ class NginxConfigsApi:
         """获取 Nginx 配置列表"""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
-            {'name': 'pageSize', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
+            {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'siteId', 'value': site_id, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'configType', 'value': config_type, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'isActive', 'value': is_active, 'style': 'form', 'explode': True, 'allow_reserved': False},

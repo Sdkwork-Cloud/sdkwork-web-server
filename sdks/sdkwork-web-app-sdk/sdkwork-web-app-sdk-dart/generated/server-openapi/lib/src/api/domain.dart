@@ -15,7 +15,7 @@ class DomainApi {
   Future<DomainPage?> sitesDomainsList(String siteId, [int? page, int? pageSize]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
-      QueryParameterSpec('pageSize', pageSize, 'form', true, false, null)
+      QueryParameterSpec('page_size', pageSize, 'form', true, false, null)
     ]);
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/sites/${serializePathParameter(siteId, const PathParameterSpec('siteId', 'simple', false))}/domains'), query));
     return (() {

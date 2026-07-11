@@ -11,7 +11,7 @@ public class CertificateApi {
     public func certificatesList(page: Int? = nil, pageSize: Int? = nil) async throws -> CertificatePage? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
-            QueryParameterSpec(name: "pageSize", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil)
+            QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
         return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/certificates"), query), responseType: CertificatePage.self)
     }

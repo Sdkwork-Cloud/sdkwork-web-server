@@ -26,7 +26,7 @@ export class AuditAuditLogsApi {
   async list(params?: AuditAuditLogsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
-      { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'targetType', value: params?.targetType, style: 'form', explode: true, allowReserved: false },
       { name: 'action', value: params?.action, style: 'form', explode: true, allowReserved: false },
       { name: 'operatorId', value: params?.operatorId, style: 'form', explode: true, allowReserved: false },

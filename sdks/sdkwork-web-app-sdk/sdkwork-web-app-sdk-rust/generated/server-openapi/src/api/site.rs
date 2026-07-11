@@ -19,7 +19,7 @@ impl SiteApi {
     pub async fn sites_list(&self, page: Option<i64>, page_size: Option<i64>, status: Option<i64>, site_type: Option<i64>, keyword: Option<&str>) -> Result<SitePage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("status", status, "form", true, false, None),
             QueryParameterSpec::new("siteType", site_type, "form", true, false, None),
             QueryParameterSpec::new("keyword", keyword, "form", true, false, None),

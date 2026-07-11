@@ -24,7 +24,7 @@ export class SiteApi {
   async list(params?: SiteListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
-      { name: 'pageSize', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
       { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
       { name: 'siteType', value: params?.siteType, style: 'form', explode: true, allowReserved: false },
       { name: 'keyword', value: params?.keyword, style: 'form', explode: true, allowReserved: false },

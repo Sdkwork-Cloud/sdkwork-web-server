@@ -26,7 +26,7 @@ pub struct WebBackendRequestContext {
 pub struct ListSitesQuery {
     #[serde(default = "crate::dto::default_page")]
     pub page: i32,
-    #[serde(default = "crate::dto::default_page_size", rename = "pageSize")]
+    #[serde(default = "crate::dto::default_page_size")]
     pub page_size: i32,
     pub status: Option<i32>,
     #[serde(rename = "siteType")]

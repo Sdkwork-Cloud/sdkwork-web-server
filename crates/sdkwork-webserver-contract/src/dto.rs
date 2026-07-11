@@ -25,8 +25,7 @@ pub struct SitePage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-    #[serde(rename = "pageSize")]
-    pub page_size: i32,
+        pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -124,8 +123,7 @@ pub struct DeploymentPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-    #[serde(rename = "pageSize")]
-    pub page_size: i32,
+        pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -274,15 +272,14 @@ pub struct NginxConfigPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-    #[serde(rename = "pageSize")]
-    pub page_size: i32,
+        pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ListNginxConfigsQuery {
     #[serde(default = "crate::dto::default_page")]
     pub page: i32,
-    #[serde(default = "crate::dto::default_page_size", rename = "pageSize")]
+    #[serde(default = "crate::dto::default_page_size")]
     pub page_size: i32,
     #[serde(rename = "siteId", default)]
     pub site_id: Option<String>,
@@ -474,8 +471,7 @@ pub struct AuditLogPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-    #[serde(rename = "pageSize")]
-    pub page_size: i32,
+        pub page_size: i32,
 }
 
 #[cfg(test)]

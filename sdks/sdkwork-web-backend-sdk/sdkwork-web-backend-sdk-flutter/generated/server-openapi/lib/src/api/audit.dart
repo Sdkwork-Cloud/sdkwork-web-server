@@ -15,7 +15,7 @@ class AuditApi {
   Future<AuditLogPage?> logsList([int? page, int? pageSize, String? targetType, String? action, String? operatorId, String? startDate, String? endDate]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
-      QueryParameterSpec('pageSize', pageSize, 'form', true, false, null),
+      QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
       QueryParameterSpec('targetType', targetType, 'form', true, false, null),
       QueryParameterSpec('action', action, 'form', true, false, null),
       QueryParameterSpec('operatorId', operatorId, 'form', true, false, null),

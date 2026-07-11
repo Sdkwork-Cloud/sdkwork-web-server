@@ -19,7 +19,7 @@ impl CertificateApi {
     pub async fn certificates_list(&self, page: Option<i64>, page_size: Option<i64>) -> Result<CertificatePage, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
-            QueryParameterSpec::new("pageSize", page_size, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
         ]);
         let path = append_query_string(app_path(&"/certificates".to_string()), &query);
         self.client.get(&path, None, None).await
