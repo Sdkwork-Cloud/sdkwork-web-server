@@ -12,7 +12,7 @@ Updated: 2026-06-29
 | `sdkwork-database` | Integrated | `database/` contract assets, `sdkwork-webserver-database-host`, full `pnpm db:*` lifecycle |
 | `sdkwork-utils-rust` | Integrated | API envelope, ProblemDetail, AES-GCM, SHA-256, env parsing, slugify, serde_int64 |
 | `sdkwork-id-core` (via `sdkwork-database-id`) | Integrated | Snowflake PKs, UUID v4 resource IDs, prefixed agent tokens (`wagent_`) |
-| `sdkwork-discovery` | Not required | HTTP unified-process only; adopt when split-services RPC is introduced |
+| `sdkwork-discovery` | Not required | HTTP application ingress only; adopt when RPC services and dynamic resolution are introduced |
 | `sdkwork-drive` | Not required | No file-upload operations in current API surface; adopt when upload features are added |
 
 ## Production Readiness

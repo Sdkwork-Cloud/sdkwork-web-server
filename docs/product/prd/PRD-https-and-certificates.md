@@ -199,8 +199,8 @@ Alerts include configurable 30-day, 14-day, 7-day, 72-hour, and 24-hour expiry t
 
 - Certificate, domain, challenge, issuance, renewal, rotation, revocation, status, event, and audit APIs follow SDKWork response envelopes, problem details, IAM, idempotency, optimistic concurrency, and asynchronous operation semantics.
 - Growing certificate, domain, operation, event, node-status, and audit collections use store-level cursor/keyset pagination with bounded `page_size` and standard `pageInfo`.
-- PostgreSQL is the cloud authority and uses transactional row claims, leases, fencing, unique constraints, and outbox/event delivery for state transitions that cross process boundaries.
-- SQLite is the standalone authority and provides equivalent business state transitions with single-node-safe transaction and worker-claim behavior. It is not a shared cluster database.
+- PostgreSQL is the cloud and default server-grade standalone authority and uses transactional row claims, leases, fencing, unique constraints, and outbox/event delivery for state transitions that cross process boundaries.
+- SQLite is supported only by an explicitly selected single-node standalone profile and provides equivalent supported business state transitions with single-node-safe transaction and worker-claim behavior. It is not a shared cluster database.
 - Database commits never claim external ACME, DNS, KMS, node activation, or public probe success. External effects use durable operations and verified state transitions.
 - PostgreSQL and SQLite run the same certificate lifecycle contract suite, migration tests, rollback policy checks, uniqueness tests, and crash-recovery scenarios.
 
@@ -228,4 +228,3 @@ Release verification includes:
 - Certificate operations, queues, caches, TLS contexts, worker concurrency, and node synchronization remain bounded under load and soak tests without OOM.
 - PostgreSQL and SQLite lifecycle suites pass and no database-only state transition is presented as proof of an external effect.
 - Expiry, renewal, served-certificate divergence, KMS/ACME failure, and node-distribution alerts are exercised with current runbooks before commercial release.
-

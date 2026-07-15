@@ -4,7 +4,7 @@ Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
 Updated: 2026-07-15
-Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, PAGINATION_SPEC.md, DEPLOYMENT_SPEC.md
+Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, PAGINATION_SPEC.md, DEPLOYMENT_SPEC.md, CONFIG_SPEC.md, RUNTIME_DIRECTORY_SPEC.md, OBSERVABILITY_SPEC.md
 
 ## Document Map
 
@@ -58,7 +58,7 @@ Product principles:
 - Import supported Nginx configuration into a normalized model and render normalized configuration back to Nginx.
 - Support TLS 1.2 and TLS 1.3, SNI, multiple certificates, ACME, managed certificate rotation, and zero-downtime TLS reload.
 - Provide deterministic validation, planning, publication, canary rollout, status observation, and rollback.
-- Support PostgreSQL for cloud and SQLite for standalone with equivalent business behavior.
+- Support PostgreSQL as the cloud and server-grade standalone default, plus an explicitly selected SQLite single-node standalone profile with equivalent supported business behavior.
 - Meet measurable throughput, latency, reload, memory, availability, security, and recovery targets.
 - Operate as a self-contained Web Server when the management control plane and database are temporarily unavailable.
 - Provide strict HTTP parsing, deterministic overload behavior, graceful process lifecycle, and safe operating-system integration.
@@ -75,6 +75,7 @@ Product principles:
 - V1 does not guarantee byte-for-byte identical Nginx-generated error pages; protocol behavior and configured routing semantics are the compatibility target.
 - V1 is a reverse proxy, not an unrestricted forward proxy, and does not expose the HTTP `CONNECT` method as an open tunnel.
 - V1 does not embed PHP, CGI, FastCGI, uWSGI, SCGI, application language runtimes, or arbitrary native code. Dynamic applications run behind supported upstream protocols.
+- V1 static roots are read-only and do not provide WebDAV or arbitrary client-driven filesystem mutation.
 - V1 does not require the request data plane to query PostgreSQL, SQLite, Redis, ACME, DNS control APIs, or the management control plane for every request.
 
 ## 5. Scope
@@ -91,7 +92,7 @@ Product principles:
 | Configuration lifecycle | Draft, validate, plan, immutable revision, publish, canary, activate, observe, rollback, and audit. |
 | Cluster operation | Node-scoped assignments, signed delta snapshots, fencing, offline recovery, version convergence, and no tenant-wide secret broadcast. |
 | Control plane | IAM-protected APIs, SDKs, pagination, idempotency, optimistic concurrency, asynchronous operations, audit, and operational status. |
-| Persistence | PostgreSQL cloud authority, SQLite standalone authority, portable contracts, migration governance, transaction safety, and drift detection. |
+| Persistence | PostgreSQL cloud and default server authority, explicit SQLite single-node standalone support, portable contracts, migration governance, transaction safety, and drift detection. |
 | Operations | Health/readiness, structured logs, metrics, traces, alerts, quotas, rate limits, backup/restore, rolling upgrades, and incident runbooks. |
 | Runtime lifecycle | Deterministic bootstrap, config test/dump/explain, non-root operation, atomic reload, graceful shutdown, overload shedding, service-manager integration, and zero-downtime executable upgrade. |
 
@@ -212,7 +213,7 @@ Health or SLO checks detect a failed canary. The control plane stops rollout, re
 
 ### Phase 1 - Rust HTTP/HTTPS Foundation
 
-- Deliver listeners, virtual hosts, static resources, reverse proxying, TLS, SNI, certificate import, safe reload, configuration compiler, immutable revisions, and standalone SQLite behavior.
+- Deliver listeners, virtual hosts, static resources, reverse proxying, TLS, SNI, certificate import, safe reload, configuration compiler, immutable revisions, PostgreSQL standalone defaults, and explicit SQLite single-node behavior.
 - Deliver strict HTTP/1.x and HTTP/2 framing, resource governor, DNS resolver, bounded streaming/spooling, process lifecycle, protected administration, and standalone operation from a local verified snapshot.
 
 ### Phase 2 - Nginx Compatibility And Managed Certificates
@@ -230,6 +231,7 @@ Health or SLO checks detect a failed canary. The control plane stops rollout, re
 
 ## 11. Linked Requirements
 
+- [REQ-2026-0003 Rust Web Server data-plane foundation](../requirements/REQ-2026-0003-rust-webserver-data-plane-foundation.md) - active implementation requirement for the configuration contract and first real HTTP/HTTPS data-plane slice.
 - [REQ-2026-0002 instant-acme Let's Encrypt](../requirements/REQ-2026-0002-instant-acme-letsencrypt.md) - existing draft requirement; it must be revised to match the HTTPS shard before implementation continues.
 - New implementation work must be decomposed into `REQ-*` records for configuration contracts, HTTP runtime core, process and resource lifecycle, Nginx compatibility, HTTPS/certificates, persistence, cluster distribution, observability, deployment, and conformance testing.
 - Existing certificate and distribution ADRs must be reviewed because their current implementation-complete claims do not satisfy this PRD.

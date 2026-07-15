@@ -35,7 +35,7 @@ The conformance catalog, not this summary, is the machine-readable authority for
 | Group | Required behavior |
 | --- | --- |
 | Structure | `http`, `server`, `location`, bounded and sandboxed `include`, directive context validation, inheritance, and deterministic source order. |
-| Listeners and hosts | `listen`, `server_name`, default server, IPv4/IPv6, HTTP/1.1, HTTP/2 mapping, Proxy Protocol policy, and host validation. |
+| Listeners and hosts | `listen`, `server_name`, default server, IPv4/IPv6, HTTP/1.0 compatibility, HTTP/1.1, HTTP/2 mapping, Proxy Protocol policy, and host validation. |
 | Static content | `root`, `alias`, `index`, `try_files`, `autoindex` policy, MIME types, conditional requests, ranges, and precompressed assets. |
 | Proxying | `proxy_pass`, upstream URI mapping, request/response headers, forwarding identity, buffering, streaming, WebSocket upgrade, SSE, timeouts, body limits, and bounded retries. |
 | Upstreams | `upstream`, server weights, backup/drain behavior, failure policy, keepalive, round robin, least connections, IP hash, and supported hash policies. |
@@ -55,6 +55,7 @@ V1 excludes:
 - Nginx Plus proprietary APIs, active health-check implementation details, key-value zones, and commercial-only features unless separately licensed and specified.
 - Mail proxy and generic TCP/UDP `stream` proxying.
 - OS-specific directives that cannot be reproduced safely and portably.
+- Embedded CGI, FastCGI, uWSGI, SCGI, and arbitrary forward-proxy/`CONNECT` execution. These require separate protocol and security requirements; dynamic apps use HTTP/gRPC upstreams in the declared V1 profile.
 - Arbitrary directives carried as opaque text into Rust activation.
 
 The importer may preserve unsupported source text only for inspection or Nginx-target round-trip. Preserved text is marked `notExecutableByRust`, cannot contribute hidden behavior, and blocks Rust publication when it is in an active context.
@@ -105,6 +106,12 @@ The compatibility profile defines:
 
 The engine must never buffer an unbounded body to emulate a directive. When exact compatibility would require unsafe or unbounded buffering, compilation fails or requires an explicit bounded policy with a documented behavioral grade.
 
+## 8.1 HTTP Protocol Compatibility
+
+The Nginx compatibility corpus includes strict HTTP/1.0/1.1 and HTTP/2 request/response behavior, not only route selection. It compares request-target parsing, Host/authority, header normalization, chunking, trailers, keep-alive, connection close, `Expect: 100-continue`, HEAD, no-body responses, range behavior, WebSocket upgrade, HTTP/2 pseudo-headers, flow control, and graceful shutdown.
+
+Security differences are never relaxed to reproduce an unsafe reference behavior. Ambiguous `Content-Length`, `Transfer-Encoding` conflicts, obsolete header folding, invalid characters, request smuggling, oversized compressed headers, rapid reset, and other protocol-confusion inputs fail closed. An intentional security hardening difference is cataloged and tested rather than hidden behind the behavioral compatibility grade.
+
 ## 9. Include And File Security
 
 - Include paths resolve from an approved import root, not the process working directory.
@@ -126,6 +133,15 @@ The workflow is:
 7. Render to the selected Nginx target or publish an immutable Rust snapshot only after all target-specific blockers are resolved.
 
 Rendering is deterministic and idempotent: normalizing rendered output must reproduce the same canonical model. Generated files include provenance and checksums but never inline secret material unless written directly to an access-controlled runtime secret mount.
+
+For the SDKWork Nginx deployment profile, rendering and deployment follow `NGINX_SPEC.md`:
+
+- Linux site files use `/etc/nginx/sites-enabled/sdkwork/<domain>.conf` with the complete public domain as the filename stem.
+- Certificate paths default to `/opt/certs/letsencrypt/live/<cert-name>/fullchain.pem` and `privkey.pem` when that protected-file profile is selected.
+- Plan reports the canonical target, upstream, certificate references, checksum, validation command, reload action, and post-reload probes without writing.
+- Render writes only to a staging target. Deploy uses an atomic file replacement with ownership/mode checks and retains a bounded previous artifact.
+- Deployment runs the real selected Nginx binary's configuration test for the exact staged content, reloads through the declared service manager only after validation, and verifies public health/readiness and expected content/TLS behavior.
+- A written file, zero exit from a wrapper that did not execute Nginx, sent reload signal, or database status change is not deployment success.
 
 ## 11. Validation And Failure Behavior
 
@@ -170,4 +186,3 @@ Reference versions, build flags, kernel settings, certificates, fixture artifact
 - Regex, include, rewrite, body, buffer, retry, connection, and configuration limits are enforced under adversarial tests without OOM.
 - Existing accepted connections survive compatible reloads; invalid revisions never replace the last verified revision.
 - The public support matrix and machine-readable catalog agree with implementation and conformance evidence.
-

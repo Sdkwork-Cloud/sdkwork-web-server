@@ -273,6 +273,5 @@ Operational tests verify the real process, socket, filesystem, TLS handshake, tr
 - Overload and dependency failures preserve the emergency operations reserve and degrade according to explicit policy without OOM, deadlock, disk exhaustion, or false readiness.
 - Three-node/multi-zone evidence meets the parent availability target and capacity survives the declared failure domain loss.
 - Logs, metrics, traces, audits, alerts, dashboards, support bundles, and runbooks cover every release-critical failure mode without secrets or unbounded cardinality.
-- Backup/restore and disaster-recovery exercises meet the parent RPO/RTO using PostgreSQL cloud authority and supported SQLite standalone behavior.
+- Backup/restore and disaster-recovery exercises meet the parent RPO/RTO using PostgreSQL cloud/default server authority and the explicitly selected SQLite single-node standalone profile where applicable.
 - Release artifacts include signature, checksum, SBOM, provenance, compatibility matrix, migration/rollback guidance, and verified package/container security posture.
-

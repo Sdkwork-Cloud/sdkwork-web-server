@@ -5,6 +5,14 @@ canon:
   prd: docs/product/prd/PRD.md
   techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
 entries:
+  - id: ADR-20260715-rust-webserver-data-plane
+    path: docs/architecture/decisions/ADR-20260715-rust-webserver-data-plane.md
+    kind: adr
+    status: accepted
+  - id: REQ-2026-0003
+    path: docs/product/requirements/REQ-2026-0003-rust-webserver-data-plane-foundation.md
+    kind: req
+    status: in-progress
   - id: ADR-20260623-acme-certificate-authority
     path: docs/architecture/decisions/ADR-20260623-acme-certificate-authority.md
     kind: adr

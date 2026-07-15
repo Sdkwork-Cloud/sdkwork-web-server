@@ -53,6 +53,7 @@ Required manifest reference:
   "profiles": {},
   "listeners": [],
   "certificates": [],
+  "tlsPolicies": [],
   "resolvers": [],
   "resources": [],
   "upstreams": [],
@@ -68,6 +69,7 @@ Rules:
 
 - Unknown fields are rejected unless explicitly allowed inside a bounded metadata extension object.
 - IDs are stable lower-kebab-case identifiers unique within the application configuration.
+- `appKey` must exactly match the owning `sdkwork.app.config.json` application key.
 - References must resolve inside the same compiled application configuration or through an approved external resource reference type.
 - Secrets and secret values are forbidden. Only secret, KMS, certificate, Drive artifact, or discovery resource references are allowed.
 - Configuration must declare explicit limits; an omitted limit resolves to a documented bounded default, never infinity.
@@ -105,7 +107,7 @@ Development defaults bind to `127.0.0.1:8080`. Container defaults bind to `0.0.0
 Each listener is an application-logical listener. The deployment compiler maps compatible logical listeners from multiple applications onto physical node sockets and proves that their protocol, TLS, Proxy Protocol, and default-host policies can coexist. Each listener supports:
 
 - Stable `id`, bind address, port, socket family, and default-server selection.
-- HTTP, HTTPS, HTTP/1.1, HTTP/2, and future-gated HTTP/3 protocol declarations.
+- HTTP, HTTPS, HTTP/1.0 compatibility, HTTP/1.1, HTTP/2, and future-gated HTTP/3 protocol declarations.
 - `reusePort`, accept backlog, keep-alive, header timeout, request timeout, idle timeout, graceful drain, and maximum connection limits.
 - Optional Proxy Protocol with explicit trusted source networks.
 - Optional TLS policy reference; HTTPS listeners require one.
@@ -126,6 +128,8 @@ Certificates are logical references, never embedded PEM values. Supported source
 - Development-only generated self-signed certificate.
 
 Each certificate declaration includes server names, source, lifecycle policy, renewal window, deployment scope, and optional client-auth trust reference. Full HTTPS behavior is defined in [PRD-https-and-certificates.md](PRD-https-and-certificates.md).
+
+Each `tlsPolicies` entry declares protocol versions, approved cipher/security profile, ALPN, session behavior, SNI/default-certificate behavior, OCSP, and optional client-auth trust references. Application TLS policy may select an approved host baseline or a stricter policy; it cannot weaken the host security minimum.
 
 ## 8. Resource Contract
 
@@ -173,6 +177,7 @@ The compiler must reject ambiguous exact matches, unreachable routes, unsafe rew
 Each upstream supports:
 
 - Static targets or an approved discovery reference.
+- IPv4, IPv6, DNS, and host-approved Unix domain socket targets where supported by the deployment platform.
 - HTTP/HTTPS origin protocol, SNI, hostname verification, and optional mTLS.
 - Target weight, backup status, drain state, and maximum connections.
 - Round-robin, weighted round-robin, least-connections, IP hash, random-two-choice, and consistent-hash policy where implemented.

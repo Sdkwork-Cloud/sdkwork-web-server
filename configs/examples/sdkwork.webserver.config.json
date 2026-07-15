@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.webserver.app",
+  "appKey": "sdkwork-example-web",
+  "compatibility": {
+    "nginxProfile": "http-core-v1",
+    "unknownDirectivePolicy": "error"
+  },
+  "limits": {
+    "maxRequestBodyBytes": 10485760,
+    "requestTimeoutMs": 30000,
+    "drainTimeoutMs": 30000,
+    "maxConnections": 10000
+  },
+  "listeners": [
+    {
+      "id": "public-http",
+      "bind": "127.0.0.1",
+      "port": 8080,
+      "protocols": ["http1"],
+      "defaultVirtualHostRef": "example-web"
+    }
+  ],
+  "certificates": [],
+  "tlsPolicies": [],
+  "resolvers": [],
+  "resources": [
+    {
+      "id": "health-response",
+      "type": "respond",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "body": "ok\n"
+    },
+    {
+      "id": "web-static",
+      "type": "static",
+      "root": "public",
+      "indexFiles": ["index.html"],
+      "spaFallback": "index.html",
+      "followSymlinks": false
+    }
+  ],
+  "upstreams": [],
+  "virtualHosts": [
+    {
+      "id": "example-web",
+      "listenerRefs": ["public-http"],
+      "serverNames": ["localhost"],
+      "routes": [
+        {
+          "id": "health",
+          "match": {
+            "pathType": "exact",
+            "path": "/healthz",
+            "methods": ["GET", "HEAD"]
+          },
+          "resourceRef": "health-response"
+        },
+        {
+          "id": "web",
+          "match": {
+            "pathType": "prefix",
+            "path": "/"
+          },
+          "resourceRef": "web-static"
+        }
+      ]
+    }
+  ],
+  "observability": {
+    "accessLog": true
+  },
+  "deployment": {
+    "drainTimeoutMs": 30000
+  },
+  "metadata": {
+    "owner": "sdkwork"
+  }
+}
