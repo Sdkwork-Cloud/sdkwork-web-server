@@ -1,29 +1,252 @@
 # SDKWork Web Server PRD
 
-Status: draft
+Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-06-24
-Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md
+Updated: 2026-07-15
+Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, PAGINATION_SPEC.md, DEPLOYMENT_SPEC.md
 
 ## Document Map
 
-- Add `PRD-<topic>.md` shards in this directory when the PRD grows beyond one reviewable screen.
+- [PRD-webserver-app-config.md](PRD-webserver-app-config.md) - per-application Web Server configuration contract and default profiles.
+- [PRD-runtime-core.md](PRD-runtime-core.md) - protocol correctness, connection lifecycle, static serving, proxying, DNS, caching, and bounded runtime behavior.
+- [PRD-production-operations.md](PRD-production-operations.md) - process lifecycle, overload control, observability, deployment, high availability, upgrades, and commercial operations.
+- [PRD-nginx-compatibility.md](PRD-nginx-compatibility.md) - Nginx HTTP compatibility scope, import/export behavior, and conformance requirements.
+- [PRD-https-and-certificates.md](PRD-https-and-certificates.md) - HTTPS, TLS, certificate lifecycle, ACME, SNI, key security, and cluster distribution.
+- [TECH_ARCHITECTURE.md](../../architecture/tech/TECH_ARCHITECTURE.md) - current technical architecture; it must be revised before implementation to reflect this PRD.
 
 ## 1. Background And Problem
 
+Nginx is the operational baseline for static content, reverse proxying, TLS termination, virtual hosts, routing, load balancing, caching, and zero-downtime configuration reload. SDKWork applications currently lack one governed, application-owned Web Server contract that can be executed consistently by a Rust runtime and translated to or imported from Nginx.
+
+The existing SDKWork Web Server implementation is primarily a management control plane. The target product is broader: a Rust-native Web Server with a production data plane, a versioned control plane, Nginx-compatible HTTP behavior, and SDKWork-native application configuration. It must support standalone and cloud deployments without allowing configuration drift, fake validation, silent compatibility degradation, unbounded memory growth, or tenant-wide secret exposure.
+
+Every Web application under `apps/<app-root>/` needs a predictable configuration contract for listeners, ports, HTTPS, domains, certificates, path resources, static bundles, proxies, upstreams, policies, logging, deployment, and rollback. Application identity and release metadata must remain separate from runtime traffic configuration.
+
 ## 2. Target Users
 
-## 3. Goals And Non-Goals
+- Application developers who need to serve static sites, SPAs, APIs, and hybrid applications without writing ad hoc server configuration.
+- Platform engineers who need a common Web Server contract across SDKWork application roots.
+- Site and tenant operators who manage domains, certificates, deployments, routing, and rollbacks.
+- SRE and security teams who require bounded resource usage, observable behavior, auditable changes, and fail-closed security.
+- Nginx operators migrating existing `nginx.conf` and site files to the SDKWork Rust data plane.
+- Integrators who need generated SDKs and standard API contracts for configuration automation.
 
-## 4. Scope
+## 3. Product Vision And Principles
 
-## 5. User Scenarios
+SDKWork Web Server is a Rust-native, high-performance HTTP/HTTPS server and reverse proxy with an Nginx HTTP compatibility profile and a first-class SDKWork application configuration model.
 
-## 6. Success Metrics
+Product principles:
 
-## 7. Phases
+- Rust is the default execution engine; Nginx is a supported compatibility, migration, and rendering target.
+- Supported Nginx semantics must be behaviorally compatible; unsupported directives must produce explicit diagnostics and must never be silently ignored.
+- HTTPS is a first-class production capability, not an optional deployment afterthought.
+- Configuration is typed, versioned, validated, immutable after publication, and atomically activated.
+- Request and response bodies are streamed; queues, caches, connections, configurations, and background work are bounded.
+- Cloud data planes are stateless and horizontally scalable; configuration and certificate distribution are node-scoped and revisioned.
+- SDKWork standards govern API envelopes, pagination, IAM, security, observability, deployment, database lifecycle, and SDK consumption.
+- No product workflow may report validation, deployment, reload, certificate issuance, or rollback success before the corresponding effect is verified.
 
-## 8. Linked Requirements
+## 4. Goals And Non-Goals
 
-## 9. Open Questions
+### 4.1 Goals
+
+- Serve HTTP and HTTPS traffic directly from the Rust data plane.
+- Support static sites, SPAs, reverse proxies, API gateways, and hybrid applications through reusable profiles.
+- Define a complete `sdkwork.webserver.app` configuration for every Web application root.
+- Support Nginx OSS HTTP Core behavior required by common production sites.
+- Import supported Nginx configuration into a normalized model and render normalized configuration back to Nginx.
+- Support TLS 1.2 and TLS 1.3, SNI, multiple certificates, ACME, managed certificate rotation, and zero-downtime TLS reload.
+- Provide deterministic validation, planning, publication, canary rollout, status observation, and rollback.
+- Support PostgreSQL for cloud and SQLite for standalone with equivalent business behavior.
+- Meet measurable throughput, latency, reload, memory, availability, security, and recovery targets.
+- Operate as a self-contained Web Server when the management control plane and database are temporarily unavailable.
+- Provide strict HTTP parsing, deterministic overload behavior, graceful process lifecycle, and safe operating-system integration.
+- Provide app-api and backend-api SDKs for every supported control-plane workflow.
+
+### 4.2 Non-Goals
+
+- V1 does not promise compatibility with arbitrary Nginx third-party dynamic modules.
+- V1 does not implement OpenResty/Lua, Perl modules, Nginx mail proxy, or Nginx Plus proprietary features.
+- V1 does not treat arbitrary raw Nginx text as executable by the Rust engine.
+- V1 does not store certificate private keys, tokens, passwords, or credentials in `sdkwork.app.config.json` or committed Web Server configuration.
+- V1 does not use SQLite as a shared cloud-cluster database.
+- V1 does not allow per-application code to bypass the Web Server compiler with handwritten runtime routes.
+- V1 does not guarantee byte-for-byte identical Nginx-generated error pages; protocol behavior and configured routing semantics are the compatibility target.
+- V1 is a reverse proxy, not an unrestricted forward proxy, and does not expose the HTTP `CONNECT` method as an open tunnel.
+- V1 does not embed PHP, CGI, FastCGI, uWSGI, SCGI, application language runtimes, or arbitrary native code. Dynamic applications run behind supported upstream protocols.
+- V1 does not require the request data plane to query PostgreSQL, SQLite, Redis, ACME, DNS control APIs, or the management control plane for every request.
+
+## 5. Scope
+
+| Capability | Product requirement |
+| --- | --- |
+| Rust data plane | HTTP/1.0 compatibility, HTTP/1.1, HTTP/2, strict parsing, streaming, keep-alive, graceful drain, static files, proxying, load balancing, and bounded backpressure. |
+| HTTPS | TLS 1.2/1.3, SNI, certificate selection, HTTP-to-HTTPS redirect, ACME, import, renewal, revocation, rotation, OCSP where supported, and secure key handling. |
+| Application configuration | One governed Web Server configuration per Web app root, referenced by its SDKWork app manifest. |
+| Virtual hosting | Multiple listeners, exact/wildcard/regex domains, default server, canonical domain, and per-host policies. |
+| Path resources | Exact/prefix/regex matching, static roots, SPA fallback, redirects, fixed responses, reverse proxy, rewrites, method/header/query/source matching. |
+| Upstreams | Weighted targets, common load-balancing algorithms, keepalive, active/passive health checks, retry budgets, circuit breaking, and discovery extension. |
+| Nginx compatibility | Import, normalize, validate, explain, diff, render, and conformance-test the supported HTTP profile. |
+| Configuration lifecycle | Draft, validate, plan, immutable revision, publish, canary, activate, observe, rollback, and audit. |
+| Cluster operation | Node-scoped assignments, signed delta snapshots, fencing, offline recovery, version convergence, and no tenant-wide secret broadcast. |
+| Control plane | IAM-protected APIs, SDKs, pagination, idempotency, optimistic concurrency, asynchronous operations, audit, and operational status. |
+| Persistence | PostgreSQL cloud authority, SQLite standalone authority, portable contracts, migration governance, transaction safety, and drift detection. |
+| Operations | Health/readiness, structured logs, metrics, traces, alerts, quotas, rate limits, backup/restore, rolling upgrades, and incident runbooks. |
+| Runtime lifecycle | Deterministic bootstrap, config test/dump/explain, non-root operation, atomic reload, graceful shutdown, overload shedding, service-manager integration, and zero-downtime executable upgrade. |
+
+Detailed requirements live in the three PRD shards linked above.
+
+## 6. User Scenarios
+
+### 6.1 Create A Static SPA
+
+An application developer selects the `static-spa` profile. The generated configuration listens on a safe non-privileged development port, serves the app build artifact, applies immutable caching to fingerprinted assets, uses `index.html` fallback for client routes, rejects path traversal, and can be promoted unchanged to a cloud listener.
+
+### 6.2 Publish A Domain With HTTPS
+
+An operator binds a verified domain, selects a managed certificate policy, validates the complete listener/host/route/TLS plan, and starts an asynchronous publication. The system obtains or imports the certificate, distributes only the assigned certificate to each selected node, activates the new revision atomically, verifies public readiness over HTTPS, and records an audit trail.
+
+### 6.3 Reverse Proxy An API
+
+An operator defines an upstream pool and a path route. The server preserves standard forwarding and WebSocket headers, streams request and response bodies, applies timeouts and bounded retries, removes unhealthy targets, and exposes latency, saturation, retry, and error metrics.
+
+### 6.4 Migrate An Nginx Site
+
+An operator imports an Nginx site file. The compiler resolves includes within an approved root, reports unsupported directives with file and line information, shows the normalized configuration and compatibility grade, runs behavioral conformance checks, and publishes only after no blocking diagnostic remains.
+
+### 6.5 Rotate A Certificate Without Downtime
+
+The certificate worker renews a certificate before expiry, validates the chain and hostname coverage, encrypts and distributes the new material, switches TLS contexts atomically, keeps existing connections alive, verifies the new fingerprint, and retains a bounded rollback window.
+
+### 6.6 Roll Back A Failed Revision
+
+Health or SLO checks detect a failed canary. The control plane stops rollout, reactivates the last verified revision with a fencing token, confirms node convergence, and returns an asynchronous operation result. A database-only status change is not a rollback.
+
+## 7. Functional Requirements
+
+- `PRD-FR-001`: Every Web application root must own `sdkwork.app.config.json` and a referenced `sdkwork.webserver.config.json` at the standard app-local path.
+- `PRD-FR-002`: The compiler must validate syntax, schema, references, listener conflicts, domain conflicts, route ambiguity, filesystem boundaries, TLS dependencies, upstream reachability policy, and resource budgets before publication.
+- `PRD-FR-003`: The Rust engine must implement deterministic virtual-host and route selection compatible with the declared Nginx profile.
+- `PRD-FR-004`: Production public listeners must support HTTPS and must not activate when required certificate material is unavailable, invalid, expired, mismatched, or unreadable.
+- `PRD-FR-005`: Static resources must support index files, MIME types, conditional requests, byte ranges, precompressed variants, cache policy, SPA fallback, and safe path normalization.
+- `PRD-FR-006`: Proxy resources must support streaming, WebSocket upgrades, forwarding headers, configurable buffering, timeouts, bounded retries, health-aware upstream selection, and cancellation propagation.
+- `PRD-FR-007`: Long-running publication, rollback, certificate, import, and bulk operations must use SDKWork asynchronous command semantics.
+- `PRD-FR-008`: Published revisions must be immutable, checksummed, auditable, atomically activated, and rollback-capable.
+- `PRD-FR-009`: Nginx import must preserve source locations and produce an explicit compatibility diagnostic for every parsed directive.
+- `PRD-FR-010`: Every node must receive only the applications, routes, certificates, and secrets assigned to that node.
+- `PRD-FR-011`: Every list/search API must use store-level SDKWork pagination and return standard `pageInfo`; growing logs, events, revisions, operations, and nodes must use cursor/keyset pagination.
+- `PRD-FR-012`: PostgreSQL and SQLite must pass the same business, transaction, migration, and API contract suite for supported deployment profiles.
+- `PRD-FR-013`: The management client must expose configuration, validation diagnostics, revisions, diff, rollout, HTTPS, certificate, node, metrics, and audit workflows without hand-built HTTP.
+- `PRD-FR-014`: HTTP/1.x and HTTP/2 parsing, framing, method, authority, header, body, connection, and response behavior must be standards-correct and fail closed against request smuggling, slow-client, and protocol-confusion attacks.
+- `PRD-FR-015`: The data plane must start from a locally available verified snapshot and continue serving the last verified snapshot without a synchronous database or control-plane dependency in the request path.
+- `PRD-FR-016`: Static serving must implement conditional requests, HEAD, byte ranges, safe path resolution, bounded metadata caching, efficient file transfer, and deterministic error handling.
+- `PRD-FR-017`: Reverse proxying must implement DNS resolution, connection pooling, HTTP upgrade, flow-controlled streaming, deadlines, health-aware balancing, bounded buffering/spooling, retries, and upstream TLS verification.
+- `PRD-FR-018`: A hierarchical resource governor must enforce process, application, listener, host, route, upstream, and client budgets before memory, descriptors, disk, CPU, or worker queues are exhausted.
+- `PRD-FR-019`: The runtime must provide config validate/dump/explain, start, readiness, reload, drain, stop, status, and version operations with service-manager and container lifecycle integration.
+- `PRD-FR-020`: Reload and executable upgrade must stage a complete candidate, preserve accepted healthy connections, fence concurrent transitions, prove the served revision, and restore the last verified generation on failure.
+- `PRD-FR-021`: Administrative, health, readiness, metrics, profiling, and debug surfaces must use separately governed exposure policies and must never be implicitly exposed through an application virtual host.
+
+## 8. Non-Functional Requirements
+
+### 8.1 Performance And Memory
+
+- A reference benchmark profile must compare the Rust data plane with the current stable Nginx OSS release on identical hardware, kernel, TLS, payload, connection, and upstream settings.
+- For supported static and reverse-proxy scenarios, V1 throughput must reach at least 80% of the Nginx baseline and p95 added proxy latency must not exceed 5 ms under the declared reference load.
+- The server must sustain at least 100,000 idle keep-alive connections on the documented 8-vCPU/16-GB reference node without OOM or loss of control-plane readiness.
+- A 10,000-route configuration must validate and atomically activate within 1 second p99 after required resources are locally available.
+- Request memory must be bounded by configured body/header windows and streaming buffers, not total request or response size.
+- List API memory must be O(page size); agent synchronization memory must be O(delta size); caches, queues, connection pools, log buffers, and retry inventories must have explicit hard limits.
+- The runtime must reserve a configurable emergency margin and begin admission control before allocator or operating-system exhaustion; reaching a configured limit must produce bounded rejection or shedding, not process OOM.
+- Per-connection and per-stream memory budgets must include parser, header, flow-control, TLS, proxy, compression, and observability allocations rather than counting body buffers alone.
+- Load and soak tests must demonstrate stable memory over 24 hours with no monotonic growth from reloads, ACME challenges, certificate rotations, disconnected clients, or failed upstreams.
+
+### 8.2 Reliability And High Availability
+
+- A production three-node data-plane deployment targets 99.99% monthly request availability, excluding approved maintenance windows and external upstream failure outside configured policy.
+- Configuration reload and certificate rotation must not drop accepted healthy connections.
+- A failed canary must stop automatically; the last verified revision must be restorable within 30 seconds after rollback authorization.
+- Control-plane cloud recovery targets are RPO <= 5 minutes and RTO <= 15 minutes, backed by tested PostgreSQL backup and restore procedures.
+- Node synchronization must be idempotent, resumable, checksummed, fenced, and safe under duplicate, delayed, reordered, or replayed messages.
+- Worker claims must use leases with expiry and fencing so a process crash cannot leave permanent in-progress state.
+- Control-plane, database, DNS control API, and certificate issuer outages must not interrupt already active valid traffic configuration.
+- Graceful shutdown must stop new accepts, advertise HTTP/2 shutdown, drain eligible requests to a deadline, and then terminate remaining work deterministically.
+
+### 8.3 Security And Privacy
+
+- Production public traffic must use HTTPS; plaintext HTTP may exist only for explicit redirect, ACME HTTP-01, loopback development, or documented private health traffic.
+- TLS 1.0 and 1.1 are forbidden. TLS 1.2 and 1.3 are supported; insecure ciphers, invalid chains, hostname mismatch, expired certificates, and unsafe fallback are rejected.
+- Private keys must be encrypted at rest, redacted from API responses/logs/metrics, referenced through secret or KMS identities, and distributed only to authorized nodes.
+- Domain ownership must be verified through an approved DNS or HTTP challenge before production certificate issuance or public activation.
+- Filesystem resources must be confined to approved roots with symlink and traversal protection.
+- Configuration size, route count, regex complexity, request headers, body size, connections, rate, and upstream retries must be quota-controlled per application and tenant.
+- IAM, RBAC, optimistic concurrency, idempotency, audit, secure headers, input validation, and problem details follow the referenced SDKWork standards.
+
+### 8.4 Observability And Operations
+
+- Every request must have a server-owned trace identity and structured access/error logging with secret redaction.
+- Metrics must cover requests, latency, response size, active connections, TLS handshakes, certificate expiry, route/upstream status, retries, cache, rate limits, pool saturation, config revision, rollout, and node convergence.
+- Traces must cover listener, virtual host, route, policy, upstream attempt, and control-plane operation without recording raw secrets or unbounded labels.
+- `/healthz`, `/readyz`, and `/metrics` must have explicit exposure policies and remain independent of business API routes.
+- Container logging defaults to structured stdout/stderr; service-package logging follows the SDKWork runtime directory standard and must survive disk-full conditions through bounded buffering and an explicit drop/block policy.
+- Production releases require operator, backup/restore, certificate incident, failed rollout, node divergence, and capacity runbooks.
+
+## 9. Success Metrics
+
+- 100% of active Web app roots have valid app manifests and Web Server configurations.
+- 100% of production domains serve a valid TLS 1.2/1.3 certificate and pass automated expiry/hostname/chain checks.
+- 100% of published revisions have validation evidence, checksum, actor, operation, node convergence, and rollback target.
+- Zero unsupported Nginx directives are silently accepted.
+- Zero unbounded interactive list queries, tenant-wide full configuration syncs, or unbounded in-memory request bodies remain in production paths.
+- PostgreSQL and SQLite compatibility suites pass for every release.
+- Nginx conformance, HTTPS, load, soak, security, failover, and rollback gates pass before stable release.
+- Protocol conformance, request-smuggling, slow-client, overload, descriptor exhaustion, disk-full, DNS failure, cache poisoning, and graceful executable-upgrade gates pass before stable release.
+- Critical certificate expiry, invalid rollout, node divergence, and capacity saturation alerts meet documented detection and response targets.
+
+## 10. Phases
+
+### Phase 0 - Contracts And Truthfulness
+
+- Finalize the Web Server app configuration schema, compatibility profile, HTTPS contract, requirements, ADRs, and verification matrix.
+- Remove or reclassify existing production-complete claims until evidence satisfies this PRD.
+
+### Phase 1 - Rust HTTP/HTTPS Foundation
+
+- Deliver listeners, virtual hosts, static resources, reverse proxying, TLS, SNI, certificate import, safe reload, configuration compiler, immutable revisions, and standalone SQLite behavior.
+- Deliver strict HTTP/1.x and HTTP/2 framing, resource governor, DNS resolver, bounded streaming/spooling, process lifecycle, protected administration, and standalone operation from a local verified snapshot.
+
+### Phase 2 - Nginx Compatibility And Managed Certificates
+
+- Deliver supported Nginx import/render/conformance, ACME HTTP-01 and DNS-01 provider model, renewal, OCSP policy, upstream health, load balancing, cache, rate limits, and PostgreSQL cloud behavior.
+
+### Phase 3 - Cluster And Commercial Operations
+
+- Deliver node-scoped delta distribution, canary rollout, fencing, autoscaling evidence, backup/restore, SLO dashboards, alerting, audit completeness, quotas, billing/entitlement hooks, and operator runbooks.
+- Deliver zero-downtime executable upgrade, multi-region failure evidence, deterministic overload behavior, capacity models, support bundles, and long-term compatibility policy.
+
+### Phase 4 - Advanced Protocols And Extensions
+
+- Evaluate HTTP/3, TCP/UDP stream proxying, WASM policy modules, WAF integrations, service discovery, and approved Nginx Plus-equivalent capabilities through separate requirements and ADRs.
+
+## 11. Linked Requirements
+
+- [REQ-2026-0002 instant-acme Let's Encrypt](../requirements/REQ-2026-0002-instant-acme-letsencrypt.md) - existing draft requirement; it must be revised to match the HTTPS shard before implementation continues.
+- New implementation work must be decomposed into `REQ-*` records for configuration contracts, HTTP runtime core, process and resource lifecycle, Nginx compatibility, HTTPS/certificates, persistence, cluster distribution, observability, deployment, and conformance testing.
+- Existing certificate and distribution ADRs must be reviewed because their current implementation-complete claims do not satisfy this PRD.
+
+## 12. Release Acceptance
+
+A stable commercial release is accepted only when:
+
+- All P0/P1 requirements in this PRD and linked ready requirements have implementation and test evidence.
+- Authoritative configuration schemas, OpenAPI, generated SDKs, runtime behavior, database contracts, and documentation agree.
+- PostgreSQL and SQLite tests, Nginx conformance, HTTPS interoperability, security, performance, soak, chaos, rolling upgrade, backup/restore, and rollback tests pass.
+- No fake success, silent directive ignore, unbounded memory path, plaintext private key exposure, cross-node secret over-distribution, or undocumented compatibility exception remains.
+- Production deployment includes immutable artifacts, checksum, signature, SBOM, provenance, health probes, resource limits, autoscaling policy, disruption policy, secret manager integration, and operational runbooks.
+
+## 13. Open Questions
+
+- Whether HTTP/3 enters Phase 2 or remains Phase 4 depends on client demand and the selected Rust transport stack's production maturity.
+- The initial DNS-01 provider set and credential ownership model require a separate integration requirement.
+- WASM/WAF extension ABI, isolation limits, and compatibility policy require an ADR before plugin work begins.
+- Nginx Plus-specific features require explicit product licensing and clean-room compatibility review before inclusion.
