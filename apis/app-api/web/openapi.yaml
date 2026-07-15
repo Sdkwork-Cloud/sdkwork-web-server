@@ -975,9 +975,8 @@ components:
       in: query
       schema:
         type: integer
-          maximum: 200
         minimum: 1
-        maximum: 100
+        maximum: 200
         default: 20
     SiteIdParam:
       name: siteId
