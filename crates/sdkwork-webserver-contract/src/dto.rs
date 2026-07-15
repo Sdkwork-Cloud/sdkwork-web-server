@@ -25,7 +25,7 @@ pub struct SitePage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-        pub page_size: i32,
+    pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -123,7 +123,7 @@ pub struct DeploymentPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-        pub page_size: i32,
+    pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -272,7 +272,7 @@ pub struct NginxConfigPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-        pub page_size: i32,
+    pub page_size: i32,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -471,7 +471,7 @@ pub struct AuditLogPage {
     #[serde(with = "sdkwork_utils_rust::serde_int64")]
     pub total: i64,
     pub page: i32,
-        pub page_size: i32,
+    pub page_size: i32,
 }
 
 #[cfg(test)]
