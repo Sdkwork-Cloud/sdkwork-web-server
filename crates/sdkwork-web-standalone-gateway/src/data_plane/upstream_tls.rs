@@ -31,13 +31,12 @@ pub(crate) fn configure_upstream_tls(
     let mut root_count = 0usize;
     for path in ca_paths {
         let pem = read_bounded_tls_material(path)?;
-        let certificates = Certificate::from_pem_bundle(&pem).map_err(|source| {
-            DataPlaneError::UpstreamTls {
+        let certificates =
+            Certificate::from_pem_bundle(&pem).map_err(|source| DataPlaneError::UpstreamTls {
                 upstream_id: upstream.id.clone(),
                 material: "CA certificate bundle",
                 source,
-            }
-        })?;
+            })?;
         if certificates.is_empty() {
             return Err(DataPlaneError::EmptyUpstreamCaBundle {
                 upstream_id: upstream.id.clone(),

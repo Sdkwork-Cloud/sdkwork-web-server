@@ -28,14 +28,9 @@ pub enum DataPlaneError {
     },
 
     #[error("upstream {upstream_id} CA bundle {path} contains no certificates")]
-    EmptyUpstreamCaBundle {
-        upstream_id: String,
-        path: PathBuf,
-    },
+    EmptyUpstreamCaBundle { upstream_id: String, path: PathBuf },
 
-    #[error(
-        "upstream {upstream_id} has {actual} custom root certificates; maximum is {maximum}"
-    )]
+    #[error("upstream {upstream_id} has {actual} custom root certificates; maximum is {maximum}")]
     TooManyUpstreamRootCertificates {
         upstream_id: String,
         actual: usize,
