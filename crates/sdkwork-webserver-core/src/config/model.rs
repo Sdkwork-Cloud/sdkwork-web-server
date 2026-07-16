@@ -573,6 +573,7 @@ pub struct UpstreamConfig {
     pub resolver_ref: Option<String>,
     #[serde(default)]
     pub address_policy: UpstreamAddressPolicyConfig,
+    pub tls: Option<UpstreamTlsConfig>,
     #[serde(default = "default_connect_timeout_ms")]
     pub connect_timeout_ms: u64,
     #[serde(default = "default_request_timeout_ms")]
@@ -588,6 +589,30 @@ pub struct UpstreamConfig {
 pub struct UpstreamAddressPolicyConfig {
     #[serde(default)]
     pub allowed_cidrs: Vec<IpNet>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpstreamTlsConfig {
+    #[serde(default)]
+    pub trust_mode: UpstreamTlsTrustMode,
+    #[serde(default)]
+    pub ca_certificate_files: Vec<String>,
+    pub client_certificate_file: Option<String>,
+    pub client_private_key_file: Option<String>,
+    #[serde(default = "default_tls_minimum")]
+    pub minimum_version: TlsVersion,
+    #[serde(default = "default_tls_maximum")]
+    pub maximum_version: TlsVersion,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UpstreamTlsTrustMode {
+    #[default]
+    System,
+    Custom,
+    SystemAndCustom,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

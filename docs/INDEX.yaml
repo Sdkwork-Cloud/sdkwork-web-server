@@ -97,6 +97,10 @@ entries:
     path: docs/product/requirements/REQ-2026-0023-bounded-upstream-dns-ssrf-policy.md
     kind: req
     status: accepted
+  - id: REQ-2026-0024
+    path: docs/product/requirements/REQ-2026-0024-upstream-tls-identity-pool-isolation.md
+    kind: req
+    status: in-progress
   - id: ADR-20260623-acme-certificate-authority
     path: docs/architecture/decisions/ADR-20260623-acme-certificate-authority.md
     kind: adr

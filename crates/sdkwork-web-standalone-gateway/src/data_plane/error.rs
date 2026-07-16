@@ -20,6 +20,28 @@ pub enum DataPlaneError {
         source: reqwest::Error,
     },
 
+    #[error("cannot load {material} for upstream {upstream_id}: {source}")]
+    UpstreamTls {
+        upstream_id: String,
+        material: &'static str,
+        source: reqwest::Error,
+    },
+
+    #[error("upstream {upstream_id} CA bundle {path} contains no certificates")]
+    EmptyUpstreamCaBundle {
+        upstream_id: String,
+        path: PathBuf,
+    },
+
+    #[error(
+        "upstream {upstream_id} has {actual} custom root certificates; maximum is {maximum}"
+    )]
+    TooManyUpstreamRootCertificates {
+        upstream_id: String,
+        actual: usize,
+        maximum: usize,
+    },
+
     #[error("upstream {upstream_id} has an invalid target URL {target}")]
     InvalidUpstreamTarget { upstream_id: String, target: String },
 

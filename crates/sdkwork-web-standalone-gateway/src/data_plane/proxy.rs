@@ -20,7 +20,7 @@ use axum::{
 };
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use reqwest::{redirect::Policy, Client, Url};
-use sdkwork_webserver_core::{RouteConfig, UpstreamConfig};
+use sdkwork_webserver_core::{CompiledWebServerApp, RouteConfig, UpstreamConfig};
 
 use super::{
     dns::{BoundedSystemResolver, GuardedDnsResolver},
@@ -29,6 +29,7 @@ use super::{
         ProxyTrailerPolicy, RequestBodyFailure,
     },
     runtime::RuntimeGeneration,
+    upstream_tls::configure_upstream_tls,
     DataPlaneError,
 };
 
@@ -42,6 +43,7 @@ pub struct ProxyUpstream {
 
 impl ProxyUpstream {
     pub(crate) fn build(
+        app: &CompiledWebServerApp,
         config: &UpstreamConfig,
         resolver: Arc<BoundedSystemResolver>,
     ) -> Result<Self, DataPlaneError> {
@@ -49,13 +51,14 @@ impl ProxyUpstream {
             resolver,
             config.address_policy.clone(),
         ));
-        let client = Client::builder()
+        let builder = Client::builder()
             .redirect(Policy::none())
             .connect_timeout(Duration::from_millis(config.connect_timeout_ms))
             .timeout(Duration::from_millis(config.request_timeout_ms))
             .pool_max_idle_per_host(config.max_idle_connections)
             .pool_idle_timeout(Duration::from_millis(config.idle_connection_timeout_ms))
-            .dns_resolver(resolver)
+            .dns_resolver(resolver);
+        let client = configure_upstream_tls(builder, app, config)?
             .build()
             .map_err(|source| DataPlaneError::UpstreamClient {
                 upstream_id: config.id.clone(),

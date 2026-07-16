@@ -15,6 +15,7 @@ mod runtime;
 mod server;
 mod static_files;
 mod tls;
+mod upstream_tls;
 mod watch;
 
 pub use error::DataPlaneError;

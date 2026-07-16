@@ -59,7 +59,7 @@ impl RuntimeGeneration {
                     })
                     .unwrap_or(&implicit_resolver)
                     .clone();
-                ProxyUpstream::build(upstream, resolver)
+                ProxyUpstream::build(&app, upstream, resolver)
                     .map(|runtime| (upstream.id.clone(), runtime))
             })
             .collect::<Result<HashMap<_, _>, _>>()?;

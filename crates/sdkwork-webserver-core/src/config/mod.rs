@@ -17,8 +17,8 @@ pub use model::{
     CertificateConfig, CertificateSource, CompatibilityConfig, DeploymentConfig, ListenerConfig,
     ListenerProtocol, ObservabilityConfig, ReloadConfig, ReloadMode, ResolverConfig,
     ResourceConfig, RouteConfig, RouteMatchConfig, RoutePathType, TlsPolicyConfig, TlsVersion,
-    UpstreamAddressPolicyConfig, UpstreamConfig, UpstreamTargetConfig, VirtualHostConfig,
-    WebServerAppConfig, WebServerLimits,
+    UpstreamAddressPolicyConfig, UpstreamConfig, UpstreamTargetConfig, UpstreamTlsConfig,
+    UpstreamTlsTrustMode, VirtualHostConfig, WebServerAppConfig, WebServerLimits,
 };
 pub use network::{is_supported_upstream_allowed_cidr, upstream_ip_is_allowed};
 pub use uri::{normalize_uri_path, UriPathNormalizationError};

@@ -23,6 +23,13 @@ pub struct CompiledWebServerApp {
     compiled_hosts: Vec<CompiledVirtualHost>,
     static_roots: HashMap<String, PathBuf>,
     certificate_paths: HashMap<String, (PathBuf, PathBuf)>,
+    upstream_tls_paths: HashMap<String, CompiledUpstreamTlsPaths>,
+}
+
+#[derive(Debug)]
+struct CompiledUpstreamTlsPaths {
+    ca_certificates: Vec<PathBuf>,
+    client_identity: Option<(PathBuf, PathBuf)>,
 }
 
 #[derive(Debug)]
@@ -105,6 +112,51 @@ impl CompiledWebServerApp {
             certificate_paths.insert(certificate.id.clone(), (certificate_path, private_key_path));
         }
 
+        let mut upstream_tls_paths = HashMap::new();
+        for (index, upstream) in config.upstreams.iter().enumerate() {
+            let Some(tls) = &upstream.tls else {
+                continue;
+            };
+            let ca_certificates = tls
+                .ca_certificate_files
+                .iter()
+                .enumerate()
+                .map(|(file_index, configured)| {
+                    resolve_protected_relative_file(
+                        &base_directory,
+                        configured,
+                        &format!("/upstreams/{index}/tls/caCertificateFiles/{file_index}"),
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let client_identity = tls
+                .client_certificate_file
+                .as_deref()
+                .zip(tls.client_private_key_file.as_deref())
+                .map(|(certificate, private_key)| {
+                    Ok((
+                        resolve_protected_relative_file(
+                            &base_directory,
+                            certificate,
+                            &format!("/upstreams/{index}/tls/clientCertificateFile"),
+                        )?,
+                        resolve_protected_relative_file(
+                            &base_directory,
+                            private_key,
+                            &format!("/upstreams/{index}/tls/clientPrivateKeyFile"),
+                        )?,
+                    ))
+                })
+                .transpose()?;
+            upstream_tls_paths.insert(
+                upstream.id.clone(),
+                CompiledUpstreamTlsPaths {
+                    ca_certificates,
+                    client_identity,
+                },
+            );
+        }
+
         let compiled_hosts = config
             .virtual_hosts
             .iter()
@@ -173,6 +225,7 @@ impl CompiledWebServerApp {
             compiled_hosts,
             static_roots,
             certificate_paths,
+            upstream_tls_paths,
         })
     }
 
@@ -225,6 +278,19 @@ impl CompiledWebServerApp {
     pub fn certificate_paths(&self, certificate_id: &str) -> Option<(&Path, &Path)> {
         self.certificate_paths
             .get(certificate_id)
+            .map(|(certificate, private_key)| (certificate.as_path(), private_key.as_path()))
+    }
+
+    pub fn upstream_tls_ca_certificate_paths(&self, upstream_id: &str) -> Option<&[PathBuf]> {
+        self.upstream_tls_paths
+            .get(upstream_id)
+            .map(|paths| paths.ca_certificates.as_slice())
+    }
+
+    pub fn upstream_tls_client_identity_paths(&self, upstream_id: &str) -> Option<(&Path, &Path)> {
+        self.upstream_tls_paths
+            .get(upstream_id)
+            .and_then(|paths| paths.client_identity.as_ref())
             .map(|(certificate, private_key)| (certificate.as_path(), private_key.as_path()))
     }
 
@@ -405,6 +471,21 @@ fn resolve_required_file(
         ));
     }
     Ok(canonical)
+}
+
+fn resolve_protected_relative_file(
+    base_directory: &Path,
+    configured: &str,
+    diagnostic_path: &str,
+) -> Result<PathBuf, WebServerConfigError> {
+    let resolved = resolve_required_file(base_directory, configured, diagnostic_path)?;
+    if !resolved.starts_with(base_directory) {
+        return Err(validation_error(
+            diagnostic_path,
+            "protected TLS file escapes the configuration directory",
+        ));
+    }
+    Ok(resolved)
 }
 
 fn validation_error(path: impl Into<String>, message: impl Into<String>) -> WebServerConfigError {

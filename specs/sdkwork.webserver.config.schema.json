@@ -727,6 +727,9 @@
         "addressPolicy": {
           "$ref": "#/$defs/upstreamAddressPolicy"
         },
+        "tls": {
+          "$ref": "#/$defs/upstreamTlsPolicy"
+        },
         "connectTimeoutMs": {
           "type": "integer",
           "minimum": 100,
@@ -769,6 +772,45 @@
           },
           "default": [],
           "description": "Explicit narrow authorization for loopback, RFC1918, RFC6598, IPv4 link-local, IPv6 ULA, or IPv6 link-local upstream destinations. Public and hard-forbidden ranges cannot be listed."
+        }
+      }
+    },
+    "upstreamTlsPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trustMode": {
+          "enum": ["system", "custom", "system-and-custom"],
+          "default": "system"
+        },
+        "caCertificateFiles": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "default": []
+        },
+        "clientCertificateFile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "clientPrivateKeyFile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "minimumVersion": {
+          "enum": ["tls1.2", "tls1.3"],
+          "default": "tls1.2"
+        },
+        "maximumVersion": {
+          "enum": ["tls1.2", "tls1.3"],
+          "default": "tls1.3"
         }
       }
     },

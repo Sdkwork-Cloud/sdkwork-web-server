@@ -9,7 +9,7 @@ use url::Url;
 use super::{
     is_supported_upstream_allowed_cidr, upstream_ip_is_allowed, CertificateSource,
     ConfigDiagnostic, ListenerProtocol, ResourceConfig, RouteConfig, TlsVersion,
-    WebServerAppConfig, WebServerConfigError, WebServerLimits,
+    UpstreamTlsTrustMode, WebServerAppConfig, WebServerConfigError, WebServerLimits,
 };
 
 const MAX_DIAGNOSTICS: usize = 128;
@@ -359,6 +359,7 @@ impl SemanticValidator {
             }
             total_targets = total_targets.saturating_add(upstream.targets.len());
             let mut target_urls = HashSet::new();
+            let mut has_plaintext_target = false;
             for (target_index, target) in upstream.targets.iter().enumerate() {
                 let target_path = format!("{path}/targets/{target_index}/url");
                 match Url::parse(&target.url) {
@@ -370,6 +371,7 @@ impl SemanticValidator {
                             && url.query().is_none()
                             && url.fragment().is_none() =>
                     {
+                        has_plaintext_target |= url.scheme() == "http";
                         let normalized = url.as_str().trim_end_matches('/').to_ascii_lowercase();
                         if !target_urls.insert(normalized) {
                             self.push(&target_path, "duplicate upstream target URL");
@@ -396,6 +398,69 @@ impl SemanticValidator {
                     self.push(
                         format!("{path}/targets/{target_index}/weight"),
                         "weighted upstream selection is not implemented by REQ-2026-0003; weight must be 1",
+                    );
+                }
+            }
+            if let Some(tls) = &upstream.tls {
+                if has_plaintext_target {
+                    self.push(
+                        format!("{path}/tls"),
+                        "upstream TLS policy requires every target to use https",
+                    );
+                }
+                match tls.trust_mode {
+                    UpstreamTlsTrustMode::System if !tls.ca_certificate_files.is_empty() => {
+                        self.push(
+                            format!("{path}/tls/caCertificateFiles"),
+                            "system trust mode does not accept custom CA certificate files",
+                        );
+                    }
+                    UpstreamTlsTrustMode::Custom | UpstreamTlsTrustMode::SystemAndCustom
+                        if tls.ca_certificate_files.is_empty() =>
+                    {
+                        self.push(
+                            format!("{path}/tls/caCertificateFiles"),
+                            "custom trust modes require at least one CA certificate file",
+                        );
+                    }
+                    _ => {}
+                }
+                for (file_index, file) in tls.ca_certificate_files.iter().enumerate() {
+                    validate_relative_path(
+                        self,
+                        &format!("{path}/tls/caCertificateFiles/{file_index}"),
+                        file,
+                        true,
+                    );
+                }
+                match (
+                    tls.client_certificate_file.as_deref(),
+                    tls.client_private_key_file.as_deref(),
+                ) {
+                    (Some(certificate), Some(private_key)) => {
+                        validate_relative_path(
+                            self,
+                            &format!("{path}/tls/clientCertificateFile"),
+                            certificate,
+                            true,
+                        );
+                        validate_relative_path(
+                            self,
+                            &format!("{path}/tls/clientPrivateKeyFile"),
+                            private_key,
+                            true,
+                        );
+                    }
+                    (None, None) => {}
+                    _ => self.push(
+                        format!("{path}/tls"),
+                        "clientCertificateFile and clientPrivateKeyFile must be configured together",
+                    ),
+                }
+                if tls.minimum_version > tls.maximum_version {
+                    self.push(
+                        format!("{path}/tls/maximumVersion"),
+                        "maximum TLS version must not be lower than minimumVersion",
                     );
                 }
             }
