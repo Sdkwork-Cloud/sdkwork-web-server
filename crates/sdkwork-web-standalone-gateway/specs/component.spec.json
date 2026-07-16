@@ -35,7 +35,8 @@
     "publicExports": ["crate-root", "binary"],
     "providedPorts": [
       {"name": "managementRouter", "export": "crate-root"},
-      {"name": "standaloneDataPlane", "export": "crate-root"}
+      {"name": "standaloneDataPlane", "export": "crate-root"},
+      {"name": "standaloneDataPlaneReload", "export": "crate-root"}
     ],
     "requiredPorts": [
       {"name": "webServerConfigCompiler", "export": "crate-root", "provider": "sdkwork-webserver-core"}

@@ -1,3 +1,4 @@
+use sdkwork_intelligence_webserver_service::AuditLogWrite;
 use sdkwork_webserver_contract::{
     AuditLogPage, AuditLogResponse, WebServiceError, WebServiceResult,
 };
@@ -75,13 +76,7 @@ impl WebRepository {
 
     pub(super) async fn insert_audit_log_repo(
         &self,
-        tenant_id: i64,
-        organization_id: i64,
-        operator_id: i64,
-        action: &str,
-        target_type: &str,
-        target_id: Option<i64>,
-        target_uuid: Option<&str>,
+        entry: AuditLogWrite<'_>,
     ) -> WebServiceResult<()> {
         let id = next_id(self.id_generator())?;
         let uuid = new_uuid();
@@ -97,13 +92,13 @@ impl WebRepository {
         )
         .bind(id)
         .bind(&uuid)
-        .bind(tenant_id)
-        .bind(organization_id)
-        .bind(operator_id)
-        .bind(action)
-        .bind(target_type)
-        .bind(target_id)
-        .bind(target_uuid)
+        .bind(entry.tenant_id)
+        .bind(entry.organization_id)
+        .bind(entry.operator_id)
+        .bind(entry.action)
+        .bind(entry.target_type)
+        .bind(entry.target_id)
+        .bind(entry.target_uuid)
         .bind(&now)
         .execute(&self.pool)
         .await

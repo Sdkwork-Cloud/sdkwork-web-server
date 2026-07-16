@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdkwork.com/schemas/web/sdkwork.webserver.im-dev.schema.json",
+  "title": "SDKWork Web Server IM Development Ingress Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "route", "https", "applications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "sdkwork.webserver.im-dev" },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathPrefix", "mobileUserAgentTokens"],
+      "properties": {
+        "pathPrefix": {
+          "type": "string",
+          "pattern": "^/.*?/$",
+          "minLength": 2,
+          "maxLength": 512
+        },
+        "mobileUserAgentTokens": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "https": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "port", "certificate"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "port": { "$ref": "#/$defs/port" },
+        "certificate": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode", "directory"],
+              "properties": {
+                "mode": { "const": "auto" },
+                "directory": { "$ref": "#/$defs/path" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode", "certificateFile", "privateKeyFile"],
+              "properties": {
+                "mode": { "const": "files" },
+                "certificateFile": { "$ref": "#/$defs/path" },
+                "privateKeyFile": { "$ref": "#/$defs/path" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "applications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pc", "h5"],
+      "properties": {
+        "pc": { "$ref": "#/$defs/application" },
+        "h5": { "$ref": "#/$defs/application" }
+      }
+    }
+  },
+  "$defs": {
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "host", "port"],
+      "properties": {
+        "root": { "$ref": "#/$defs/path" },
+        "host": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "port": { "$ref": "#/$defs/port" }
+      }
+    }
+  }
+}

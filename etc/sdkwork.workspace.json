@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.source-application-workspace",
+  "workspaceRoot": "../..",
+  "repositories": {
+    "sdkwork-im": {
+      "root": "sdkwork-im"
+    }
+  },
+  "applications": {
+    "sdkwork-im-pc": {
+      "repository": "sdkwork-im",
+      "root": "sdkwork-im/apps/sdkwork-im-pc",
+      "canonicalAppKey": "sdkwork-im-pc",
+      "framework": "react-vite",
+      "criticalFiles": [
+        "package.json",
+        "sdkwork.app.config.json",
+        "vite.config.ts",
+        "src/main.tsx"
+      ],
+      "actions": {
+        "build": {
+          "runtimeTarget": "browser",
+          "steps": [
+            {
+              "command": "pnpm",
+              "args": ["build"]
+            }
+          ]
+        }
+      }
+    },
+    "sdkwork-im-h5": {
+      "repository": "sdkwork-im",
+      "root": "sdkwork-im/apps/sdkwork-im-h5",
+      "canonicalAppKey": "sdkwork-im-h5",
+      "framework": "react-capacitor",
+      "criticalFiles": [
+        "package.json",
+        "sdkwork.app.config.json",
+        "vite.config.ts",
+        "src/main.tsx",
+        "packages/sdkwork-im-h5-capacitor/package.json",
+        "packages/sdkwork-im-h5-capacitor/capacitor.config.ts"
+      ],
+      "actions": {
+        "build": {
+          "runtimeTarget": "browser",
+          "steps": [
+            {
+              "command": "pnpm",
+              "args": ["build"]
+            }
+          ]
+        },
+        "package:ios": {
+          "runtimeTarget": "capacitor-ios",
+          "supportedHosts": ["darwin"],
+          "steps": [
+            {
+              "command": "pnpm",
+              "args": ["build"]
+            },
+            {
+              "cwd": "packages/sdkwork-im-h5-capacitor",
+              "command": "pnpm",
+              "args": ["exec", "cap", "sync", "ios"]
+            },
+            {
+              "cwd": "packages/sdkwork-im-h5-capacitor",
+              "command": "pnpm",
+              "args": ["exec", "cap", "build", "ios", "--configuration", "Release"]
+            }
+          ]
+        },
+        "package:android": {
+          "runtimeTarget": "capacitor-android",
+          "steps": [
+            {
+              "command": "pnpm",
+              "args": ["build"]
+            },
+            {
+              "cwd": "packages/sdkwork-im-h5-capacitor",
+              "command": "pnpm",
+              "args": ["exec", "cap", "sync", "android"]
+            },
+            {
+              "cwd": "packages/sdkwork-im-h5-capacitor",
+              "command": "pnpm",
+              "args": ["exec", "cap", "build", "android", "--androidreleasetype", "AAB"]
+            }
+          ]
+        }
+      }
+    },
+    "sdkwork-im-flutter": {
+      "repository": "sdkwork-im",
+      "root": "sdkwork-im/apps/sdkwork-im-flutter-mobile",
+      "canonicalAppKey": "sdkwork-im-flutter-mobile",
+      "framework": "flutter",
+      "criticalFiles": [
+        "pubspec.yaml",
+        "sdkwork.app.config.json",
+        "lib/main.dart",
+        "android/app/build.gradle.kts",
+        "ios/Runner.xcodeproj/project.pbxproj"
+      ],
+      "actions": {
+        "build": {
+          "runtimeTarget": "flutter-android",
+          "steps": [
+            {
+              "command": "flutter",
+              "args": ["pub", "get"]
+            },
+            {
+              "command": "flutter",
+              "args": ["build", "apk", "--release"]
+            }
+          ]
+        },
+        "package:ios": {
+          "runtimeTarget": "flutter-ios",
+          "supportedHosts": ["darwin"],
+          "steps": [
+            {
+              "command": "flutter",
+              "args": ["pub", "get"]
+            },
+            {
+              "command": "flutter",
+              "args": ["build", "ipa", "--release"]
+            }
+          ]
+        },
+        "package:android": {
+          "runtimeTarget": "flutter-android",
+          "steps": [
+            {
+              "command": "flutter",
+              "args": ["pub", "get"]
+            },
+            {
+              "command": "flutter",
+              "args": ["build", "appbundle", "--release"]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

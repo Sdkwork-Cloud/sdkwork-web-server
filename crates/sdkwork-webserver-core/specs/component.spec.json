@@ -31,7 +31,8 @@
     "layerRole": "backend-domain",
     "publicExports": ["crate-root"],
     "providedPorts": [
-      {"name": "webServerConfigCompiler", "export": "crate-root"}
+      {"name": "webServerConfigCompiler", "export": "crate-root"},
+      {"name": "webServerConfigRevision", "export": "crate-root"}
     ],
     "requiredPorts": [],
     "runtimeEntrypoints": [],
@@ -52,4 +53,3 @@
     ]
   }
 }
-

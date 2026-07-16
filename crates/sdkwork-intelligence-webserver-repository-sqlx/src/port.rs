@@ -1,7 +1,7 @@
 //! `WebRepositoryPort` trait implementation delegating to SQLx repository modules.
 
 use async_trait::async_trait;
-use sdkwork_intelligence_webserver_service::WebRepositoryPort;
+use sdkwork_intelligence_webserver_service::{AuditLogWrite, WebRepositoryPort};
 use sdkwork_webserver_contract::{
     AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse, AuditLogPage,
     CertificateIssueUpdate, CertificatePage, CertificateResponse, CreateCertificateRequest,
@@ -422,25 +422,7 @@ impl WebRepositoryPort for WebRepository {
         self.list_audit_logs_repo(tenant_id, page, page_size).await
     }
 
-    async fn insert_audit_log(
-        &self,
-        tenant_id: i64,
-        organization_id: i64,
-        operator_id: i64,
-        action: &str,
-        target_type: &str,
-        target_id: Option<i64>,
-        target_uuid: Option<&str>,
-    ) -> WebServiceResult<()> {
-        self.insert_audit_log_repo(
-            tenant_id,
-            organization_id,
-            operator_id,
-            action,
-            target_type,
-            target_id,
-            target_uuid,
-        )
-        .await
+    async fn insert_audit_log(&self, entry: AuditLogWrite<'_>) -> WebServiceResult<()> {
+        self.insert_audit_log_repo(entry).await
     }
 }

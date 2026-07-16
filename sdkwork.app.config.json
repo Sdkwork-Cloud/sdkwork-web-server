@@ -92,14 +92,14 @@
       "family": "sdkwork-web-app-sdk",
       "surface": "app-api",
       "apiAuthority": "sdkwork-web.app",
-      "assemblyPath": "sdks/sdkwork-web-app-sdk/.sdkwork-assembly.json",
+      "manifestPath": "sdks/sdkwork-web-app-sdk/sdk-manifest.json",
       "componentSpecPath": "sdks/sdkwork-web-app-sdk/specs/component.spec.json"
     },
     {
       "family": "sdkwork-web-backend-sdk",
       "surface": "backend-api",
       "apiAuthority": "sdkwork-web.backend",
-      "assemblyPath": "sdks/sdkwork-web-backend-sdk/.sdkwork-assembly.json",
+      "manifestPath": "sdks/sdkwork-web-backend-sdk/sdk-manifest.json",
       "componentSpecPath": "sdks/sdkwork-web-backend-sdk/specs/component.spec.json"
     }
   ],

@@ -7,7 +7,7 @@ use sdkwork_webserver_contract::{
     UpdateSiteRequest, WebAppApi, WebAppRequestContext, WebServiceResult,
 };
 
-use crate::WebService;
+use crate::{AuditLogWrite, WebService};
 
 impl WebService {
     fn require_tenant(context: &WebAppRequestContext) -> WebServiceResult<i64> {
@@ -25,15 +25,15 @@ impl WebService {
     ) -> WebServiceResult<()> {
         let operator_id = context.actor_id.unwrap_or(0);
         self.repository
-            .insert_audit_log(
-                context.tenant_id,
-                context.organization_id.unwrap_or(0),
+            .insert_audit_log(AuditLogWrite {
+                tenant_id: context.tenant_id,
+                organization_id: context.organization_id.unwrap_or(0),
                 operator_id,
                 action,
-                "site",
-                None,
-                Some(target_uuid),
-            )
+                target_type: "site",
+                target_id: None,
+                target_uuid: Some(target_uuid),
+            })
             .await
     }
 }

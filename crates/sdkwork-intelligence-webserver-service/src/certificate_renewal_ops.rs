@@ -5,7 +5,7 @@ use sdkwork_webserver_contract::{
     CertificateResponse, WebServiceError, WebServiceResult,
 };
 
-use crate::WebService;
+use crate::{AuditLogWrite, WebService};
 
 impl WebService {
     pub async fn run_certificate_renewal_cycle(
@@ -153,15 +153,15 @@ impl WebService {
 
         let _ = self
             .repository
-            .insert_audit_log(
+            .insert_audit_log(AuditLogWrite {
                 tenant_id,
-                0,
-                0,
-                audit_action,
-                "certificate",
-                None,
-                Some(&response.id),
-            )
+                organization_id: 0,
+                operator_id: 0,
+                action: audit_action,
+                target_type: "certificate",
+                target_id: None,
+                target_uuid: Some(&response.id),
+            })
             .await;
 
         Ok(response)

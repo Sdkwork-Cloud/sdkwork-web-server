@@ -1,71 +1,43 @@
 use std::{
-    future::Future,
     io,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
 
-use axum_server::accept::Accept;
 use tokio::{
     io::{AsyncRead, AsyncWrite, ReadBuf},
     sync::{OwnedSemaphorePermit, Semaphore},
 };
 
-#[derive(Clone)]
-pub struct ConnectionLimitAcceptor<A> {
-    inner: A,
-    global_permits: std::sync::Arc<Semaphore>,
-    listener_permits: std::sync::Arc<Semaphore>,
+pub struct ConnectionLimiter {
+    global_permits: Arc<Semaphore>,
+    listener_permits: Arc<Semaphore>,
 }
 
-impl<A> ConnectionLimitAcceptor<A> {
-    pub fn new(
-        inner: A,
-        global_permits: std::sync::Arc<Semaphore>,
-        maximum_listener_connections: usize,
-    ) -> Self {
+impl ConnectionLimiter {
+    pub fn new(global_permits: Arc<Semaphore>, maximum_listener_connections: usize) -> Self {
         Self {
-            inner,
             global_permits,
-            listener_permits: std::sync::Arc::new(Semaphore::new(maximum_listener_connections)),
+            listener_permits: Arc::new(Semaphore::new(maximum_listener_connections)),
         }
     }
-}
 
-impl<A, I, S> Accept<I, S> for ConnectionLimitAcceptor<A>
-where
-    A: Accept<I, S> + Clone + Send + Sync + 'static,
-    A::Future: Send + 'static,
-    A::Stream: Send + Unpin + 'static,
-    A::Service: Send + 'static,
-    I: Send + 'static,
-    S: Send + 'static,
-{
-    type Stream = ConnectionLimitedStream<A::Stream>;
-    type Service = A::Service;
-    type Future =
-        Pin<Box<dyn Future<Output = io::Result<(Self::Stream, Self::Service)>> + Send + 'static>>;
-
-    fn accept(&self, stream: I, service: S) -> Self::Future {
-        let inner = self.inner.clone();
-        let global_permits = self.global_permits.clone();
-        let listener_permits = self.listener_permits.clone();
-        Box::pin(async move {
-            let global_permit = global_permits
-                .try_acquire_owned()
-                .map_err(|_| connection_limit_error())?;
-            let listener_permit = listener_permits
-                .try_acquire_owned()
-                .map_err(|_| connection_limit_error())?;
-            let (stream, service) = inner.accept(stream, service).await?;
-            Ok((
-                ConnectionLimitedStream {
-                    inner: stream,
-                    _global_permit: global_permit,
-                    _listener_permit: listener_permit,
-                },
-                service,
-            ))
+    pub fn try_admit<I>(&self, stream: I) -> io::Result<ConnectionLimitedStream<I>> {
+        let global_permit = self
+            .global_permits
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| connection_limit_error())?;
+        let listener_permit = self
+            .listener_permits
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| connection_limit_error())?;
+        Ok(ConnectionLimitedStream {
+            inner: stream,
+            _global_permit: global_permit,
+            _listener_permit: listener_permit,
         })
     }
 }

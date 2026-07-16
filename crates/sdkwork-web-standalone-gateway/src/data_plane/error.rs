@@ -38,12 +38,37 @@ pub enum DataPlaneError {
     #[error("certificate {certificate_id} has no resolved protected files")]
     MissingCertificateFiles { certificate_id: String },
 
+    #[error("TLS policy {policy_id} has an ambiguous certificate mapping for {server_name}")]
+    AmbiguousTlsServerName {
+        policy_id: String,
+        server_name: String,
+    },
+
+    #[error("cannot install a process-wide Rustls cryptography provider")]
+    TlsCryptoProvider,
+
     #[error("cannot load TLS certificate {certificate_file} or key {private_key_file}: {source}")]
     TlsFiles {
         certificate_file: PathBuf,
         private_key_file: PathBuf,
         source: io::Error,
     },
+
+    #[error("cannot fingerprint TLS material {path}: {source}")]
+    TlsMaterialRead { path: PathBuf, source: io::Error },
+
+    #[error("TLS material {path} is {actual_bytes} bytes; maximum is {maximum_bytes}")]
+    TlsMaterialTooLarge {
+        path: PathBuf,
+        actual_bytes: u64,
+        maximum_bytes: u64,
+    },
+
+    #[error("candidate configuration changes restart-only listener, TLS, or admission topology")]
+    ReloadRequiresRestart,
+
+    #[error("configuration reload worker failed: {0}")]
+    ReloadWorker(#[source] tokio::task::JoinError),
 
     #[error("listener {listener_id} failed: {source}")]
     Listener {

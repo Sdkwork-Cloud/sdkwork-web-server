@@ -1,6 +1,11 @@
-use std::{fs, path::Path};
+use std::{
+    fs::{self, File},
+    io::Read,
+    path::Path,
+};
 
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use super::{
     validate_webserver_config, CompiledWebServerApp, ConfigDiagnostic, WebServerAppConfig,
@@ -11,10 +16,73 @@ pub const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 const MAX_SCHEMA_DIAGNOSTICS: usize = 64;
 const SCHEMA: &str = include_str!("../../../../specs/sdkwork.webserver.config.schema.json");
 
+#[derive(Debug)]
+pub struct CompiledWebServerRevision {
+    app: CompiledWebServerApp,
+    sha256: String,
+    size_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebServerConfigFileRevision {
+    sha256: String,
+    size_bytes: u64,
+}
+
+impl WebServerConfigFileRevision {
+    pub fn sha256(&self) -> &str {
+        &self.sha256
+    }
+
+    pub fn size_bytes(&self) -> u64 {
+        self.size_bytes
+    }
+}
+
+impl CompiledWebServerRevision {
+    pub fn app(&self) -> &CompiledWebServerApp {
+        &self.app
+    }
+
+    pub fn sha256(&self) -> &str {
+        &self.sha256
+    }
+
+    pub fn size_bytes(&self) -> u64 {
+        self.size_bytes
+    }
+
+    pub fn into_app(self) -> CompiledWebServerApp {
+        self.app
+    }
+}
+
 pub fn load_and_compile_webserver_config(
     path: impl AsRef<Path>,
 ) -> Result<CompiledWebServerApp, WebServerConfigError> {
+    load_and_compile_webserver_config_revision(path).map(CompiledWebServerRevision::into_app)
+}
+
+pub fn load_and_compile_webserver_config_revision(
+    path: impl AsRef<Path>,
+) -> Result<CompiledWebServerRevision, WebServerConfigError> {
     let path = path.as_ref();
+    let bytes = read_bounded_config(path)?;
+    let sha256 = hex::encode(Sha256::digest(&bytes));
+    compile_webserver_config_revision(path, bytes, sha256)
+}
+
+pub fn inspect_webserver_config_revision(
+    path: impl AsRef<Path>,
+) -> Result<WebServerConfigFileRevision, WebServerConfigError> {
+    let bytes = read_bounded_config(path.as_ref())?;
+    Ok(WebServerConfigFileRevision {
+        sha256: hex::encode(Sha256::digest(&bytes)),
+        size_bytes: bytes.len() as u64,
+    })
+}
+
+fn read_bounded_config(path: &Path) -> Result<Vec<u8>, WebServerConfigError> {
     let metadata = fs::metadata(path).map_err(|source| WebServerConfigError::Inspect {
         path: path.to_path_buf(),
         source,
@@ -27,10 +95,33 @@ pub fn load_and_compile_webserver_config(
         });
     }
 
-    let bytes = fs::read(path).map_err(|source| WebServerConfigError::Read {
+    let mut file = File::open(path).map_err(|source| WebServerConfigError::Read {
         path: path.to_path_buf(),
         source,
     })?;
+    let mut bytes = Vec::with_capacity(metadata.len().min(MAX_CONFIG_BYTES + 1) as usize);
+    file.by_ref()
+        .take(MAX_CONFIG_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|source| WebServerConfigError::Read {
+            path: path.to_path_buf(),
+            source,
+        })?;
+    if bytes.len() as u64 > MAX_CONFIG_BYTES {
+        return Err(WebServerConfigError::TooLarge {
+            path: path.to_path_buf(),
+            actual_bytes: bytes.len() as u64,
+            maximum_bytes: MAX_CONFIG_BYTES,
+        });
+    }
+    Ok(bytes)
+}
+
+fn compile_webserver_config_revision(
+    path: &Path,
+    bytes: Vec<u8>,
+    sha256: String,
+) -> Result<CompiledWebServerRevision, WebServerConfigError> {
     let instance: Value =
         serde_json::from_slice(&bytes).map_err(|source| WebServerConfigError::Json {
             path: path.to_path_buf(),
@@ -46,7 +137,12 @@ pub fn load_and_compile_webserver_config(
     validate_webserver_config(&config)?;
 
     let base_directory = path.parent().unwrap_or_else(|| Path::new("."));
-    CompiledWebServerApp::compile(config, base_directory)
+    let app = CompiledWebServerApp::compile(config, base_directory)?;
+    Ok(CompiledWebServerRevision {
+        app,
+        sha256,
+        size_bytes: bytes.len() as u64,
+    })
 }
 
 fn validate_schema(instance: &Value) -> Result<(), WebServerConfigError> {

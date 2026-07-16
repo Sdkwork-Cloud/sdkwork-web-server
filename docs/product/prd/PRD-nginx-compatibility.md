@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-07-15
+Updated: 2026-07-16
 Parent: [PRD.md](PRD.md)
 Specs: NGINX_SPEC.md, REQUIREMENTS_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, TEST_SPEC.md
 
@@ -111,6 +111,36 @@ The engine must never buffer an unbounded body to emulate a directive. When exac
 The Nginx compatibility corpus includes strict HTTP/1.0/1.1 and HTTP/2 request/response behavior, not only route selection. It compares request-target parsing, Host/authority, header normalization, chunking, trailers, keep-alive, connection close, `Expect: 100-continue`, HEAD, no-body responses, range behavior, WebSocket upgrade, HTTP/2 pseudo-headers, flow control, and graceful shutdown.
 
 Security differences are never relaxed to reproduce an unsafe reference behavior. Ambiguous `Content-Length`, `Transfer-Encoding` conflicts, obsolete header folding, invalid characters, request smuggling, oversized compressed headers, rapid reset, and other protocol-confusion inputs fail closed. An intentional security hardening difference is cataloged and tested rather than hidden behind the behavioral compatibility grade.
+
+### 8.2 Current HTTP/1 Connection Evidence
+
+[REQ-2026-0010](../requirements/REQ-2026-0010-http1-connection-semantics.md) is the first raw-socket HTTP/1 connection slice compared with a real Nginx binary. It proves equivalent default-server selection, ordered HTTP/1.0 Keep-Alive Pipeline handling, HTTP/1.0 Transfer-Encoding rejection, valid `100 Continue`, and complete Body half-close behavior for the tested fixtures.
+
+The slice intentionally returns `417` for unsupported expectations and refuses to execute non-proxy actions after a truncated declared Body even where the reference Nginx `return` path ignores those inputs. Hyper 1.10.1 also preserves an HTTP/1.0 response status line for an HTTP/1.0 peer while Nginx 1.26.2 emits HTTP/1.1. These differences lower the current Behavioral grade and remain visible in the requirement matrix; they are not represented as complete Nginx compatibility.
+
+### 8.3 Current HTTP/2 Abuse And Drain Evidence
+
+[REQ-2026-0012](../requirements/REQ-2026-0012-bounded-http2-abuse-and-drain.md) proves an SDKWork safety slice over real TLS/ALPN H2 connections: configured SETTINGS, finite Frame/new-Stream/reset windows, encoded Header Block and Continuation bounds, H2 `ENHANCE_YOUR_CALM` local-error reset protection, isolated recovery, and graceful GOAWAY drain. These are runtime correctness and hardening results, not an Nginx Behavioral compatibility grade. A real Nginx HTTP/2 differential corpus, HPACK CPU corpus, and exhaustive malformed-Frame suite remain required before claiming HTTP/2 compatibility.
+
+[REQ-2026-0014](../requirements/REQ-2026-0014-response-progress-timeouts.md) adds finite response producer-idle and downstream write-stall behavior with real Socket evidence. The connection write control is conceptually aligned with Nginx `send_timeout` progress semantics, but no Nginx differential fixture has yet established exact timing, buffering, status-line, or connection-close equivalence; the compatibility grade remains unchanged.
+
+### 8.4 Current URI Normalization Evidence
+
+[REQ-2026-0018](../requirements/REQ-2026-0018-canonical-uri-normalization.md) introduces separate raw and canonical URI representations. A pinned loopback Nginx 1.26.2 fixture confirms equivalent percent decoding, repeated-slash merging, dot-segment resolution, encoded-slash routing, trailing-slash preservation, and above-root rejection for the recorded corpus. Route selection and static identity use the canonical Path; no-rewrite proxying retains the original Path and Query, while `stripPrefix` rewrites the canonical Path and retains the original Query.
+
+This evidence is draft, not a Behavioral compatibility grade. SDKWork intentionally returns `400` for a decoded backslash and invalid UTF-8, including where the tested Windows Nginx build treats backslash as a separator. ADR-20260716 remains proposed and requires human review before the requirement or compatibility behavior can be accepted.
+
+### 8.5 Current HTTP/1 Pipeline Depth Evidence
+
+[REQ-2026-0019](../requirements/REQ-2026-0019-bounded-http1-pipeline-depth.md) adds an SDKWork request-count ceiling in addition to the shared parser-byte ceiling. A real Nginx 1.26.2 loopback probe accepted 64 pipelined HTTP/1.1 requests in one write and emitted all 64 ordered `200` responses because Nginx exposes no equivalent pending-head count. SDKWork closes the connection when complete request heads awaiting Service dispatch exceed `http1MaxPipelineDepth`.
+
+This is an intentional safety and scheduling-fairness difference, not a claimed Nginx Behavioral match. Accepted requests remain ordered, request Bodies are never buffered by the counter, TLS applies the limit after decryption, and H2 is outside its scope.
+
+### 8.6 Current HTTP/2 Keep-Alive PING Evidence
+
+[REQ-2026-0020](../requirements/REQ-2026-0020-http2-keep-alive-ping-timeout.md) adds proactive HTTP/2 liveness detection through Hyper/H2. The pinned Nginx 1.26.2 binary negotiated TLS ALPN `h2` but emitted no PING during the recorded 2,500 ms idle window; it emitted only SETTINGS, a connection WINDOW_UPDATE, and SETTINGS ACK. SDKWork with a 1,000 ms interval emitted PING and, when ACK was withheld for 300 ms, sent `GOAWAY(NO_ERROR)` and closed.
+
+This is an operational difference scoped to the pinned interval and build, not evidence that every Nginx build can never emit PING. A compliant client that ACKs remains connected; healthy-idle maximum lifetime remains a separate policy.
 
 ## 9. Include And File Security
 

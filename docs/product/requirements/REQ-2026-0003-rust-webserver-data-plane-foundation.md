@@ -4,7 +4,7 @@
 id: REQ-2026-0003
 title: Run verified application Web Server configuration on the Rust data plane
 owner: SDKWork maintainers
-status: in-progress
+status: accepted
 source: platform
 problem: The current application manages sites, domains, certificates, Nginx configuration, and agents, but it does not yet execute an application-owned Web Server configuration as an independent HTTP/HTTPS data plane.
 goals:
@@ -31,7 +31,7 @@ acceptance_criteria:
   - The data-plane startup path does not initialize PostgreSQL or SQLite.
   - A configured HTTP listener serves exact-host and default-host fixed, redirect, static, and proxy routes.
   - A configured HTTPS listener serves TLS 1.2/1.3 with the selected certificate and HTTP/2 ALPN support.
-  - Request and response bodies are streamed for proxy routes and configured size/deadline bounds are enforced.
+  - Proxy request and response bodies are streamed; configured request-size and request/deadline bounds are enforced.
   - Shutdown stops accepting new traffic and drains active server tasks to a configured deadline.
   - Unit and integration tests exercise config failures, host/path precedence, static traversal rejection, proxy streaming, TLS handshake, and shutdown.
 non_functional_requirements:
@@ -57,11 +57,23 @@ trace:
 verification:
   - cargo test -p sdkwork-webserver-core
   - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test --workspace
+  - cargo clippy --workspace --all-targets -- -D warnings
   - cargo fmt -- --check
   - node ../sdkwork-specs/tools/check-application-layering.mjs --root .
   - node ../sdkwork-specs/tools/check-rust-backend-composition.mjs --root .
-  - pnpm check:repository-docs
+  - pnpm verify
 ```
 
 Product authority: [PRD.md](../prd/PRD.md). Architecture decision: [ADR-20260715-rust-webserver-data-plane.md](../../architecture/decisions/ADR-20260715-rust-webserver-data-plane.md).
 
+## Acceptance Evidence
+
+Accepted on 2026-07-15 as the bounded Phase 1 foundation slice, not as commercial-release acceptance of the parent PRD.
+
+- The checked-in configuration example is validated by Draft 2020-12 JSON Schema, strict Serde decoding, semantic validation, and immutable compilation tests.
+- Real-socket integration tests prove fixed, redirect, static, default-host, HTTP proxy, HTTPS, HTTP/2 ALPN, request-body rejection, traversal/authority-confusion rejection, connection overload rejection, and finite shutdown drain behavior.
+- Proxy request and response bodies remain streams; the implementation does not collect an unbounded body before forwarding.
+- `cargo test --workspace`, full-workspace strict Clippy, and `pnpm verify` pass on the acceptance revision.
+
+The parent PRD remains active. Dynamic configuration generations, multi-certificate SNI rotation, WebSocket Upgrade, Nginx import/conformance, dynamic DNS, advanced HTTP abuse controls, cache/rate limiting, cluster rollout, observability, and production load/soak/chaos evidence are outside this accepted requirement and remain release blockers.

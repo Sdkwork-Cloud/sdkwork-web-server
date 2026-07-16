@@ -104,6 +104,7 @@ The request path does not call management services or repositories. Management r
 
 | ADR | Topic | Status |
 | --- | --- | --- |
+| ADR-20260716-canonical-uri-dual-representation | Raw request URI preservation and bounded canonical routing Path | proposed; human review required |
 | ADR-20260715-rust-webserver-data-plane | Config authority, crate boundaries, HTTP/TLS/static/proxy stack | accepted / implementation in progress |
 | ADR-20260623-acme-certificate-authority | ACME client, CA selection, key storage | historical accepted; requires review against HTTPS PRD |
 | ADR-20260623-cert-distribution-topology | Agent sync and certificate distribution | historical accepted; requires review against node-scoped distribution PRD |
@@ -119,4 +120,3 @@ pnpm check
 ```
 
 Commercial completion additionally requires the protocol, Nginx, HTTPS, performance, OOM, soak, failure, upgrade, backup/restore, and cluster evidence named by the PRD.
-

@@ -1,26 +1,26 @@
 openapi: 3.1.2
 info:
   title: SDKWork Web Backend API
-  description: SDKWork Web Server 管理后台 API
+  description: SDKWork Web Server 绠＄悊鍚庡彴 API
   version: 1.0.0
 servers:
-  - url: https://api.web.sdkwork.com
-    description: Production
-  - url: http://localhost:3800
-    description: Local Development
+- url: https://api.web.sdkwork.com
+  description: Production
+- url: http://localhost:3800
+  description: Local Development
 security:
-  - AuthToken: []
-    AccessToken: []
+- AuthToken: []
+  AccessToken: []
 paths:
   /backend/v3/api/nginx/configs:
     get:
       operationId: nginx.configs.list
-      summary: 获取 Nginx 配置列表
+      summary: 鑾峰彇 Nginx 閰嶇疆鍒楄〃
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -28,59 +28,59 @@ paths:
       x-sdkwork-permission: web.nginx.write
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: siteId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: configType
-          in: query
-          schema:
-            type: integer
-            enum:
-              - 1
-              - 2
-              - 3
-              - 4
-        - name: isActive
-          in: query
-          schema:
-            type: boolean
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      - name: siteId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: configType
+        in: query
+        schema:
+          type: integer
+          enum:
+          - 1
+          - 2
+          - 3
+          - 4
+      - name: isActive
+        in: query
+        schema:
+          type: boolean
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        additionalProperties: false
-                        required:
-                          - items
-                          - pageInfo
-                        properties:
-                          items: &a1
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/NginxConfigResponse"
-                          pageInfo:
-                            $ref: "#/components/schemas/PageInfo"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - items
+                      - pageInfo
+                      properties:
+                        items:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/NginxConfigResponse'
+                        pageInfo:
+                          $ref: '#/components/schemas/PageInfo'
     post:
       operationId: nginx.configs.create
-      summary: 创建 Nginx 配置
+      summary: 鍒涘缓 Nginx 閰嶇疆
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -93,42 +93,42 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateNginxConfigRequest"
+              $ref: '#/components/schemas/CreateNginxConfigRequest'
       responses:
-        "201":
-          description: 创建成功
+        '201':
+          description: 鍒涘缓鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxConfigResponse"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxConfigResponse'
   /backend/v3/api/nginx/configs/{configId}:
     parameters:
-      - name: configId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+    - name: configId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     get:
       operationId: nginx.configs.retrieve
-      summary: 获取 Nginx 配置详情
+      summary: 鑾峰彇 Nginx 閰嶇疆璇︽儏
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -136,34 +136,34 @@ paths:
       x-sdkwork-permission: web.nginx.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxConfigResponse"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxConfigResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       operationId: nginx.configs.update
-      summary: 更新 Nginx 配置
+      summary: 鏇存柊 Nginx 閰嶇疆
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -176,44 +176,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateNginxConfigRequest"
+              $ref: '#/components/schemas/UpdateNginxConfigRequest'
       responses:
-        "200":
-          description: 更新成功
+        '200':
+          description: 鏇存柊鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxConfigResponse"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxConfigResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /backend/v3/api/nginx/configs/{configId}/validate:
     parameters:
-      - name: configId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+    - name: configId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     post:
       operationId: nginx.configs.validate
-      summary: 校验 Nginx 配置
+      summary: 鏍￠獙 Nginx 閰嶇疆
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -221,40 +221,40 @@ paths:
       x-sdkwork-permission: web.nginx.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        "200":
-          description: 校验结果
+        '200':
+          description: 鏍￠獙缁撴灉
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxValidateResponse"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxValidateResponse'
   /backend/v3/api/nginx/configs/{configId}/deploy:
     parameters:
-      - name: configId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+    - name: configId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     post:
       operationId: nginx.configs.deploy
-      summary: 部署 Nginx 配置
+      summary: 閮ㄧ讲 Nginx 閰嶇疆
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -264,35 +264,35 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       x-sdkwork-rate-limit-tier: auth-critical
       responses:
-        "200":
-          description: 部署成功
+        '200':
+          description: 閮ㄧ讲鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxDeployResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxDeployResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /backend/v3/api/nginx/reload:
     post:
       operationId: nginx.reload
-      summary: 热加载 Nginx
+      summary: "鐑\uDCAD鍔犺浇 Nginx"
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -301,33 +301,33 @@ paths:
       x-sdkwork-idempotent: true
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        "200":
-          description: 热加载结果
+        '200':
+          description: "鐑\uDCAD鍔犺浇缁撴灉"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxReloadResponse"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxReloadResponse'
   /backend/v3/api/nginx/status:
     get:
       operationId: nginx.status.retrieve
-      summary: 获取 Nginx 状态
+      summary: "鑾峰彇 Nginx 鐘舵\uDC80\uDC81"
       tags:
-        - nginx
+      - nginx
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -335,33 +335,33 @@ paths:
       x-sdkwork-permission: web.nginx.write
       x-sdkwork-owner: sdkwork-web-server
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/NginxStatusResponse"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/NginxStatusResponse'
   /backend/v3/api/servers:
     get:
       operationId: servers.list
-      summary: 获取服务器列表
+      summary: "鑾峰彇鏈嶅姟鍣ㄥ垪琛\uDCA8"
       tags:
-        - server
+      - server
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -369,41 +369,41 @@ paths:
       x-sdkwork-permission: web.servers.read
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        additionalProperties: false
-                        required:
-                          - items
-                          - pageInfo
-                        properties:
-                          items: &a2
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/ServerResponse"
-                          pageInfo:
-                            $ref: "#/components/schemas/PageInfo"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - items
+                      - pageInfo
+                      properties:
+                        items:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/ServerResponse'
+                        pageInfo:
+                          $ref: '#/components/schemas/PageInfo'
     post:
       operationId: servers.create
-      summary: 注册服务器
+      summary: "娉ㄥ唽鏈嶅姟鍣\uDCA8"
       tags:
-        - server
+      - server
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -417,34 +417,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateServerRequest"
+              $ref: '#/components/schemas/CreateServerRequest'
       responses:
-        "201":
-          description: 注册成功
+        '201':
+          description: 娉ㄥ唽鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/CreateServerResponse"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/CreateServerResponse'
   /backend/v3/api/agent/heartbeat:
     post:
       operationId: agent.heartbeat
-      summary: 边缘节点心跳
+      summary: 杈圭紭鑺傜偣蹇冭烦
       tags:
-        - agent
+      - agent
       security:
-        - AgentToken: []
+      - AgentToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -457,36 +457,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AgentHeartbeatRequest"
+              $ref: '#/components/schemas/AgentHeartbeatRequest'
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/AgentHeartbeatResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/AgentHeartbeatResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /backend/v3/api/agent/sync:
     get:
-      operationId: agent.sync
-      summary: 拉取 nginx 配置与证书 bundle
+      operationId: agent.retrieve
+      summary: "鎷夊彇 nginx 閰嶇疆涓庤瘉涔\uDCA6 bundle"
       tags:
-        - agent
+      - agent
       security:
-        - AgentToken: []
+      - AgentToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -495,42 +495,42 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       x-sdkwork-rate-limit-tier: auth-critical
       parameters:
-        - name: ifSyncVersion
-          in: query
-          description: When it matches the current tenant manifest fingerprint, returns
-            unchanged=true with empty bundles.
-          schema:
-            type: string
+      - name: ifSyncVersion
+        in: query
+        description: When it matches the current tenant manifest fingerprint, returns
+          unchanged=true with empty bundles.
+        schema:
+          type: string
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        required:
-                          - item
-                        properties:
-                          item:
-                            $ref: "#/components/schemas/AgentSyncResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      required:
+                      - item
+                      properties:
+                        item:
+                          $ref: '#/components/schemas/AgentSyncResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /backend/v3/api/audit_logs:
     get:
       operationId: auditLogs.list
-      summary: 获取审计日志列表
+      summary: "鑾峰彇瀹¤\uDCAE℃棩蹇楀垪琛\uDCA8"
       tags:
-        - audit
+      - audit
       security:
-        - AuthToken: []
-          AccessToken: []
+      - AuthToken: []
+        AccessToken: []
       x-sdkwork-api-surface: backend-api
       x-sdkwork-api-authority: sdkwork-web.backend
       x-sdkwork-request-context: WebRequestContext
@@ -538,59 +538,59 @@ paths:
       x-sdkwork-permission: web.auditLogs.read
       x-sdkwork-owner: sdkwork-web-server
       parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: targetType
-          in: query
-          schema:
-            type: string
-        - name: action
-          in: query
-          schema:
-            type: string
-        - name: operatorId
-          in: query
-          schema:
-            type: string
-            format: int64
-            pattern: ^[0-9]+$
-            x-sdkwork-int64-string: true
-            x-sdkwork-rust-type: i64
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date-time
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/PageSizeParam'
+      - name: targetType
+        in: query
+        schema:
+          type: string
+      - name: action
+        in: query
+        schema:
+          type: string
+      - name: operatorId
+        in: query
+        schema:
+          type: string
+          format: int64
+          pattern: ^[0-9]+$
+          x-sdkwork-int64-string: true
+          x-sdkwork-rust-type: i64
+      - name: startDate
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: endDate
+        in: query
+        schema:
+          type: string
+          format: date-time
       responses:
-        "200":
-          description: 成功
+        '200':
+          description: 鎴愬姛
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/SdkWorkApiResponse"
-                  - type: object
-                    required:
-                      - data
-                    properties:
-                      data:
-                        type: object
-                        additionalProperties: false
-                        required:
-                          - items
-                          - pageInfo
-                        properties:
-                          items: &a3
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/AuditLogResponse"
-                          pageInfo:
-                            $ref: "#/components/schemas/PageInfo"
+                - $ref: '#/components/schemas/SdkWorkApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - items
+                      - pageInfo
+                      properties:
+                        items:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/AuditLogResponse'
+                        pageInfo:
+                          $ref: '#/components/schemas/PageInfo'
 components:
   securitySchemes:
     AuthToken:
@@ -626,11 +626,11 @@ components:
       type: object
       additionalProperties: true
       required:
-        - type
-        - title
-        - status
-        - code
-        - traceId
+      - type
+      - title
+      - status
+      - code
+      - traceId
       properties:
         type:
           type: string
@@ -646,7 +646,7 @@ components:
         instance:
           type: string
         code:
-          $ref: "#/components/schemas/SdkWorkPlatformErrorCode"
+          $ref: '#/components/schemas/SdkWorkPlatformErrorCode'
         traceId:
           type: string
           format: uuid
@@ -654,21 +654,21 @@ components:
         errors:
           type: array
           items:
-            $ref: "#/components/schemas/FieldError"
+            $ref: '#/components/schemas/FieldError'
     CreateNginxConfigRequest:
       type: object
       required:
-        - configType
-        - configName
-        - configContent
+      - configType
+      - configName
+      - configContent
       properties:
         configType:
           type: integer
           enum:
-            - 1
-            - 2
-            - 3
-            - 4
+          - 1
+          - 2
+          - 3
+          - 4
         configName:
           type: string
           maxLength: 200
@@ -720,14 +720,18 @@ components:
     NginxConfigPage:
       type: object
       properties:
-        items: *a1
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NginxConfigResponse'
         total:
           type: string
           format: int64
           pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Total item count as a string to avoid JavaScript precision loss.
+          description: Total item count as a string to avoid JavaScript precision
+            loss.
     NginxValidateResponse:
       type: object
       properties:
@@ -745,9 +749,9 @@ components:
               severity:
                 type: string
                 enum:
-                  - error
-                  - warning
-                  - info
+                - error
+                - warning
+                - info
     NginxDeployResponse:
       type: object
       properties:
@@ -794,9 +798,9 @@ components:
     CreateServerRequest:
       type: object
       required:
-        - name
-        - host
-        - sshPort
+      - name
+      - host
+      - sshPort
       properties:
         name:
           type: string
@@ -838,14 +842,14 @@ components:
           format: date-time
     CreateServerResponse:
       allOf:
-        - $ref: "#/components/schemas/ServerResponse"
-        - type: object
-          required:
-            - agentToken
-          properties:
-            agentToken:
-              type: string
-              description: Bootstrap agent credential; returned once at registration.
+      - $ref: '#/components/schemas/ServerResponse'
+      - type: object
+        required:
+        - agentToken
+        properties:
+          agentToken:
+            type: string
+            description: Bootstrap agent credential; returned once at registration.
     AgentHeartbeatRequest:
       type: object
       properties:
@@ -862,7 +866,8 @@ components:
           description: Number of active nginx configs reported by the agent as a string.
         lastSyncVersion:
           type: string
-          description: Last successfully applied syncVersion reported by the edge agent.
+          description: Last successfully applied syncVersion reported by the edge
+            agent.
     AgentHeartbeatResponse:
       type: object
       properties:
@@ -886,16 +891,16 @@ components:
             for the tenant.
         unchanged:
           type: boolean
-          description: True when ifSyncVersion matched syncVersion; bundles are omitted to
-            save bandwidth.
+          description: True when ifSyncVersion matched syncVersion; bundles are omitted
+            to save bandwidth.
         nginxConfigs:
           type: array
           items:
-            $ref: "#/components/schemas/AgentNginxConfigBundle"
+            $ref: '#/components/schemas/AgentNginxConfigBundle'
         certificates:
           type: array
           items:
-            $ref: "#/components/schemas/AgentCertificateBundle"
+            $ref: '#/components/schemas/AgentCertificateBundle'
     AgentNginxConfigBundle:
       type: object
       properties:
@@ -934,14 +939,18 @@ components:
     ServerPage:
       type: object
       properties:
-        items: *a2
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServerResponse'
         total:
           type: string
           format: int64
           pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Total item count as a string to avoid JavaScript precision loss.
+          description: Total item count as a string to avoid JavaScript precision
+            loss.
     AuditLogResponse:
       type: object
       properties:
@@ -954,7 +963,8 @@ components:
           pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Operator user id as a string to avoid JavaScript precision loss.
+          description: Operator user id as a string to avoid JavaScript precision
+            loss.
         operatorType:
           type: string
         action:
@@ -967,7 +977,8 @@ components:
           pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Target snowflake id as a string to avoid JavaScript precision loss.
+          description: Target snowflake id as a string to avoid JavaScript precision
+            loss.
         targetUuid:
           type: string
         ipAddress:
@@ -980,27 +991,31 @@ components:
     AuditLogPage:
       type: object
       properties:
-        items: *a3
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogResponse'
         total:
           type: string
           format: int64
           pattern: ^[0-9]+$
           x-sdkwork-int64-string: true
           x-sdkwork-rust-type: i64
-          description: Total item count as a string to avoid JavaScript precision loss.
+          description: Total item count as a string to avoid JavaScript precision
+            loss.
     SdkWorkApiResponse:
       type: object
       additionalProperties: false
       required:
-        - code
-        - data
-        - traceId
+      - code
+      - data
+      - traceId
       properties:
         code:
           type: integer
           format: int32
           enum:
-            - 0
+          - 0
           default: 0
           minimum: 0
           maximum: 0
@@ -1014,7 +1029,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        - item
+      - item
       properties:
         item:
           type: object
@@ -1024,8 +1039,8 @@ components:
       type: object
       additionalProperties: false
       required:
-        - items
-        - pageInfo
+      - items
+      - pageInfo
       properties:
         items:
           type: array
@@ -1033,12 +1048,12 @@ components:
             type: object
             additionalProperties: true
         pageInfo:
-          $ref: "#/components/schemas/PageInfo"
+          $ref: '#/components/schemas/PageInfo'
     SdkWorkCommandData:
       type: object
       additionalProperties: false
       required:
-        - accepted
+      - accepted
       properties:
         accepted:
           type: boolean
@@ -1051,13 +1066,13 @@ components:
       type: object
       additionalProperties: false
       required:
-        - mode
+      - mode
       properties:
         mode:
           type: string
           enum:
-            - offset
-            - cursor
+          - offset
+          - cursor
         page:
           type: integer
           minimum: 1
@@ -1073,8 +1088,8 @@ components:
           minimum: 0
         nextCursor:
           type:
-            - string
-            - "null"
+          - string
+          - 'null'
         hasMore:
           type: boolean
     SdkWorkPlatformErrorCode:
@@ -1082,13 +1097,13 @@ components:
       format: int32
       minimum: 40001
       maximum: 79999
-      description: Platform or domain error code per API_SPEC.md §15.3.
+      description: Platform or domain error code per API_SPEC.md 搂15.3.
     FieldError:
       type: object
       additionalProperties: false
       required:
-        - field
-        - message
+      - field
+      - message
       properties:
         field:
           type: string
@@ -1101,50 +1116,53 @@ components:
           maximum: 40099
     SdkWorkResourceResponse:
       allOf:
-        - $ref: "#/components/schemas/SdkWorkApiResponse"
-        - type: object
-          required:
-            - data
-          properties:
-            data:
-              $ref: "#/components/schemas/SdkWorkResourceData"
+      - $ref: '#/components/schemas/SdkWorkApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/SdkWorkResourceData'
     SdkWorkListResponse:
       allOf:
-        - $ref: "#/components/schemas/SdkWorkApiResponse"
-        - type: object
-          required:
-            - data
-          properties:
-            data:
-              $ref: "#/components/schemas/SdkWorkPageData"
+      - $ref: '#/components/schemas/SdkWorkApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/SdkWorkPageData'
     SdkWorkCommandResponse:
       allOf:
-        - $ref: "#/components/schemas/SdkWorkApiResponse"
-        - type: object
-          required:
-            - data
-          properties:
-            data:
-              $ref: "#/components/schemas/SdkWorkCommandData"
+      - $ref: '#/components/schemas/SdkWorkApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/SdkWorkCommandData'
   responses:
     BadRequest:
-      description: 请求参数错误
+      description: "璇锋眰鍙傛暟閿欒\uDCAF\uDCAF"
       content:
         application/problem+json:
-          schema: &a4
-            $ref: "#/components/schemas/ProblemDetail"
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
     Unauthorized:
-      description: 未认证
+      description: "鏈\uDCAA璁よ瘉"
       content:
         application/problem+json:
-          schema: *a4
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
     NotFound:
-      description: 资源不存在
+      description: "璧勬簮涓嶅瓨鍦\uDCA8"
       content:
         application/problem+json:
-          schema: *a4
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
     Conflict:
-      description: 资源冲突
+      description: 璧勬簮鍐茬獊
       content:
         application/problem+json:
-          schema: *a4
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'

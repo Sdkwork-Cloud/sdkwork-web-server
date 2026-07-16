@@ -1,17 +1,25 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use axum::{
     body::Body,
     extract::{ConnectInfo, State},
     http::{
-        header::{CONTENT_LENGTH, CONTENT_TYPE, HOST, LOCATION},
-        HeaderValue, Request, Response, StatusCode, Version,
+        header::{
+            CONNECTION, CONTENT_LENGTH, CONTENT_TYPE, EXPECT, HOST, LOCATION, RETRY_AFTER, TE,
+            TRANSFER_ENCODING,
+        },
+        HeaderMap, HeaderValue, Request, Response, StatusCode, Version,
     },
 };
+use futures_util::StreamExt;
 use sdkwork_webserver_core::{normalize_authority_host, ResourceConfig};
 
 use super::{
-    proxy::{proxy_request, text_response},
+    proxy::{proxy_request, request_body_timeout_response, text_response},
+    proxy_body::RequestBodyFailure,
+    request_admission::hold_request_permit,
+    request_body_timeout::RequestBodyTimeout,
+    request_uri::{validate_request_uri, RequestUriError},
     static_files::serve_static,
     ListenerState,
 };
@@ -21,20 +29,68 @@ pub async fn route_request(
     State(state): State<ListenerState>,
     request: Request<Body>,
 ) -> Response<Body> {
+    let version = request.version();
+    let permit = match state.runtime.request_permits.clone().try_acquire_owned() {
+        Ok(permit) => permit,
+        Err(_) => return overload_response(version),
+    };
+    let response_body_idle_timeout = Duration::from_millis(
+        state
+            .runtime
+            .current()
+            .app
+            .config()
+            .limits
+            .response_body_idle_timeout_ms,
+    );
+    let response = route_admitted_request(peer, state, request).await;
+    hold_request_permit(response, permit, response_body_idle_timeout)
+}
+
+async fn route_admitted_request(
+    peer: SocketAddr,
+    state: ListenerState,
+    request: Request<Body>,
+) -> Response<Body> {
+    if let Err((status, message)) = validate_request_framing(request.headers(), request.version()) {
+        return text_response(status, message);
+    }
+    let generation = state.runtime.current();
+    let normalized_path = match validate_request_uri(request.uri(), &generation.app.config().limits)
+    {
+        Ok(path) => path,
+        Err(error) => return request_uri_error_response(request.version(), error),
+    };
+    if content_length_exceeds(
+        request.headers(),
+        generation.app.config().limits.max_request_body_bytes,
+    ) {
+        return text_response(StatusCode::PAYLOAD_TOO_LARGE, "request body is too large\n");
+    }
     let authority = match request_authority(&request) {
         Ok(authority) => authority,
         Err((status, message)) => return text_response(status, message),
     };
     let method = request.method().as_str().to_owned();
-    let path = request.uri().path().to_owned();
+    let path = normalized_path;
     let Some(selected) =
-        state
-            .runtime
+        generation
             .app
             .select_route(&state.listener_id, &authority, &path, &method)
     else {
         return text_response(StatusCode::NOT_FOUND, "route was not found\n");
     };
+
+    let request_failure = RequestBodyFailure::default();
+    let (parts, body) = request.into_parts();
+    let limits = &generation.app.config().limits;
+    let body = RequestBodyTimeout::new(
+        body,
+        Duration::from_millis(limits.request_body_start_timeout_ms),
+        Duration::from_millis(limits.request_body_idle_timeout_ms),
+        request_failure.clone(),
+    );
+    let request = Request::from_parts(parts, Body::new(body));
 
     let virtual_host_id = selected.virtual_host.id.clone();
     let route_id = selected.route.id.clone();
@@ -44,20 +100,56 @@ pub async fn route_request(
             content_type,
             body,
             ..
-        } => fixed_response(*status, content_type, body, method == "HEAD"),
+        } => match drain_bounded_request_body(
+            request,
+            generation.app.config().limits.max_request_body_bytes,
+            &request_failure,
+        )
+        .await
+        {
+            Ok(_) => fixed_response(*status, content_type, body, method == "HEAD"),
+            Err(response) => response,
+        },
         ResourceConfig::Redirect {
             status, location, ..
-        } => redirect_response(*status, location),
+        } => match drain_bounded_request_body(
+            request,
+            generation.app.config().limits.max_request_body_bytes,
+            &request_failure,
+        )
+        .await
+        {
+            Ok(_) => redirect_response(*status, location),
+            Err(response) => response,
+        },
         ResourceConfig::Static {
             id, spa_fallback, ..
         } => {
-            let Some(root) = state.runtime.app.static_root(id) else {
+            let Some(root) = generation.app.static_root(id) else {
                 return text_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "static resource is unavailable\n",
                 );
             };
-            serve_static(root, selected.route, spa_fallback.as_deref(), request).await
+            match drain_bounded_request_body(
+                request,
+                generation.app.config().limits.max_request_body_bytes,
+                &request_failure,
+            )
+            .await
+            {
+                Ok(request) => {
+                    serve_static(
+                        root,
+                        selected.route,
+                        spa_fallback.as_deref(),
+                        &path,
+                        request,
+                    )
+                    .await
+                }
+                Err(response) => response,
+            }
         }
         ResourceConfig::Proxy {
             upstream_ref,
@@ -67,13 +159,15 @@ pub async fn route_request(
             let scheme = if state.is_tls { "https" } else { "http" };
             proxy_request(
                 super::proxy::ProxyRequestContext {
-                    runtime: &state.runtime,
+                    generation: &generation,
                     upstream_ref,
                     strip_prefix: *strip_prefix,
                     route: selected.route,
                     peer,
                     external_scheme: scheme,
                     external_authority: &authority,
+                    normalized_path: &path,
+                    request_failure,
                 },
                 request,
             )
@@ -81,8 +175,10 @@ pub async fn route_request(
         }
     };
 
-    if state.runtime.app.config().observability.access_log {
+    if generation.app.config().observability.access_log {
         tracing::info!(
+            config_generation = generation.id,
+            config_revision = %generation.revision,
             listener_id = %state.listener_id,
             virtual_host_id = %virtual_host_id,
             route_id = %route_id,
@@ -92,6 +188,134 @@ pub async fn route_request(
         );
     }
     response
+}
+
+fn overload_response(version: Version) -> Response<Body> {
+    let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "server is overloaded\n");
+    response
+        .headers_mut()
+        .insert(RETRY_AFTER, HeaderValue::from_static("1"));
+    if version != Version::HTTP_2 {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+fn request_uri_error_response(version: Version, error: RequestUriError) -> Response<Body> {
+    let (status, message) = match error {
+        RequestUriError::Invalid => (StatusCode::BAD_REQUEST, "request URI is invalid\n"),
+        RequestUriError::TooLong => (StatusCode::URI_TOO_LONG, "request URI exceeds limits\n"),
+    };
+    let mut response = text_response(status, message);
+    if version != Version::HTTP_2 {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+async fn drain_bounded_request_body(
+    request: Request<Body>,
+    maximum: u64,
+    failure: &RequestBodyFailure,
+) -> Result<Request<Body>, Response<Body>> {
+    let (parts, body) = request.into_parts();
+    let version = parts.version;
+    let mut stream = body.into_data_stream();
+    let mut observed = 0_u64;
+    while let Some(frame) = stream.next().await {
+        let bytes = frame.map_err(|_| {
+            if failure.timed_out() {
+                request_body_timeout_response(version)
+            } else {
+                text_response(StatusCode::BAD_REQUEST, "request body framing is invalid\n")
+            }
+        })?;
+        observed = observed.saturating_add(bytes.len() as u64);
+        if observed > maximum {
+            return Err(text_response(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "request body is too large\n",
+            ));
+        }
+    }
+    Ok(Request::from_parts(parts, Body::empty()))
+}
+
+fn content_length_exceeds(headers: &HeaderMap, maximum: u64) -> bool {
+    headers
+        .get(CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .is_some_and(|length| length > maximum)
+}
+
+fn validate_request_framing(
+    headers: &HeaderMap,
+    version: Version,
+) -> Result<(), (StatusCode, &'static str)> {
+    validate_expectation(headers, version)?;
+
+    let mut content_lengths = headers.get_all(CONTENT_LENGTH).iter();
+    let has_content_length = content_lengths.next().is_some();
+    if content_lengths.next().is_some() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "multiple Content-Length headers are forbidden\n",
+        ));
+    }
+    let has_transfer_encoding = headers.contains_key(TRANSFER_ENCODING);
+    if has_content_length && has_transfer_encoding {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Transfer-Encoding with Content-Length is forbidden\n",
+        ));
+    }
+    if version != Version::HTTP_11 && has_transfer_encoding {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Transfer-Encoding requires HTTP/1.1\n",
+        ));
+    }
+    for value in headers.get_all(TE) {
+        let value = value
+            .to_str()
+            .map_err(|_| (StatusCode::BAD_REQUEST, "invalid TE header\n"))?;
+        if value
+            .split(',')
+            .map(str::trim)
+            .any(|token| !token.eq_ignore_ascii_case("trailers"))
+        {
+            return Err((StatusCode::BAD_REQUEST, "only TE: trailers is supported\n"));
+        }
+    }
+    Ok(())
+}
+
+fn validate_expectation(
+    headers: &HeaderMap,
+    version: Version,
+) -> Result<(), (StatusCode, &'static str)> {
+    let mut expectations = headers.get_all(EXPECT).iter();
+    let Some(expectation) = expectations.next() else {
+        return Ok(());
+    };
+    if expectations.next().is_some()
+        || version != Version::HTTP_11
+        || expectation
+            .to_str()
+            .map(|value| !value.eq_ignore_ascii_case("100-continue"))
+            .unwrap_or(true)
+    {
+        return Err((
+            StatusCode::EXPECTATION_FAILED,
+            "request expectation is not supported\n",
+        ));
+    }
+    Ok(())
 }
 
 fn request_authority(request: &Request<Body>) -> Result<String, (StatusCode, &'static str)> {

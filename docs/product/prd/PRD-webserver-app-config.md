@@ -189,9 +189,11 @@ Retries are allowed only before a non-replayable request body has been committed
 
 ## 11.1 Resolver Contract
 
-Each resolver declaration supports approved DNS servers or a platform resolver profile, query timeout, retry bound, positive TTL floor/ceiling, negative TTL, stale-on-error window, IPv4/IPv6 policy, maximum answers, and cache budget.
+The commercial target supports approved DNS servers or a platform resolver profile, query timeout, retry bound, positive TTL floor/ceiling, negative TTL, stale-on-error window, IPv4/IPv6 policy, maximum answers, and cache budget.
 
-Resolution is asynchronous and off the request executor's blocking path. Results retain DNS TTL semantics, are partitioned by application security scope, reject malformed or oversized answers, and cannot resolve an unapproved public hostname into a forbidden private/link-local destination when SSRF policy forbids it. An upstream using dynamic names must declare behavior for no healthy address, address-set change, and stale DNS.
+The currently implemented foundation profile is deliberately smaller. A resolver declares `timeoutMs`, `maximumAnswers`, and `maxConcurrentQueries`; its `servers` list must be empty because custom DNS transport is not implemented. An upstream may select `resolverRef`, set finite `idleConnectionTimeoutMs`, and authorize narrow restricted networks through `addressPolicy.allowedCidrs`. The runtime performs bounded asynchronous system lookup, admits without a waiter queue, rechecks every answer, rejects a mixed forbidden answer set, and preserves the configured hostname for Host, TLS SNI, and certificate verification. Public unicast is allowed by default; loopback/private/shared/link-local/ULA requires explicit narrow authorization; metadata and hard special-use destinations remain forbidden.
+
+Authoritative TTL retention, application positive/negative cache, stale-on-error, CNAME depth inspection, custom DNS server transport, deterministic address racing, resolver retries, and health-aware dynamic target selection are not implemented in this profile and remain release gates. An address change affects later connections; healthy in-flight work is not terminated solely because DNS changes.
 
 ## 12. Policy Contract
 
@@ -207,6 +209,22 @@ Policies include:
 - CSP, HSTS, `nosniff`, frame protection, referrer policy, and permissions policy.
 
 Every queue, cache, buffer, rate bucket, connection pool, and concurrency gate has a finite default and an enforced maximum.
+
+The runtime-wide `maxConcurrentRequests` gate is shared by every listener in one process and holds capacity through response Body completion or cancellation. It is distinct from per-listener connection limits and per-connection HTTP/2 Stream limits.
+
+Response policy distinguishes `responseBodyIdleTimeoutMs`, which measures meaningful Frame production gaps, from `connectionWriteTimeoutMs`, which measures downstream Socket backpressure. Both have finite defaults and are not aliases for total request, upstream, or Keep-Alive timeouts.
+
+Request ingress separately declares `requestBodyStartTimeoutMs` for the first non-empty Data or Trailer Frame and `requestBodyIdleTimeoutMs` for later meaningful Frame gaps. Both are finite, apply before every selected resource action, ignore empty Data as progress, return `408` on expiry, close HTTP/1, and remain Stream-scoped for HTTP/2. They are not HTTP/1 Keep-Alive idle controls.
+
+`http1KeepAliveIdleTimeoutMs` controls only the gap between completed HTTP/1 response lifecycles and a subsequent request. Its default is 75 seconds for Nginx-profile compatibility. It does not run during request upload, response streaming, pending downstream flush, TLS handshake, initial Header input, or H2 traffic.
+
+`http1MaxPipelineDepth` independently bounds complete HTTP/1 request heads read ahead of Service dispatch. Its default is 16, it stores only a connection-local atomic count, and over-depth connections close without queuing or buffering request Bodies. The field is applied after TLS decryption, bypassed by H2, and classified Restart-only.
+
+HTTP/2 liveness uses `http2KeepAliveIntervalMs` for inbound-Frame inactivity and `http2KeepAliveTimeoutMs` for the corresponding PING ACK. Hyper/H2 owns Frame generation, ACK matching, `GOAWAY(NO_ERROR)`, and close. Responsive idle connections remain alive, so these controls are failure detection rather than a maximum idle-age policy. Both fields are Restart-only and scoped away from HTTP/1.
+
+`maxConnectionAgeMs` provides the separate total-lifetime boundary for HTTP/1 and HTTP/2 and defaults to one hour, aligned with Nginx `keepalive_time`. Its connection-owned timer does not reset on traffic. Expiry stops HTTP/1 reuse or sends H2 `GOAWAY(NO_ERROR)` through Hyper, then bounds accepted work with `drainTimeoutMs`. The field is Restart-only and has no per-Stream timer or request Body buffer.
+
+URI resource governance declares raw Path bytes, once-decoded Path bytes, Path segment count, Query string bytes, Query parameter count, and Query name/value component bytes. Zero disables all Query input only when all three Query budgets are zero. This validation precedes routing and does not define canonical Nginx normalization or rewrite semantics.
 
 Cache policy additionally declares eligibility, canonical key inputs, `Vary` handling, authorization/cookie behavior, maximum object size, memory and disk budgets, stale behavior, revalidation, collapsed forwarding, purge authorization, and cache-poisoning defenses. Disk spooling and cache writes have per-app and process quotas and must fail without exhausting the runtime volume.
 

@@ -1,45 +1,30 @@
 mod connection_limit;
+mod dns;
 mod error;
 mod handler;
+mod http1_wire;
+mod http2_wire;
+mod io_timeout;
+mod keep_alive_timeout;
 mod proxy;
+mod proxy_body;
+mod request_admission;
+mod request_body_timeout;
+mod request_uri;
+mod runtime;
 mod server;
 mod static_files;
+mod tls;
+mod watch;
 
 pub use error::DataPlaneError;
+pub use runtime::DataPlaneReloadReport;
 pub use server::run_data_plane_until;
+pub use watch::run_data_plane_from_config_until;
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
-use sdkwork_webserver_core::CompiledWebServerApp;
-use tokio::sync::Semaphore;
-
-use self::proxy::ProxyUpstream;
-
-struct DataPlaneRuntime {
-    app: Arc<CompiledWebServerApp>,
-    upstreams: HashMap<String, ProxyUpstream>,
-    connection_permits: Arc<Semaphore>,
-}
-
-impl DataPlaneRuntime {
-    fn build(app: CompiledWebServerApp) -> Result<Arc<Self>, DataPlaneError> {
-        let app = Arc::new(app);
-        let upstreams = app
-            .config()
-            .upstreams
-            .iter()
-            .map(|upstream| {
-                ProxyUpstream::build(upstream).map(|runtime| (upstream.id.clone(), runtime))
-            })
-            .collect::<Result<HashMap<_, _>, _>>()?;
-        let connection_permits = Arc::new(Semaphore::new(app.config().limits.max_connections));
-        Ok(Arc::new(Self {
-            app,
-            upstreams,
-            connection_permits,
-        }))
-    }
-}
+use self::runtime::DataPlaneRuntime;
 
 #[derive(Clone)]
 struct ListenerState {

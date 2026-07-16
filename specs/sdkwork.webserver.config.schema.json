@@ -159,6 +159,48 @@
           "maximum": 3600000,
           "default": 30000
         },
+        "requestBodyStartTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Maximum wait for the first meaningful request Body Frame after request dispatch begins."
+        },
+        "requestBodyIdleTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Maximum idle gap between meaningful request Body Frames after Body progress begins."
+        },
+        "responseBodyIdleTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Maximum idle gap between response Body Frames after response processing begins."
+        },
+        "connectionWriteTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Maximum continuous Pending duration for downstream write, flush, or shutdown operations."
+        },
+        "http1KeepAliveIdleTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 75000,
+          "description": "Maximum HTTP/1 idle wait for a subsequent request after the prior response lifecycle and pending writes complete."
+        },
+        "http1MaxPipelineDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 16,
+          "description": "Maximum number of fully read HTTP/1 request heads awaiting service dispatch on one connection. Excess depth closes the connection without buffering request bodies."
+        },
         "drainTimeoutMs": {
           "type": "integer",
           "minimum": 100,
@@ -170,6 +212,213 @@
           "minimum": 1,
           "maximum": 1000000,
           "default": 10000
+        },
+        "maxConcurrentRequests": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 4096,
+          "description": "Process-wide admitted request limit across all listeners. Saturation is rejected without queueing, and permits remain held through response Body completion."
+        },
+        "maxRequestHeaderBytes": {
+          "type": "integer",
+          "minimum": 8192,
+          "maximum": 1048576,
+          "default": 65536
+        },
+        "maxRequestLineBytes": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 65536,
+          "default": 8192
+        },
+        "maxRequestMethodBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256,
+          "default": 32
+        },
+        "maxRequestTargetBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536,
+          "default": 8192
+        },
+        "maxUriPathBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536,
+          "default": 8192,
+          "description": "Maximum raw URI Path bytes for every HTTP version."
+        },
+        "maxDecodedPathBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536,
+          "default": 8192,
+          "description": "Maximum Path bytes after one validated percent-decoding pass without changing routing representation."
+        },
+        "maxPathSegments": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 256
+        },
+        "maxQueryStringBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536,
+          "default": 4096
+        },
+        "maxQueryParameters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096,
+          "default": 256
+        },
+        "maxQueryComponentBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536,
+          "default": 1024,
+          "description": "Maximum raw bytes for each query parameter name or value component."
+        },
+        "maxHeaderNameBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192,
+          "default": 256
+        },
+        "maxHeaderValueBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576,
+          "default": 8192
+        },
+        "maxRequestHeaders": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 100
+        },
+        "requestHeaderTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 10000
+        },
+        "maxChunkLineBytes": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 8192,
+          "default": 1024
+        },
+        "maxTrailerBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "default": 8192,
+          "description": "Maximum encoded bytes for request or response Trailer declarations and actual Trailer fields. Zero disables Trailers together with maxTrailers."
+        },
+        "maxTrailers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "default": 32,
+          "description": "Maximum request or response Trailer field count for declarations and actual Trailer frames. Zero disables Trailers together with maxTrailerBytes."
+        },
+        "http2MaxConcurrentStreams": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 100
+        },
+        "maxConnectionAgeMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 86400000,
+          "default": 3600000,
+          "description": "Maximum total lifetime of an accepted HTTP/1 or HTTP/2 connection before protocol-aware graceful retirement. In-flight work may drain only through drainTimeoutMs."
+        },
+        "http2KeepAliveIntervalMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 3600000,
+          "default": 60000,
+          "description": "Maximum inbound HTTP/2 Frame inactivity before Hyper sends a Keep-Alive PING, including when no streams are active."
+        },
+        "http2KeepAliveTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 20000,
+          "description": "Maximum wait for the corresponding HTTP/2 PING ACK before Hyper sends GOAWAY(NO_ERROR) and closes the connection."
+        },
+        "http2MaxPendingAcceptResetStreams": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 20
+        },
+        "http2MaxLocalErrorResetStreams": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 128
+        },
+        "http2MaxSendBufferBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 16777216,
+          "default": 65536
+        },
+        "http2MaxHeaderListBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1048576,
+          "default": 65536
+        },
+        "http2MaxFrameBytes": {
+          "type": "integer",
+          "minimum": 16384,
+          "maximum": 16777215,
+          "default": 16384
+        },
+        "http2AbuseWindowMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 1000
+        },
+        "http2MaxFramesPerWindow": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 1000000,
+          "default": 10000
+        },
+        "http2MaxNewStreamsPerWindow": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 1000
+        },
+        "http2MaxResetFramesPerWindow": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 100
+        },
+        "http2MaxContinuationFrames": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "default": 16
+        },
+        "http2MaxEncodedHeaderBlockBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1048576,
+          "default": 65536
         }
       }
     },
@@ -258,13 +507,36 @@
     "tlsPolicy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "certificateRef"],
+      "required": ["id"],
+      "oneOf": [
+        {
+          "required": ["certificateRef"],
+          "not": {
+            "required": ["certificateRefs"]
+          }
+        },
+        {
+          "required": ["certificateRefs"],
+          "not": {
+            "required": ["certificateRef"]
+          }
+        }
+      ],
       "properties": {
         "id": {
           "$ref": "#/$defs/id"
         },
         "certificateRef": {
           "$ref": "#/$defs/id"
+        },
+        "certificateRefs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
         },
         "minimumVersion": {
           "enum": ["tls1.2", "tls1.3"],
@@ -315,6 +587,13 @@
           "minimum": 1,
           "maximum": 64,
           "default": 16
+        },
+        "maxConcurrentQueries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 64,
+          "description": "Maximum in-flight system DNS lookups for this resolver profile. Saturation fails without queueing."
         }
       }
     },
@@ -442,6 +721,12 @@
             "$ref": "#/$defs/upstreamTarget"
           }
         },
+        "resolverRef": {
+          "$ref": "#/$defs/id"
+        },
+        "addressPolicy": {
+          "$ref": "#/$defs/upstreamAddressPolicy"
+        },
         "connectTimeoutMs": {
           "type": "integer",
           "minimum": 100,
@@ -459,6 +744,31 @@
           "minimum": 0,
           "maximum": 100000,
           "default": 128
+        },
+        "idleConnectionTimeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Maximum idle lifetime of a pooled upstream connection before it is removed and the next connection resolves again."
+        }
+      }
+    },
+    "upstreamAddressPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowedCidrs": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64
+          },
+          "default": [],
+          "description": "Explicit narrow authorization for loopback, RFC1918, RFC6598, IPv4 link-local, IPv6 ULA, or IPv6 link-local upstream destinations. Public and hard-forbidden ranges cannot be listed."
         }
       }
     },
@@ -582,6 +892,25 @@
           "type": "integer",
           "minimum": 100,
           "maximum": 600000
+        },
+        "reload": {
+          "$ref": "#/$defs/reload"
+        }
+      }
+    },
+    "reload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": ["disabled", "watch"],
+          "default": "disabled"
+        },
+        "pollIntervalMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 1000
         }
       }
     }

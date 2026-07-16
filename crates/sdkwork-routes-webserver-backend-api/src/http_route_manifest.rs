@@ -92,9 +92,9 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/backend/v3/api/agent/sync",
         "agent",
-        "agent.sync",
+        "agent.retrieve",
     )
-    .with_required_permission("web.agent.write")
+    .with_required_permission("web.agent.read")
     .with_rate_limit_tier(RateLimitTier::AuthCritical),
     HttpRoute::dual_token(
         HttpMethod::Get,

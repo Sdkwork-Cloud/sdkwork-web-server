@@ -4,10 +4,14 @@ pub mod config;
 pub mod runtime_env;
 
 pub use config::{
-    load_and_compile_webserver_config, normalize_authority_host, CertificateConfig,
-    CertificateSource, CompiledWebServerApp, ConfigDiagnostic, ListenerConfig, ListenerProtocol,
-    ResourceConfig, RouteConfig, RouteMatchConfig, RoutePathType, SelectedRoute, TlsPolicyConfig,
-    UpstreamConfig, VirtualHostConfig, WebServerAppConfig, WebServerConfigError, WebServerLimits,
+    inspect_webserver_config_revision, load_and_compile_webserver_config,
+    load_and_compile_webserver_config_revision, normalize_authority_host, normalize_server_name,
+    normalize_uri_path, server_name_covers, upstream_ip_is_allowed, CertificateConfig,
+    CertificateSource, CompiledWebServerApp, CompiledWebServerRevision, ConfigDiagnostic,
+    ListenerConfig, ListenerProtocol, ReloadConfig, ReloadMode, ResolverConfig, ResourceConfig,
+    RouteConfig, RouteMatchConfig, RoutePathType, SelectedRoute, TlsPolicyConfig,
+    UpstreamAddressPolicyConfig, UpstreamConfig, UriPathNormalizationError, VirtualHostConfig,
+    WebServerAppConfig, WebServerConfigError, WebServerConfigFileRevision, WebServerLimits,
     MAX_CONFIG_BYTES,
 };
 pub use runtime_env::{

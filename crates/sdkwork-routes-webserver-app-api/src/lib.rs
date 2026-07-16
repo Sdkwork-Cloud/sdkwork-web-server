@@ -12,3 +12,14 @@ pub use sdkwork_webserver_contract::{WebAppApi, WebAppRequestContext};
 pub use web_bootstrap::{
     web_app_api_prefixes, web_app_api_public_path_prefixes, wrap_router_with_web_framework_from_env,
 };
+
+use sdkwork_web_core::HttpRouteManifest;
+use std::sync::Arc;
+
+pub fn gateway_route_manifest() -> HttpRouteManifest {
+    app_route_manifest()
+}
+
+pub fn gateway_mount(api: Arc<dyn WebAppApi>) -> axum::Router {
+    build_router_with_shared_app_api(api)
+}

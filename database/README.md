@@ -25,4 +25,8 @@ pnpm run db:migrate
 pnpm run db:seed
 pnpm run db:status
 pnpm run db:drift:check
+pnpm run db:test:sqlite
+SDKWORK_WEB_POSTGRES_TEST_DATABASE_URL=<disposable-url> pnpm run db:test:postgres
 ```
+
+`db:test:postgres` is intentionally ignored by the default Cargo test run and requires an explicitly configured disposable, empty PostgreSQL database. The test refuses to continue when the target schema already contains `web_*` tables. SQLite is an explicit single-node profile only; PostgreSQL remains the default for standalone shared and cloud control-plane deployments.

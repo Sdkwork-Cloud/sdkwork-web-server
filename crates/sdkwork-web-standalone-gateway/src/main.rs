@@ -1,9 +1,9 @@
 use std::{error::Error, io, path::PathBuf};
 
 use sdkwork_web_standalone_gateway::{
-    build_router, run_data_plane_until, run_database_migrate_only,
+    build_router, run_data_plane_from_config_until, run_database_migrate_only,
 };
-use sdkwork_webserver_core::load_and_compile_webserver_config;
+use sdkwork_webserver_core::load_and_compile_webserver_config_revision;
 use tokio::signal;
 
 type MainResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
@@ -32,8 +32,8 @@ async fn run() -> MainResult<()> {
             .map_err(|error| io::Error::other(format!("database migration failed: {error}")))?,
         Some("validate") => validate_config(config_path(arguments.next())?)?,
         Some("data-plane") => {
-            let compiled = load_and_compile_webserver_config(config_path(arguments.next())?)?;
-            run_data_plane_until(compiled, shutdown_signal()).await?;
+            run_data_plane_from_config_until(config_path(arguments.next())?, shutdown_signal())
+                .await?;
         }
         Some("help" | "--help" | "-h") => print_help(),
         Some(command) => {
@@ -62,7 +62,8 @@ async fn run_management_plane() -> MainResult<()> {
 }
 
 fn validate_config(path: PathBuf) -> MainResult<()> {
-    let compiled = load_and_compile_webserver_config(&path)?;
+    let revision = load_and_compile_webserver_config_revision(&path)?;
+    let compiled = revision.app();
     let route_count = compiled
         .config()
         .virtual_hosts
@@ -70,8 +71,10 @@ fn validate_config(path: PathBuf) -> MainResult<()> {
         .map(|virtual_host| virtual_host.routes.len())
         .sum::<usize>();
     println!(
-        "validated appKey={} listeners={} virtualHosts={} routes={} resources={} upstreams={} tlsPolicies={}",
+        "validated appKey={} revision={} bytes={} listeners={} virtualHosts={} routes={} resources={} upstreams={} tlsPolicies={}",
         compiled.config().app_key,
+        revision.sha256(),
+        revision.size_bytes(),
         compiled.config().listeners.len(),
         compiled.config().virtual_hosts.len(),
         route_count,

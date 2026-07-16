@@ -1,0 +1,39 @@
+{
+  "$schema": "../specs/sdkwork.webserver.im-dev.schema.json",
+  "schemaVersion": 1,
+  "kind": "sdkwork.webserver.im-dev",
+  "route": {
+    "pathPrefix": "/sdkwork-im/",
+    "mobileUserAgentTokens": [
+      "Android",
+      "webOS",
+      "iPhone",
+      "iPad",
+      "iPod",
+      "BlackBerry",
+      "IEMobile",
+      "Opera Mini",
+      "Mobile"
+    ]
+  },
+  "https": {
+    "host": "0.0.0.0",
+    "port": 3443,
+    "certificate": {
+      "mode": "auto",
+      "directory": "../.runtime/dev-certificates"
+    }
+  },
+  "applications": {
+    "pc": {
+      "root": "../../sdkwork-im/apps/sdkwork-im-pc",
+      "host": "127.0.0.1",
+      "port": 4176
+    },
+    "h5": {
+      "root": "../../sdkwork-im/apps/sdkwork-im-h5",
+      "host": "127.0.0.1",
+      "port": 4177
+    }
+  }
+}

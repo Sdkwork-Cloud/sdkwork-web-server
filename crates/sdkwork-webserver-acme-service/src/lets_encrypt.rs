@@ -125,11 +125,11 @@ fn parse_certificate_validity(pem_chain: &str) -> AcmeServiceResult<(String, Str
         .validity()
         .not_before
         .to_rfc2822()
-        .map_err(|error| AcmeServiceError::Internal(error))?;
+        .map_err(AcmeServiceError::Internal)?;
     let not_after = cert
         .validity()
         .not_after
         .to_rfc2822()
-        .map_err(|error| AcmeServiceError::Internal(error))?;
+        .map_err(AcmeServiceError::Internal)?;
     Ok((not_before, not_after))
 }

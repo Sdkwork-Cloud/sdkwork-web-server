@@ -4,7 +4,7 @@ use axum::{
     body::Body,
     http::{Request, Response, StatusCode, Uri},
 };
-use percent_encoding::percent_decode_str;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use sdkwork_webserver_core::{RouteConfig, RoutePathType};
 use tower::ServiceExt;
 use tower_http::services::{ServeDir, ServeFile};
@@ -15,23 +15,20 @@ pub async fn serve_static(
     root: &Path,
     route: &RouteConfig,
     spa_fallback: Option<&str>,
+    normalized_request_path: &str,
     request: Request<Body>,
 ) -> Response<Body> {
     if !matches!(request.method().as_str(), "GET" | "HEAD") {
         return text_response(StatusCode::METHOD_NOT_ALLOWED, "method is not allowed\n");
     }
 
-    let relative = relative_request_path(route, request.uri().path()).to_owned();
-    let decoded = match percent_decode_str(&relative).decode_utf8() {
-        Ok(decoded) => decoded,
-        Err(_) => return text_response(StatusCode::BAD_REQUEST, "invalid request path\n"),
-    };
-    if let Err(status) = verify_static_path(root, &decoded).await {
+    let relative = relative_request_path(route, normalized_request_path).to_owned();
+    if let Err(status) = verify_static_path(root, &relative).await {
         return text_response(status, "static path is not available\n");
     }
 
     let (mut parts, _) = request.into_parts();
-    let service_path = format!("/{}", relative.trim_start_matches('/'));
+    let service_path = encode_service_path(&relative);
     parts.uri = match service_path.parse::<Uri>() {
         Ok(uri) => uri,
         Err(_) => return text_response(StatusCode::BAD_REQUEST, "invalid request path\n"),
@@ -54,6 +51,18 @@ pub async fn serve_static(
                 .await,
         )
     }
+}
+
+fn encode_service_path(relative: &str) -> String {
+    let mut encoded = String::with_capacity(relative.len().saturating_add(1));
+    encoded.push('/');
+    for (index, segment) in relative.trim_start_matches('/').split('/').enumerate() {
+        if index > 0 {
+            encoded.push('/');
+        }
+        encoded.extend(utf8_percent_encode(segment, NON_ALPHANUMERIC));
+    }
+    encoded
 }
 
 fn relative_request_path<'a>(route: &RouteConfig, request_path: &'a str) -> &'a str {

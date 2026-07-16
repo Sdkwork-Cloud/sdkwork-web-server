@@ -200,10 +200,10 @@ tables:
         columns: [domain_id]
       - name: idx_web_certificate_expiry
         columns: [not_after]
-        partial: status = 1
+        predicate: status = 1
       - name: idx_web_certificate_renewal
         columns: [renewal_status, not_after]
-        partial: auto_renew = true AND status = 1
+        predicate: auto_renew = true AND status = 1
     ownership:
       tenant: required
 
@@ -264,7 +264,7 @@ tables:
         columns: [tenant_id, status, created_at]
       - name: idx_web_deployment_status
         columns: [status]
-        partial: status IN (0, 1, 2)
+        predicate: status IN (0, 1, 2)
     ownership:
       tenant: required
       organization: default_zero

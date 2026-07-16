@@ -8,7 +8,7 @@ pub mod certificate_renewal_ops;
 pub mod nginx_ops;
 pub mod repository;
 
-pub use repository::WebRepositoryPort;
+pub use repository::{AuditLogWrite, WebRepositoryPort};
 
 use std::sync::Arc;
 

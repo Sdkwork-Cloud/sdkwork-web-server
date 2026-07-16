@@ -304,7 +304,7 @@
     {
       "method": "GET",
       "path": "/backend/v3/api/agent/sync",
-      "operationId": "agent.sync",
+      "operationId": "agent.retrieve",
       "tags": [
         "agent"
       ],
@@ -323,7 +323,7 @@
       },
       "requestContext": "WebRequestContext",
       "apiSurface": "backend-api",
-      "permission": "web.agent.write",
+      "permission": "web.agent.read",
       "idempotent": false,
       "rateLimitTier": "auth-critical"
     },

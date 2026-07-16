@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sdkwork-web-server-gateway-assembly",
   "crates/sdkwork-webserver-database-host",
   "crates/sdkwork-routes-webserver-common",
   "crates/sdkwork-webserver-contract",
@@ -23,16 +24,23 @@ license = "UNLICENSED"
 
 [workspace.dependencies]
 async-trait = "0.1"
+atomic-waker = "1"
+arc-swap = "1"
 axum = "0.8"
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 bytes = "1"
 dotenvy = "0.15"
 http = "1.4"
 http-body = "1"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["server-auto", "tokio"] }
+ipnet = { version = "2", features = ["serde"] }
 futures-util = "0.3"
 percent-encoding = "2"
 reqwest = { version = "0.12", default-features = false, features = ["http2", "rustls-tls", "stream"] }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
+rustls-pemfile = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 jsonschema = { version = "0.47", default-features = false }
@@ -49,11 +57,14 @@ chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1"
 base64 = "0.22"
 hex = "0.4"
+h2 = "0.4"
 sha2 = "0.10"
+sync_wrapper = "1"
 aes-gcm = "0.10"
 instant-acme = { version = "0.8", features = ["rcgen"] }
 rcgen = "0.13"
 x509-parser = "0.16"
+tokio-rustls = "0.26"
 
 sdkwork-webserver-acme-service = { path = "crates/sdkwork-webserver-acme-service" }
 sdkwork-webserver-edge-runtime = { path = "crates/sdkwork-webserver-edge-runtime" }
@@ -74,6 +85,7 @@ sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
 sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
 sdkwork-web-bootstrap = { path = "../sdkwork-web-framework/crates/sdkwork-web-bootstrap" }
 sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config", package = "sdkwork-database-config" }
+sdkwork-database-drift = { path = "../sdkwork-database/crates/sdkwork-database-drift", package = "sdkwork-database-drift" }
 sdkwork-database-lifecycle = { path = "../sdkwork-database/crates/sdkwork-database-lifecycle", package = "sdkwork-database-lifecycle" }
 sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi", package = "sdkwork-database-spi" }
 sdkwork-database-sqlx = { path = "../sdkwork-database/crates/sdkwork-database-sqlx", package = "sdkwork-database-sqlx" }

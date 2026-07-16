@@ -13,22 +13,33 @@ name = "sdkwork-web-standalone-gateway"
 path = "src/main.rs"
 
 [dependencies]
+atomic-waker.workspace = true
+arc-swap.workspace = true
 axum.workspace = true
 axum-server.workspace = true
 bytes.workspace = true
 futures-util.workspace = true
+hex.workspace = true
 http.workspace = true
 http-body.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
 percent-encoding.workspace = true
 reqwest.workspace = true
 rustls.workspace = true
+rustls-pemfile.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
+sync_wrapper.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-rustls.workspace = true
 tower.workspace = true
 tower-http.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+x509-parser.workspace = true
 sdkwork-routes-webserver-app-api.workspace = true
 sdkwork-routes-webserver-backend-api.workspace = true
 sdkwork-routes-webserver-common.workspace = true
@@ -39,5 +50,7 @@ sdkwork-webserver-core.workspace = true
 sdkwork-web-bootstrap.workspace = true
 
 [dev-dependencies]
+h2.workspace = true
+http-body-util = { workspace = true, features = ["channel"] }
 rcgen.workspace = true
 tempfile.workspace = true

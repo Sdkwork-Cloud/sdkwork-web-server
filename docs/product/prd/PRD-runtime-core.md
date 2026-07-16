@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-07-15
+Updated: 2026-07-16
 Parent: [PRD.md](PRD.md)
 Specs: NGINX_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, CONFIG_SPEC.md, TEST_SPEC.md
 
@@ -144,6 +144,8 @@ The runtime is a reverse proxy. It rejects arbitrary destination selection, open
 
 Resolver failure does not cause an unbounded retry storm. Each upstream declares whether a last valid answer may be used temporarily, how long, and what happens after it expires.
 
+Current verified boundary: the foundation profile uses one bounded asynchronous system resolver per profile, shared across its upstreams. It provides finite lookup timeout, retained-answer count, non-queuing concurrent-query admission, per-upstream immutable address authorization, literal-IP validation, per-resolution rebinding checks, and finite idle pooled-connection lifetime. It does not yet implement custom DNS server transport, authoritative TTL/CNAME processing, application positive/negative cache, stale answers, resolver retries, health-aware selection, or deterministic connection racing; the target requirements above remain commercial release gates.
+
 ## 11. Compression
 
 - Gzip and Brotli negotiation respects q-values, wildcard/identity semantics, MIME allowlists, minimum/maximum size, existing `Content-Encoding`, `Cache-Control: no-transform`, and `Vary`.
@@ -231,3 +233,42 @@ Fuzz and property-test corpora are retained as regression evidence. Failures mus
 - No request-path lock is held across asynchronous or external I/O, and concurrency/deadlock test evidence covers reload, shutdown, health, certificate rotation, and upstream churn.
 - Performance, memory, compatibility, and availability targets in the parent PRD pass on the published reference profiles.
 
+## 18. Current Verified Delivery Boundary
+
+[REQ-2026-0007](../requirements/REQ-2026-0007-bounded-http-protocol-ingress.md) delivers a bounded protocol-ingress slice. HTTP/1 now has explicit parser-buffer bytes, header-count, and complete-header deadline controls. HTTP/2 now has explicit concurrent-stream, header-list, pending-reset, local-error-reset, per-stream send-buffer, flow-control-window, and frame-size controls. Cross-field validation caps configured concurrent header-list and send-buffer products at 64 MiB per connection.
+
+[REQ-2026-0008](../requirements/REQ-2026-0008-safe-http1-chunked-framing.md) replaces the temporary no-Transfer-Encoding policy with an incremental Framing Guard after TLS decryption and before Hyper normalization. The Guard validates every Keep-Alive/Pipeline request, accepts exactly Chunked transfer coding, bounds Chunk Size/Extension, Body totals, Trailer count/bytes, and rejects TE/CL in either order plus all duplicate Content-Length values. HTTP/2 selected by ALPN bypasses the HTTP/1 Guard.
+
+REQ-2026-0008 also established all-action Body accounting: fixed-length Body limits return `413` before every action, non-proxy actions stream-discard and count Body Data, Chunked totals are checked before routing can report success, and HTTP/2 bodies without Content-Length are bounded. Reverse proxying removes inbound framing headers and lets Reqwest generate new upstream framing.
+
+[REQ-2026-0009](../requirements/REQ-2026-0009-bounded-proxy-trailer-fidelity.md) replaces the data-only proxy bridge with frame-preserving request and response bodies. Valid declared HTTP/1 Trailers and HTTP/2 trailing HEADERS cross the proxy without Body collection. `maxTrailerBytes` and `maxTrailers` now cover request and upstream declarations plus actual request and response Trailer frames. Hop-specific `TE` is removed from the client request and regenerated as `TE: trailers` toward the upstream; unsupported client TE tokens fail closed. HTTP/1 recipients still advertise `TE: trailers`, and HTTP/1 Trailer fields must be declared before the body because the runtime will not buffer an entire stream to synthesize a late declaration.
+
+[REQ-2026-0010](../requirements/REQ-2026-0010-http1-connection-semantics.md) adds strict HTTP/1.1 Expect/Continue handling, early `413` without an informational response, upstream Expect termination, HTTP/1.0 default-host/Keep-Alive/Pipeline behavior, HTTP/1.0 Transfer-Encoding rejection, and complete/truncated TCP half-close tests. The same Continue sequence is proven after TLS/ALPN. A real Nginx 1.26.2 probe records semantic matches, intentional fail-closed differences, and Hyper's HTTP/1.0 response-version constraint.
+
+[REQ-2026-0011](../requirements/REQ-2026-0011-bounded-http1-request-fields.md) adds pre-Hyper request-line, method, request-target, and individual Header/Trailer name/value budgets. The original-wire parser validates request-line structure, method tokens, visible-ASCII targets, field tokens/control bytes, and applies the smaller of total and individual line budgets before growing its line buffer. The new fields are schema-validated and Restart-only under Watch reload.
+
+[REQ-2026-0012](../requirements/REQ-2026-0012-bounded-http2-abuse-and-drain.md) adds a constant-memory decrypted HTTP/2 Wire Guard before Hyper. It bounds fixed-window Frame, new Stream, and `RST_STREAM` churn plus encoded `HEADERS`/`CONTINUATION` bytes and fragment count. Hyper/H2 still owns protocol parsing, HPACK, flow control, SETTINGS, stream errors, and GOAWAY. Real TLS/H2 evidence covers advertised settings, isolated Frame/new-Stream/reset abuse, encoded Header Block rejection, `ENHANCE_YOUR_CALM` for excessive H2 local-error resets, healthy-connection recovery, and graceful GOAWAY drain. HPACK dynamic-table sizing is deliberately not exposed because the selected Hyper server builder has no real configuration path.
+
+[REQ-2026-0013](../requirements/REQ-2026-0013-process-request-admission.md) adds one process-wide, non-queuing `maxConcurrentRequests` gate shared across listeners. Saturation produces bounded `503` responses, and admitted permits move into a zero-copy response Body wrapper so streaming proxy/static work remains counted after Handler completion. Real HTTP/1 and TLS/H2 tests cover overload headers, Stream isolation, completion recovery, and H2 reset cancellation. Aggregate Core validation caps active H2 Header List/send-buffer and connection encoded-header products.
+
+[REQ-2026-0014](../requirements/REQ-2026-0014-response-progress-timeouts.md) separates response producer-idle from downstream write-stall control. The admitted response Body timer resets only on meaningful Frames and releases capacity on timeout; the accepted-stream timer bounds continuously Pending write, flush, and shutdown after TLS and framing guards. Real HTTP/1, slow-reader, and TLS/H2 tests prove timeout scope and recovery before the longer upstream deadline.
+
+[REQ-2026-0015](../requirements/REQ-2026-0015-request-body-progress-timeouts.md) adds distinct first-meaningful-request-Frame and later Body progress deadlines before every resource action. The zero-copy wrapper stores no request content, empty Data cannot reset either phase, and timeout classification survives the proxy adapter. Real HTTP/1 and TLS/H2 tests prove `408`, HTTP/1 close, H2 Stream isolation, one-permit recovery, and same-connection H2 reuse.
+
+[REQ-2026-0016](../requirements/REQ-2026-0016-http1-keep-alive-idle-timeout.md) adds a protocol-scoped HTTP/1 request-between-request idle deadline. Connection Stream and per-connection Service state coordinate active response Body ownership and pending write flushes so uploads, streaming responses, and ordered pipelines cannot be misclassified as idle. H2 on a mixed ALPN listener bypasses the field.
+
+[REQ-2026-0017](../requirements/REQ-2026-0017-bounded-uri-query-components.md) adds allocation-free cross-H1/H2 raw and once-decoded Path, segment, Query, parameter, and component budgets before route selection. Invalid percent/control/backslash representation fails with `400`; budget overflow uses `414`; valid Query forwarding remains byte-preserving.
+
+[REQ-2026-0018](../requirements/REQ-2026-0018-canonical-uri-normalization.md) implements one bounded canonical Path alongside the preserved raw Path and Query. Canonical identity now drives route selection, static mapping, and `stripPrefix` proxy rewrites; no-rewrite proxying preserves the raw URI. Its ADR remains proposed because accepting decoded-backslash and invalid-UTF8 hardening differences is a human compatibility and security decision.
+
+[REQ-2026-0019](../requirements/REQ-2026-0019-bounded-http1-pipeline-depth.md) adds a connection-local bound on complete HTTP/1 request heads read by the original-wire Guard but not yet submitted to Hyper's Service. A synchronous dispatch decrement adds no request queue or Body buffer; over-depth connections close and H2 bypasses the policy.
+
+[REQ-2026-0020](../requirements/REQ-2026-0020-http2-keep-alive-ping-timeout.md) configures Hyper/H2 to send PING after finite inbound-Frame inactivity, wait a finite ACK deadline, and emit `GOAWAY(NO_ERROR)` before closing an unresponsive connection. Responsive idle clients remain connected, so this does not replace a future healthy-idle or maximum-connection-age policy.
+
+[REQ-2026-0021](../requirements/REQ-2026-0021-proxy-early-response-request-lifecycle.md) adds explicit two-phase ownership for streamed proxy uploads. Final upstream headers pause client Body polling; complete response handoff or downstream cancellation then terminates the upstream producer. HTTP/1 closes both non-reusable half-written connections, while H2 sends `RST_STREAM(NO_ERROR)` and preserves other Streams. Plain/TLS/H2 and pinned Nginx evidence prove status, Body, timeout, admission, and pool behavior without request buffering.
+
+[REQ-2026-0022](../requirements/REQ-2026-0022-bounded-connection-maximum-age.md) adds one finite maximum lifetime to every accepted HTTP/1 and HTTP/2 connection. The runtime owns and supervises each Hyper connection Future, performs protocol-aware graceful retirement at age expiry, bounds in-flight completion by the existing drain deadline, and joins or cancels every connection task. Real HTTP/1 and TLS/H2 tests cover reuse prevention, `GOAWAY(NO_ERROR)`, in-flight completion, forced drain, fresh-connection recovery, and Restart-only Watch behavior.
+
+[REQ-2026-0023](../requirements/REQ-2026-0023-bounded-upstream-dns-ssrf-policy.md) adds a bounded system-resolver adapter through Reqwest's public resolver port. Resolver concurrency has no waiter queue, answer retention uses one overflow detection item, and every literal or resolved address passes a fail-closed policy before connection. Real localhost proxy evidence proves default loopback denial and explicit dual-stack authorization; injected rebinding evidence proves a public answer cannot later change to private without rejection.
+
+These slices do not satisfy this PRD's final acceptance. Adaptive RSS/cgroup admission and health-priority reserve, custom/authoritative DNS with bounded TTL/cache/stale/CNAME behavior, upstream TLS policy and health/retry/balancing, undeclared cross-protocol Trailer synthesis, full gRPC Trailer/deadline/status conformance, complete HTTP/1 differential and fuzz corpora, exhaustive HTTP/2 malformed-frame/HPACK CPU/fuzz and Nginx differential suites, and published load/soak memory evidence remain blockers. Canonical URI semantics also remain unaccepted until ADR-20260716 receives human review.

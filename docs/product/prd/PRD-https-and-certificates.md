@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-07-15
+Updated: 2026-07-16
 Parent: [PRD.md](PRD.md)
 Specs: NGINX_SPEC.md, SECURITY_SPEC.md, CONFIG_SPEC.md, ENVIRONMENT_SPEC.md, DEPLOYMENT_SPEC.md, TEST_SPEC.md
 
@@ -228,3 +228,9 @@ Release verification includes:
 - Certificate operations, queues, caches, TLS contexts, worker concurrency, and node synchronization remain bounded under load and soak tests without OOM.
 - PostgreSQL and SQLite lifecycle suites pass and no database-only state transition is presented as proof of an external effect.
 - Expiry, renewal, served-certificate divergence, KMS/ACME failure, and node-distribution alerts are exercised with current runbooks before commercial release.
+
+## 20. Current Verified Delivery Boundary
+
+[REQ-2026-0006](../requirements/REQ-2026-0006-multi-certificate-sni.md) delivers the bounded standalone static-map portion of sections 3 and 4: one HTTPS listener can load multiple protected-file certificates, validate leaf time/SAN/key consistency before opening, and select Exact or single-label Wildcard SNI through immutable indexed maps. Exact wins over Wildcard. Unknown or absent DNS SNI fails closed; there is no implicit first-certificate fallback.
+
+This does not complete this PRD. Certificate collection or material changes remain Restart-only. Explicit default-certificate policy, same-name RSA/ECDSA negotiation, full trust-chain and revocation validation, atomic live rotation, existing-connection rotation evidence, ACME/KMS distribution, cluster convergence, served-fingerprint probes, handshake abuse controls, telemetry, load/soak, and incident runbooks remain commercial release blockers.

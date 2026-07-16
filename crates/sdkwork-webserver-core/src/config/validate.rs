@@ -7,8 +7,9 @@ use std::{
 use url::Url;
 
 use super::{
-    CertificateSource, ConfigDiagnostic, ListenerProtocol, ResourceConfig, RouteConfig, TlsVersion,
-    WebServerAppConfig, WebServerConfigError,
+    is_supported_upstream_allowed_cidr, upstream_ip_is_allowed, CertificateSource,
+    ConfigDiagnostic, ListenerProtocol, ResourceConfig, RouteConfig, TlsVersion,
+    WebServerAppConfig, WebServerConfigError, WebServerLimits,
 };
 
 const MAX_DIAGNOSTICS: usize = 128;
@@ -77,6 +78,11 @@ impl SemanticValidator {
             .upstreams
             .iter()
             .map(|upstream| (upstream.id.as_str(), upstream))
+            .collect::<HashMap<_, _>>();
+        let resolvers = config
+            .resolvers
+            .iter()
+            .map(|resolver| (resolver.id.as_str(), resolver))
             .collect::<HashMap<_, _>>();
         let virtual_hosts = config
             .virtual_hosts
@@ -157,12 +163,21 @@ impl SemanticValidator {
 
         for (index, certificate) in config.certificates.iter().enumerate() {
             let path = format!("/certificates/{index}");
+            let mut normalized_names = HashSet::new();
             for (name_index, server_name) in certificate.server_names.iter().enumerate() {
-                if normalize_server_name(server_name).is_none() {
-                    self.push(
+                match normalize_server_name(server_name) {
+                    Some(normalized) => {
+                        if !normalized_names.insert(normalized) {
+                            self.push(
+                                format!("{path}/serverNames/{name_index}"),
+                                "duplicate certificate server name after DNS normalization",
+                            );
+                        }
+                    }
+                    None => self.push(
                         format!("{path}/serverNames/{name_index}"),
                         "invalid exact or leading-wildcard DNS server name",
-                    );
+                    ),
                 }
             }
             let CertificateSource::ProtectedFile {
@@ -179,11 +194,56 @@ impl SemanticValidator {
 
         for (index, policy) in config.tls_policies.iter().enumerate() {
             let path = format!("/tlsPolicies/{index}");
-            if !certificates.contains_key(policy.certificate_ref.as_str()) {
+            if policy.certificate_ref.is_some() != policy.certificate_refs.is_empty() {
                 self.push(
-                    format!("{path}/certificateRef"),
-                    format!("unknown certificate {}", policy.certificate_ref),
+                    &path,
+                    "exactly one of certificateRef or certificateRefs must be configured",
                 );
+            }
+            let mut referenced_certificates = HashSet::new();
+            let mut server_name_owners = HashMap::new();
+            for (reference_path, certificate_ref) in policy
+                .certificate_ref
+                .iter()
+                .map(|certificate_ref| (format!("{path}/certificateRef"), certificate_ref))
+                .chain(policy.certificate_refs.iter().enumerate().map(
+                    |(reference_index, certificate_ref)| {
+                        (
+                            format!("{path}/certificateRefs/{reference_index}"),
+                            certificate_ref,
+                        )
+                    },
+                ))
+            {
+                if !referenced_certificates.insert(certificate_ref.as_str()) {
+                    self.push(reference_path, "duplicate certificate reference");
+                    continue;
+                }
+                let Some(certificate) = certificates.get(certificate_ref.as_str()) else {
+                    self.push(
+                        reference_path,
+                        format!("unknown certificate {certificate_ref}"),
+                    );
+                    continue;
+                };
+                for server_name in &certificate.server_names {
+                    let Some(normalized) = normalize_server_name(server_name) else {
+                        continue;
+                    };
+                    if let Some(previous_certificate) =
+                        server_name_owners.insert(normalized.clone(), certificate.id.as_str())
+                    {
+                        if previous_certificate != certificate.id {
+                            self.push(
+                                &path,
+                                format!(
+                                    "certificates {previous_certificate} and {} both declare server name {normalized}",
+                                    certificate.id
+                                ),
+                            );
+                        }
+                    }
+                }
             }
             if policy.minimum_version > policy.maximum_version {
                 self.push(
@@ -204,11 +264,13 @@ impl SemanticValidator {
             }
         }
 
-        if !config.resolvers.is_empty() {
-            self.push(
-                "/resolvers",
-                "custom resolver profiles are not implemented by REQ-2026-0003; use the bounded system resolver",
-            );
+        for (index, resolver) in config.resolvers.iter().enumerate() {
+            if !resolver.servers.is_empty() {
+                self.push(
+                    format!("/resolvers/{index}/servers"),
+                    "custom DNS server transport is not implemented; omit servers to use the bounded system resolver",
+                );
+            }
         }
 
         for (index, resource) in config.resources.iter().enumerate() {
@@ -279,6 +341,22 @@ impl SemanticValidator {
         let mut total_targets = 0usize;
         for (index, upstream) in config.upstreams.iter().enumerate() {
             let path = format!("/upstreams/{index}");
+            if let Some(resolver_ref) = &upstream.resolver_ref {
+                if !resolvers.contains_key(resolver_ref.as_str()) {
+                    self.push(
+                        format!("{path}/resolverRef"),
+                        format!("unknown resolver {resolver_ref}"),
+                    );
+                }
+            }
+            for (cidr_index, cidr) in upstream.address_policy.allowed_cidrs.iter().enumerate() {
+                if !is_supported_upstream_allowed_cidr(cidr) {
+                    self.push(
+                        format!("{path}/addressPolicy/allowedCidrs/{cidr_index}"),
+                        "allowed CIDR must be wholly contained in an approved loopback, private, shared, link-local, or ULA range",
+                    );
+                }
+            }
             total_targets = total_targets.saturating_add(upstream.targets.len());
             let mut target_urls = HashSet::new();
             for (target_index, target) in upstream.targets.iter().enumerate() {
@@ -295,6 +373,18 @@ impl SemanticValidator {
                         let normalized = url.as_str().trim_end_matches('/').to_ascii_lowercase();
                         if !target_urls.insert(normalized) {
                             self.push(&target_path, "duplicate upstream target URL");
+                        }
+                        if let Some(ip) = url.host_str().and_then(|host| host.parse::<IpAddr>().ok())
+                        {
+                            if !upstream_ip_is_allowed(
+                                ip,
+                                &upstream.address_policy.allowed_cidrs,
+                            ) {
+                                self.push(
+                                    &target_path,
+                                    "literal upstream IP is forbidden unless its restricted range is explicitly authorized",
+                                );
+                            }
                         }
                     }
                     _ => self.push(
@@ -354,7 +444,13 @@ impl SemanticValidator {
             }
 
             total_routes = total_routes.saturating_add(virtual_host.routes.len());
-            validate_routes(self, &path, &virtual_host.routes, &resources);
+            validate_routes(
+                self,
+                &path,
+                &virtual_host.routes,
+                &resources,
+                &config.limits,
+            );
         }
         if total_routes > MAX_TOTAL_ROUTES {
             self.push(
@@ -382,9 +478,10 @@ impl SemanticValidator {
             let Some(policy) = tls_policies.get(policy_ref.as_str()) else {
                 continue;
             };
-            let Some(certificate) = certificates.get(policy.certificate_ref.as_str()) else {
-                continue;
-            };
+            let policy_certificates = policy
+                .certificate_refs()
+                .filter_map(|certificate_ref| certificates.get(certificate_ref))
+                .collect::<Vec<_>>();
             for virtual_host in config.virtual_hosts.iter().filter(|virtual_host| {
                 virtual_host
                     .listener_refs
@@ -392,16 +489,26 @@ impl SemanticValidator {
                     .any(|listener_ref| listener_ref == &listener.id)
             }) {
                 for server_name in &virtual_host.server_names {
-                    if !certificate
-                        .server_names
-                        .iter()
-                        .any(|certificate_name| server_name_covers(certificate_name, server_name))
+                    if normalize_server_name(server_name)
+                        .is_some_and(|name| name.parse::<IpAddr>().is_ok())
                     {
                         self.push(
                             format!("/listeners/{listener_index}/tlsPolicyRef"),
                             format!(
-                                "certificate {} does not cover server name {server_name}",
-                                certificate.id
+                                "strict SNI certificate selection requires a DNS server name, not IP address {server_name}"
+                            ),
+                        );
+                        continue;
+                    }
+                    if !policy_certificates.iter().any(|certificate| {
+                        certificate.server_names.iter().any(|certificate_name| {
+                            server_name_covers(certificate_name, server_name)
+                        })
+                    }) {
+                        self.push(
+                            format!("/listeners/{listener_index}/tlsPolicyRef"),
+                            format!(
+                                "TLS policy {policy_ref} has no certificate covering server name {server_name}"
                             ),
                         );
                     }
@@ -424,6 +531,42 @@ impl SemanticValidator {
                 "request timeout must be between 100 ms and 1 hour",
             );
         }
+        if !(100..=3_600_000).contains(&limits.request_body_start_timeout_ms) {
+            self.push(
+                "/limits/requestBodyStartTimeoutMs",
+                "request Body start timeout must be between 100 ms and 1 hour",
+            );
+        }
+        if !(100..=3_600_000).contains(&limits.request_body_idle_timeout_ms) {
+            self.push(
+                "/limits/requestBodyIdleTimeoutMs",
+                "request Body idle timeout must be between 100 ms and 1 hour",
+            );
+        }
+        if !(100..=3_600_000).contains(&limits.response_body_idle_timeout_ms) {
+            self.push(
+                "/limits/responseBodyIdleTimeoutMs",
+                "response Body idle timeout must be between 100 ms and 1 hour",
+            );
+        }
+        if !(100..=3_600_000).contains(&limits.connection_write_timeout_ms) {
+            self.push(
+                "/limits/connectionWriteTimeoutMs",
+                "connection write timeout must be between 100 ms and 1 hour",
+            );
+        }
+        if !(100..=3_600_000).contains(&limits.http1_keep_alive_idle_timeout_ms) {
+            self.push(
+                "/limits/http1KeepAliveIdleTimeoutMs",
+                "HTTP/1 Keep-Alive idle timeout must be between 100 ms and 1 hour",
+            );
+        }
+        if !(1..=1_024).contains(&limits.http1_max_pipeline_depth) {
+            self.push(
+                "/limits/http1MaxPipelineDepth",
+                "HTTP/1 Pipeline depth must be between 1 and 1,024",
+            );
+        }
         if !(100..=600_000).contains(&limits.drain_timeout_ms) {
             self.push(
                 "/limits/drainTimeoutMs",
@@ -434,6 +577,344 @@ impl SemanticValidator {
             self.push(
                 "/limits/maxConnections",
                 "maxConnections must be between 1 and 1,000,000",
+            );
+        }
+        if !(1..=100_000).contains(&limits.max_concurrent_requests) {
+            self.push(
+                "/limits/maxConcurrentRequests",
+                "maxConcurrentRequests must be between 1 and 100,000",
+            );
+        }
+        if !(8_192..=1_048_576).contains(&limits.max_request_header_bytes) {
+            self.push(
+                "/limits/maxRequestHeaderBytes",
+                "maxRequestHeaderBytes must be between 8 KiB and 1 MiB",
+            );
+        }
+        if !(16..=65_536).contains(&limits.max_request_line_bytes) {
+            self.push(
+                "/limits/maxRequestLineBytes",
+                "maxRequestLineBytes must be between 16 bytes and 64 KiB",
+            );
+        }
+        if !(1..=256).contains(&limits.max_request_method_bytes) {
+            self.push(
+                "/limits/maxRequestMethodBytes",
+                "maxRequestMethodBytes must be between 1 and 256 bytes",
+            );
+        }
+        if !(1..=65_536).contains(&limits.max_request_target_bytes) {
+            self.push(
+                "/limits/maxRequestTargetBytes",
+                "maxRequestTargetBytes must be between 1 byte and 64 KiB",
+            );
+        }
+        if !(1..=65_536).contains(&limits.max_uri_path_bytes) {
+            self.push(
+                "/limits/maxUriPathBytes",
+                "maxUriPathBytes must be between 1 and 64 KiB",
+            );
+        }
+        if !(1..=65_536).contains(&limits.max_decoded_path_bytes) {
+            self.push(
+                "/limits/maxDecodedPathBytes",
+                "maxDecodedPathBytes must be between 1 and 64 KiB",
+            );
+        }
+        if limits.max_decoded_path_bytes > limits.max_uri_path_bytes {
+            self.push(
+                "/limits/maxDecodedPathBytes",
+                "maxDecodedPathBytes must not exceed maxUriPathBytes",
+            );
+        }
+        if !(1..=4_096).contains(&limits.max_path_segments) {
+            self.push(
+                "/limits/maxPathSegments",
+                "maxPathSegments must be between 1 and 4,096",
+            );
+        }
+        if limits.max_query_string_bytes > 65_536 {
+            self.push(
+                "/limits/maxQueryStringBytes",
+                "maxQueryStringBytes must not exceed 64 KiB",
+            );
+        }
+        if limits.max_query_parameters > 4_096 {
+            self.push(
+                "/limits/maxQueryParameters",
+                "maxQueryParameters must not exceed 4,096",
+            );
+        }
+        if limits.max_query_component_bytes > 65_536 {
+            self.push(
+                "/limits/maxQueryComponentBytes",
+                "maxQueryComponentBytes must not exceed 64 KiB",
+            );
+        }
+        let query_disabled = limits.max_query_string_bytes == 0
+            && limits.max_query_parameters == 0
+            && limits.max_query_component_bytes == 0;
+        let query_enabled = limits.max_query_string_bytes > 0
+            && limits.max_query_parameters > 0
+            && limits.max_query_component_bytes > 0;
+        if !query_disabled && !query_enabled {
+            self.push(
+                "/limits",
+                "query string, parameter, and component budgets must all be zero or all be positive",
+            );
+        }
+        if query_enabled && limits.max_query_component_bytes > limits.max_query_string_bytes {
+            self.push(
+                "/limits/maxQueryComponentBytes",
+                "maxQueryComponentBytes must not exceed maxQueryStringBytes",
+            );
+        }
+        if !(1..=8_192).contains(&limits.max_header_name_bytes) {
+            self.push(
+                "/limits/maxHeaderNameBytes",
+                "maxHeaderNameBytes must be between 1 byte and 8 KiB",
+            );
+        }
+        if !(1..=1_048_576).contains(&limits.max_header_value_bytes) {
+            self.push(
+                "/limits/maxHeaderValueBytes",
+                "maxHeaderValueBytes must be between 1 byte and 1 MiB",
+            );
+        }
+        if limits.max_request_line_bytes > limits.max_request_header_bytes {
+            self.push(
+                "/limits/maxRequestLineBytes",
+                "maxRequestLineBytes must not exceed maxRequestHeaderBytes",
+            );
+        }
+        if limits.max_request_method_bytes > limits.max_request_line_bytes {
+            self.push(
+                "/limits/maxRequestMethodBytes",
+                "maxRequestMethodBytes must not exceed maxRequestLineBytes",
+            );
+        }
+        if limits.max_request_target_bytes > limits.max_request_line_bytes {
+            self.push(
+                "/limits/maxRequestTargetBytes",
+                "maxRequestTargetBytes must not exceed maxRequestLineBytes",
+            );
+        }
+        if limits.max_header_name_bytes > limits.max_request_header_bytes {
+            self.push(
+                "/limits/maxHeaderNameBytes",
+                "maxHeaderNameBytes must not exceed maxRequestHeaderBytes",
+            );
+        }
+        if limits.max_header_value_bytes > limits.max_request_header_bytes {
+            self.push(
+                "/limits/maxHeaderValueBytes",
+                "maxHeaderValueBytes must not exceed maxRequestHeaderBytes",
+            );
+        }
+        if !(1..=1_024).contains(&limits.max_request_headers) {
+            self.push(
+                "/limits/maxRequestHeaders",
+                "maxRequestHeaders must be between 1 and 1,024",
+            );
+        }
+        if !(100..=60_000).contains(&limits.request_header_timeout_ms) {
+            self.push(
+                "/limits/requestHeaderTimeoutMs",
+                "requestHeaderTimeoutMs must be between 100 ms and 1 minute",
+            );
+        }
+        if !(16..=8_192).contains(&limits.max_chunk_line_bytes) {
+            self.push(
+                "/limits/maxChunkLineBytes",
+                "maxChunkLineBytes must be between 16 bytes and 8 KiB",
+            );
+        }
+        if limits.max_trailer_bytes > 1_048_576 {
+            self.push(
+                "/limits/maxTrailerBytes",
+                "maxTrailerBytes must not exceed 1 MiB",
+            );
+        }
+        if limits.max_trailers > 1_024 {
+            self.push("/limits/maxTrailers", "maxTrailers must not exceed 1,024");
+        }
+        if (limits.max_trailer_bytes == 0) != (limits.max_trailers == 0) {
+            self.push(
+                "/limits",
+                "maxTrailerBytes and maxTrailers must both be zero or both be positive",
+            );
+        }
+        if !(1..=10_000).contains(&limits.http2_max_concurrent_streams) {
+            self.push(
+                "/limits/http2MaxConcurrentStreams",
+                "http2MaxConcurrentStreams must be between 1 and 10,000",
+            );
+        }
+        if !(100..=86_400_000).contains(&limits.max_connection_age_ms) {
+            self.push(
+                "/limits/maxConnectionAgeMs",
+                "maxConnectionAgeMs must be between 100 ms and 24 hours",
+            );
+        }
+        if !(1_000..=3_600_000).contains(&limits.http2_keep_alive_interval_ms) {
+            self.push(
+                "/limits/http2KeepAliveIntervalMs",
+                "HTTP/2 Keep-Alive interval must be between 1 second and 1 hour",
+            );
+        }
+        if !(100..=60_000).contains(&limits.http2_keep_alive_timeout_ms) {
+            self.push(
+                "/limits/http2KeepAliveTimeoutMs",
+                "HTTP/2 Keep-Alive ACK timeout must be between 100 ms and 1 minute",
+            );
+        }
+        if limits.http2_keep_alive_timeout_ms > limits.http2_keep_alive_interval_ms {
+            self.push(
+                "/limits/http2KeepAliveTimeoutMs",
+                "HTTP/2 Keep-Alive ACK timeout must not exceed its interval",
+            );
+        }
+        if !(1..=1_024).contains(&limits.http2_max_pending_accept_reset_streams) {
+            self.push(
+                "/limits/http2MaxPendingAcceptResetStreams",
+                "http2MaxPendingAcceptResetStreams must be between 1 and 1,024",
+            );
+        }
+        if !(1..=4_096).contains(&limits.http2_max_local_error_reset_streams) {
+            self.push(
+                "/limits/http2MaxLocalErrorResetStreams",
+                "http2MaxLocalErrorResetStreams must be between 1 and 4,096",
+            );
+        }
+        if !(1_024..=16_777_216).contains(&limits.http2_max_send_buffer_bytes) {
+            self.push(
+                "/limits/http2MaxSendBufferBytes",
+                "http2MaxSendBufferBytes must be between 1 KiB and 16 MiB",
+            );
+        }
+        if !(1_024..=1_048_576).contains(&limits.http2_max_header_list_bytes) {
+            self.push(
+                "/limits/http2MaxHeaderListBytes",
+                "http2MaxHeaderListBytes must be between 1 KiB and 1 MiB",
+            );
+        }
+        if !(16_384..=16_777_215).contains(&limits.http2_max_frame_bytes) {
+            self.push(
+                "/limits/http2MaxFrameBytes",
+                "http2MaxFrameBytes must be between 16 KiB and 16,777,215 bytes",
+            );
+        }
+        if !(100..=60_000).contains(&limits.http2_abuse_window_ms) {
+            self.push(
+                "/limits/http2AbuseWindowMs",
+                "http2AbuseWindowMs must be between 100 ms and 1 minute",
+            );
+        }
+        if !(100..=1_000_000).contains(&limits.http2_max_frames_per_window) {
+            self.push(
+                "/limits/http2MaxFramesPerWindow",
+                "http2MaxFramesPerWindow must be between 100 and 1,000,000",
+            );
+        }
+        if !(1..=100_000).contains(&limits.http2_max_new_streams_per_window) {
+            self.push(
+                "/limits/http2MaxNewStreamsPerWindow",
+                "http2MaxNewStreamsPerWindow must be between 1 and 100,000",
+            );
+        }
+        if !(1..=100_000).contains(&limits.http2_max_reset_frames_per_window) {
+            self.push(
+                "/limits/http2MaxResetFramesPerWindow",
+                "http2MaxResetFramesPerWindow must be between 1 and 100,000",
+            );
+        }
+        if limits.http2_max_continuation_frames > 1_024 {
+            self.push(
+                "/limits/http2MaxContinuationFrames",
+                "http2MaxContinuationFrames must not exceed 1,024",
+            );
+        }
+        if !(1_024..=1_048_576).contains(&limits.http2_max_encoded_header_block_bytes) {
+            self.push(
+                "/limits/http2MaxEncodedHeaderBlockBytes",
+                "http2MaxEncodedHeaderBlockBytes must be between 1 KiB and 1 MiB",
+            );
+        }
+        if limits.http2_max_new_streams_per_window > limits.http2_max_frames_per_window {
+            self.push(
+                "/limits/http2MaxNewStreamsPerWindow",
+                "http2MaxNewStreamsPerWindow must not exceed http2MaxFramesPerWindow",
+            );
+        }
+        if limits.http2_max_reset_frames_per_window > limits.http2_max_frames_per_window {
+            self.push(
+                "/limits/http2MaxResetFramesPerWindow",
+                "http2MaxResetFramesPerWindow must not exceed http2MaxFramesPerWindow",
+            );
+        }
+        let concurrent_streams = u64::from(limits.http2_max_concurrent_streams);
+        if concurrent_streams.saturating_mul(limits.http2_max_send_buffer_bytes as u64)
+            > 64 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "HTTP/2 concurrent-stream send-buffer budget must not exceed 64 MiB per connection",
+            );
+        }
+        if concurrent_streams.saturating_mul(u64::from(limits.http2_max_header_list_bytes))
+            > 64 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "HTTP/2 concurrent-stream header-list budget must not exceed 64 MiB per connection",
+            );
+        }
+        if concurrent_streams.saturating_mul(limits.http2_max_encoded_header_block_bytes as u64)
+            > 64 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "HTTP/2 concurrent-stream encoded-header budget must not exceed 64 MiB per connection",
+            );
+        }
+        if (limits.max_connections as u64).saturating_mul(limits.max_request_header_bytes as u64)
+            > 1024 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "global HTTP/1 connection header-window budget must not exceed 1 GiB",
+            );
+        }
+        let active_requests = limits.max_concurrent_requests as u64;
+        if active_requests.saturating_mul(u64::from(limits.http2_max_header_list_bytes))
+            > 1024 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "global active HTTP/2 header-list budget must not exceed 1 GiB",
+            );
+        }
+        if active_requests.saturating_mul(limits.http2_max_send_buffer_bytes as u64)
+            > 1024 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "global active HTTP/2 send-buffer budget must not exceed 1 GiB",
+            );
+        }
+        if (limits.max_connections as u64)
+            .saturating_mul(limits.http2_max_encoded_header_block_bytes as u64)
+            > 1024 * 1024 * 1024
+        {
+            self.push(
+                "/limits",
+                "global HTTP/2 encoded-header connection budget must not exceed 1 GiB",
+            );
+        }
+        if !(100..=60_000).contains(&config.deployment.reload.poll_interval_ms) {
+            self.push(
+                "/deployment/reload/pollIntervalMs",
+                "reload poll interval must be between 100 ms and 1 minute",
             );
         }
     }
@@ -499,20 +980,37 @@ fn validate_routes(
     host_path: &str,
     routes: &[RouteConfig],
     resources: &HashMap<&str, &ResourceConfig>,
+    limits: &WebServerLimits,
 ) {
     for (index, route) in routes.iter().enumerate() {
         let path = format!("{host_path}/routes/{index}");
         let configured_path = &route.route_match.path;
-        if !configured_path.starts_with('/')
-            || configured_path.contains('\\')
-            || configured_path.contains('?')
-            || configured_path.contains('#')
-            || configured_path.contains('\0')
-        {
-            validator.push(
-                format!("{path}/match/path"),
-                "route path must be an absolute URI path without query, fragment, NUL, or backslash",
-            );
+        if let Err(error) = super::uri::validate_canonical_uri_path(
+            configured_path,
+            limits.max_decoded_path_bytes,
+            limits.max_path_segments,
+        ) {
+            match super::uri::normalize_uri_path(
+                configured_path,
+                limits.max_decoded_path_bytes,
+                limits.max_path_segments,
+            ) {
+                Ok(normalized) if normalized != *configured_path => validator.push(
+                    format!("{path}/match/path"),
+                    format!("route path must be canonical; use {normalized}"),
+                ),
+                _ => validator.push(
+                    format!("{path}/match/path"),
+                    match error {
+                        super::uri::UriPathNormalizationError::Invalid => {
+                            "route path is not a valid canonical Path"
+                        }
+                        super::uri::UriPathNormalizationError::TooLong => {
+                            "route path exceeds canonical Path budgets"
+                        }
+                    },
+                ),
+            }
         }
         if !resources.contains_key(route.resource_ref.as_str()) {
             validator.push(
@@ -593,7 +1091,7 @@ fn validate_redirect_location(validator: &mut SemanticValidator, path: &str, loc
     }
 }
 
-pub(crate) fn normalize_server_name(value: &str) -> Option<String> {
+pub fn normalize_server_name(value: &str) -> Option<String> {
     let normalized = value.trim_end_matches('.').to_ascii_lowercase();
     let dns_name = normalized.strip_prefix("*.").unwrap_or(&normalized);
     if dns_name.is_empty() || dns_name.len() > 253 || dns_name.contains('*') {
@@ -619,7 +1117,7 @@ fn valid_dns_label(label: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
-pub(crate) fn server_name_covers(certificate_name: &str, server_name: &str) -> bool {
+pub fn server_name_covers(certificate_name: &str, server_name: &str) -> bool {
     let Some(certificate_name) = normalize_server_name(certificate_name) else {
         return false;
     };

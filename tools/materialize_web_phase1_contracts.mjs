@@ -320,26 +320,6 @@ function namespaceArgsFor(family, language) {
   }
 }
 
-function languageEntries(family) {
-  return LANGUAGE_LIST.map((language) => {
-    const surfaceLabel = family.endsWith("-app-sdk") ? "app" : "backend";
-    const workspace = `${family}-${language}`;
-    const packagePath = `${workspace}/generated/server-openapi`;
-    return {
-      language,
-      workspace,
-      generationState: "materialized",
-      releaseState: "not_published",
-      packagePath,
-      manifestPath: `${packagePath}/${manifestFileFor(family, language)}`,
-      name: packageNameFor(family, language),
-      version: SDK_VERSION,
-      description: `Generator-owned ${language} transport SDK for SDKWork Web ${surfaceLabel === "app" ? "App" : "Backend"} API.`,
-      generatedPath: packagePath,
-    };
-  });
-}
-
 function sdkDependenciesFor(surface) {
   if (surface === "app-api") {
     return [
@@ -355,42 +335,6 @@ function sdkDependenciesFor(surface) {
       reason: "Platform operator IAM for protected backend-api routes.",
     },
   ];
-}
-
-function writeFullAssembly(profile, openapi) {
-  const family = profile.sdkFamily;
-  const sdkgenFileName = `sdkwork-web-${profile.surface === "app-api" ? "app" : "backend"}-api.sdkgen.yaml`;
-  const sdkgenPath = `openapi/${sdkgenFileName}`;
-  const assembly = {
-    workspace: family,
-    title:
-      profile.surface === "app-api"
-        ? "SDKWork Web App API SDK"
-        : "SDKWork Web Backend API SDK",
-    apiVersion: SDK_VERSION,
-    openapiVersion: "3.1.2",
-    authoritySpec: `openapi/web-${profile.surface === "app-api" ? "app" : "backend"}-api.openapi.json`,
-    generationInputSpec: sdkgenPath,
-    derivedSpecs: {
-      default: sdkgenPath,
-      flutter: sdkgenPath,
-    },
-    sdkOwner: "sdkwork-web",
-    apiAuthority: profile.apiAuthority,
-    discoverySurface: {
-      sdkTarget: profile.surface === "app-api" ? "app" : "backend",
-      apiPrefix: profile.prefix,
-      schemaUrl: `${profile.prefix.replace("/api", "/openapi.json")}`,
-      generatedProtocols: ["http-openapi"],
-      manualTransports: [],
-    },
-    languages: languageEntries(family),
-    metadata: {
-      managedBy: "tools/materialize_web_phase1_contracts.mjs",
-      standardVersion: STANDARD_VERSION,
-    },
-  };
-  writeJson(`sdks/${family}/.sdkwork-assembly.json`, assembly);
 }
 
 function writeComponentSpec(profile) {
@@ -760,7 +704,6 @@ for (const profile of surfaces) {
   });
   writeHttpRouteManifestRust(profile.crateDir, profile.manifestFn, routes);
   // C4-C7: emit full family metadata, sdkgen input, and generate-sdk wrappers.
-  writeFullAssembly(profile, openapi);
   writeComponentSpec(profile);
   writeSdkgenInput(profile, openapi);
   writeGenerateSdkScripts(profile);

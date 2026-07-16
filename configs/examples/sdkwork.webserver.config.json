@@ -9,8 +9,47 @@
   "limits": {
     "maxRequestBodyBytes": 10485760,
     "requestTimeoutMs": 30000,
+    "requestBodyStartTimeoutMs": 30000,
+    "requestBodyIdleTimeoutMs": 30000,
+    "responseBodyIdleTimeoutMs": 30000,
+    "connectionWriteTimeoutMs": 30000,
+    "http1KeepAliveIdleTimeoutMs": 75000,
+    "http1MaxPipelineDepth": 16,
     "drainTimeoutMs": 30000,
-    "maxConnections": 10000
+    "maxConnections": 10000,
+    "maxConcurrentRequests": 4096,
+    "maxRequestHeaderBytes": 65536,
+    "maxRequestLineBytes": 8192,
+    "maxRequestMethodBytes": 32,
+    "maxRequestTargetBytes": 8192,
+    "maxUriPathBytes": 8192,
+    "maxDecodedPathBytes": 8192,
+    "maxPathSegments": 256,
+    "maxQueryStringBytes": 4096,
+    "maxQueryParameters": 256,
+    "maxQueryComponentBytes": 1024,
+    "maxHeaderNameBytes": 256,
+    "maxHeaderValueBytes": 8192,
+    "maxRequestHeaders": 100,
+    "requestHeaderTimeoutMs": 10000,
+    "maxChunkLineBytes": 1024,
+    "maxTrailerBytes": 8192,
+    "maxTrailers": 32,
+    "http2MaxConcurrentStreams": 100,
+    "maxConnectionAgeMs": 3600000,
+    "http2KeepAliveIntervalMs": 60000,
+    "http2KeepAliveTimeoutMs": 20000,
+    "http2MaxPendingAcceptResetStreams": 20,
+    "http2MaxLocalErrorResetStreams": 128,
+    "http2MaxSendBufferBytes": 65536,
+    "http2MaxHeaderListBytes": 65536,
+    "http2MaxFrameBytes": 16384,
+    "http2AbuseWindowMs": 1000,
+    "http2MaxFramesPerWindow": 10000,
+    "http2MaxNewStreamsPerWindow": 1000,
+    "http2MaxResetFramesPerWindow": 100,
+    "http2MaxContinuationFrames": 16,
+    "http2MaxEncodedHeaderBlockBytes": 65536
   },
   "listeners": [
     {
@@ -72,7 +111,11 @@
     "accessLog": true
   },
   "deployment": {
-    "drainTimeoutMs": 30000
+    "drainTimeoutMs": 30000,
+    "reload": {
+      "mode": "watch",
+      "pollIntervalMs": 1000
+    }
   },
   "metadata": {
     "owner": "sdkwork"

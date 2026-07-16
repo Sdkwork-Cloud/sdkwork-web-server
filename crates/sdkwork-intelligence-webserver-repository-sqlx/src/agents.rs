@@ -40,7 +40,7 @@ impl WebRepository {
         .await
         .map_err(|error| store_error("authenticate web_server agent token", error))?;
 
-        let row = row.ok_or_else(|| WebServiceError::Forbidden)?;
+        let row = row.ok_or(WebServiceError::Forbidden)?;
         map_authenticated_agent(&row)
             .map_err(|error| WebServiceError::Internal(format!("map authenticated agent: {error}")))
     }

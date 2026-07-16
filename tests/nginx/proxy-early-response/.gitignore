@@ -1,0 +1,10 @@
+sdkwork-proxy-early-response.pid
+logs/*
+!logs/.gitkeep
+temp/*
+!temp/client_body_temp/
+!temp/proxy_temp/
+temp/client_body_temp/*
+!temp/client_body_temp/.gitkeep
+temp/proxy_temp/*
+!temp/proxy_temp/.gitkeep

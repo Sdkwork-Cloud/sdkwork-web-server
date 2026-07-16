@@ -14,6 +14,17 @@ use sdkwork_webserver_contract::{
     ServerPage, SitePage, SiteResponse, UpdateNginxConfigRequest, UpdateSiteRequest,
 };
 
+#[derive(Clone, Copy, Debug)]
+pub struct AuditLogWrite<'a> {
+    pub tenant_id: i64,
+    pub organization_id: i64,
+    pub operator_id: i64,
+    pub action: &'a str,
+    pub target_type: &'a str,
+    pub target_id: Option<i64>,
+    pub target_uuid: Option<&'a str>,
+}
+
 #[async_trait]
 pub trait WebRepositoryPort: Send + Sync {
     async fn ready_check(&self) -> WebServiceResult<()>;
@@ -296,14 +307,5 @@ pub trait WebRepositoryPort: Send + Sync {
         page_size: i32,
     ) -> WebServiceResult<AuditLogPage>;
 
-    async fn insert_audit_log(
-        &self,
-        tenant_id: i64,
-        organization_id: i64,
-        operator_id: i64,
-        action: &str,
-        target_type: &str,
-        target_id: Option<i64>,
-        target_uuid: Option<&str>,
-    ) -> WebServiceResult<()>;
+    async fn insert_audit_log(&self, entry: AuditLogWrite<'_>) -> WebServiceResult<()>;
 }
