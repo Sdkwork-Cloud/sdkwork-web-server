@@ -33,18 +33,21 @@ dotenvy = "0.15"
 http = "1.4"
 http-body = "1"
 http-body-util = "0.1"
-hyper = { version = "1", features = ["http1", "http2", "server"] }
-hyper-util = { version = "0.1", features = ["server-auto", "tokio"] }
+hyper = { version = "1", features = ["client", "http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "server-auto", "tokio"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["aws-lc-rs", "http1", "http2", "tls12", "webpki-roots"] }
 ipnet = { version = "2", features = ["serde"] }
 futures-util = "0.3"
 percent-encoding = "2"
 reqwest = { version = "0.12", default-features = false, features = ["http2", "rustls-tls", "stream"] }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
 rustls-pemfile = "2"
+url = "2"
+webpki-roots = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+socket2 = "0.6"
 jsonschema = { version = "0.47", default-features = false }
-url = "2"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "postgres", "any", "migrate"] }
 thiserror = "2"
 tempfile = "3"
@@ -65,6 +68,7 @@ instant-acme = { version = "0.8", features = ["rcgen"] }
 rcgen = "0.13"
 x509-parser = "0.16"
 tokio-rustls = "0.26"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
 
 sdkwork-webserver-acme-service = { path = "crates/sdkwork-webserver-acme-service" }
 sdkwork-webserver-edge-runtime = { path = "crates/sdkwork-webserver-edge-runtime" }

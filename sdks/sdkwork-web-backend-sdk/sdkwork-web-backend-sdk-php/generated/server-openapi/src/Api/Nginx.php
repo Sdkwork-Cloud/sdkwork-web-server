@@ -45,7 +45,7 @@ final class NginxApi extends BaseApi
     /** 获取 Nginx 配置详情 */
     public function configsRetrieve(string $configId): ?NginxConfigResponse
     {
-        $path = $this->interpolatePath('/backend/v3/api/nginx/configs/{configId}', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
+        $path = $this->interpolatePath('/backend/v3/api/nginx/etc/{configId}', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
         $result = $this->client->request('GET', $path, []);
         return is_array($result) ? NginxConfigResponse::fromArray($result) : null;
     }
@@ -53,7 +53,7 @@ final class NginxApi extends BaseApi
     /** 更新 Nginx 配置 */
     public function configsUpdate(string $configId, array|UpdateNginxConfigRequest $body): ?NginxConfigResponse
     {
-        $path = $this->interpolatePath('/backend/v3/api/nginx/configs/{configId}', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
+        $path = $this->interpolatePath('/backend/v3/api/nginx/etc/{configId}', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
         $payload = $body instanceof UpdateNginxConfigRequest ? $body->toArray() : $body;
         $result = $this->client->request('PUT', $path, [
             'json' => $payload,
@@ -64,7 +64,7 @@ final class NginxApi extends BaseApi
     /** 校验 Nginx 配置 */
     public function configsValidate(string $configId): ?NginxValidateResponse
     {
-        $path = $this->interpolatePath('/backend/v3/api/nginx/configs/{configId}/validate', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
+        $path = $this->interpolatePath('/backend/v3/api/nginx/etc/{configId}/validate', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
         $result = $this->client->request('POST', $path, []);
         return is_array($result) ? NginxValidateResponse::fromArray($result) : null;
     }
@@ -72,7 +72,7 @@ final class NginxApi extends BaseApi
     /** 部署 Nginx 配置 */
     public function configsDeploy(string $configId): ?NginxDeployResponse
     {
-        $path = $this->interpolatePath('/backend/v3/api/nginx/configs/{configId}/deploy', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
+        $path = $this->interpolatePath('/backend/v3/api/nginx/etc/{configId}/deploy', ['configId' => $this->serializePathParameter($configId, new PathParameterSpec('configId', 'simple', false))]);
         $result = $this->client->request('POST', $path, []);
         return is_array($result) ? NginxDeployResponse::fromArray($result) : null;
     }

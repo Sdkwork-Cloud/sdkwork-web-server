@@ -11,7 +11,10 @@ use sdkwork_webserver_core::{
 };
 use tokio::{sync::watch, time::MissedTickBehavior};
 
-use super::{runtime::DataPlaneRuntime, server::run_data_plane_runtime_until, DataPlaneError};
+use super::{
+    operations::DataPlaneOperationsConfig, runtime::DataPlaneRuntime,
+    server::run_data_plane_runtime_until, DataPlaneError,
+};
 
 pub async fn run_data_plane_from_config_until<F>(
     config_path: impl Into<PathBuf>,
@@ -20,12 +23,32 @@ pub async fn run_data_plane_from_config_until<F>(
 where
     F: Future<Output = ()> + Send,
 {
+    run_data_plane_from_config_with_operations_until(config_path, None, shutdown).await
+}
+
+pub async fn run_data_plane_from_config_with_operations_until<F>(
+    config_path: impl Into<PathBuf>,
+    operations: Option<DataPlaneOperationsConfig>,
+    shutdown: F,
+) -> Result<(), DataPlaneError>
+where
+    F: Future<Output = ()> + Send,
+{
     let config_path = config_path.into();
     let initial = load_and_compile_webserver_config_revision(&config_path)?;
     let reload = initial.app().config().deployment.reload.clone();
-    let runtime = DataPlaneRuntime::build_revision(initial)?;
+    let runtime = match operations.as_ref() {
+        Some(config) => DataPlaneRuntime::build_revision_with_metric_dimensions(
+            initial,
+            config.dimensions.clone(),
+        )?,
+        None => DataPlaneRuntime::build_revision(initial)?,
+    };
     if reload.mode == ReloadMode::Disabled {
-        return run_data_plane_runtime_until(runtime, shutdown).await;
+        let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
+        let health_result = runtime.stop_active_health().await;
+        let resource_result = runtime.stop_resource_pressure().await;
+        return result.and(health_result).and(resource_result);
     }
 
     let (stop_tx, stop_rx) = watch::channel(false);
@@ -41,14 +64,18 @@ where
         .await;
     });
 
-    let result = run_data_plane_runtime_until(runtime, shutdown).await;
+    let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
     let _ = stop_tx.send(true);
     if let Err(error) = worker.await {
         if result.is_ok() {
+            let _ = runtime.stop_active_health().await;
+            let _ = runtime.stop_resource_pressure().await;
             return Err(DataPlaneError::ReloadWorker(error));
         }
     }
-    result
+    let health_result = runtime.stop_active_health().await;
+    let resource_result = runtime.stop_resource_pressure().await;
+    result.and(health_result).and(resource_result)
 }
 
 async fn watch_config(

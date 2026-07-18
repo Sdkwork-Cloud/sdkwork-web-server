@@ -34,25 +34,25 @@ public class NginxApi {
 
     /** 获取 Nginx 配置详情 */
     public NginxConfigResponse configsRetrieve(String configId) throws Exception {
-        Object raw = client.get(ApiPaths.backendPath("/nginx/configs/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + ""));
+        Object raw = client.get(ApiPaths.backendPath("/nginx/etc/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + ""));
         return client.convertValue(raw, new TypeReference<NginxConfigResponse>() {});
     }
 
     /** 更新 Nginx 配置 */
     public NginxConfigResponse configsUpdate(String configId, UpdateNginxConfigRequest body) throws Exception {
-        Object raw = client.put(ApiPaths.backendPath("/nginx/configs/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + ""), body, null, null, "application/json");
+        Object raw = client.put(ApiPaths.backendPath("/nginx/etc/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + ""), body, null, null, "application/json");
         return client.convertValue(raw, new TypeReference<NginxConfigResponse>() {});
     }
 
     /** 校验 Nginx 配置 */
     public NginxValidateResponse configsValidate(String configId) throws Exception {
-        Object raw = client.post(ApiPaths.backendPath("/nginx/configs/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + "/validate"), null);
+        Object raw = client.post(ApiPaths.backendPath("/nginx/etc/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + "/validate"), null);
         return client.convertValue(raw, new TypeReference<NginxValidateResponse>() {});
     }
 
     /** 部署 Nginx 配置 */
     public NginxDeployResponse configsDeploy(String configId) throws Exception {
-        Object raw = client.post(ApiPaths.backendPath("/nginx/configs/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + "/deploy"), null);
+        Object raw = client.post(ApiPaths.backendPath("/nginx/etc/" + serializePathParameter(configId, new PathParameterSpec("configId", "simple", false)) + "/deploy"), null);
         return client.convertValue(raw, new TypeReference<NginxDeployResponse>() {});
     }
 

@@ -3,7 +3,7 @@ use std::{
     io,
     pin::Pin,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     },
     task::{Context, Poll},
@@ -17,6 +17,7 @@ use tokio_rustls::server::TlsStream;
 use tower::Service;
 
 use super::connection_limit::ConnectionLimitedStream;
+use super::metrics::{DataPlaneMetrics, ProtocolErrorKind};
 
 const READ_SCRATCH_BYTES: usize = 8 * 1024;
 const MAX_WIRE_BODY_BYTES: u64 = 2_147_483_648;
@@ -76,13 +77,19 @@ impl<I> NegotiatedHttpProtocol for TlsStream<I> {
 pub(crate) struct Http1WireGuardAcceptor<A> {
     inner: A,
     limits: WireLimits,
+    metrics: Option<Arc<DataPlaneMetrics>>,
 }
 
 impl<A> Http1WireGuardAcceptor<A> {
-    pub(crate) fn new(inner: A, limits: &WebServerLimits) -> Self {
+    pub(crate) fn new_observed(
+        inner: A,
+        limits: &WebServerLimits,
+        metrics: Arc<DataPlaneMetrics>,
+    ) -> Self {
         Self {
             inner,
             limits: limits.into(),
+            metrics: Some(metrics),
         }
     }
 }
@@ -104,6 +111,7 @@ where
     fn accept(&self, stream: I, service: S) -> Self::Future {
         let inner = self.inner.clone();
         let limits = self.limits;
+        let metrics = self.metrics.clone();
         Box::pin(async move {
             let (stream, service) = inner.accept(stream, service).await?;
             let pipeline = stream
@@ -116,6 +124,8 @@ where
                 Http1WireGuardStream {
                     inner: stream,
                     parser,
+                    metrics,
+                    wire_error_recorded: false,
                 },
                 Http1PipelineService {
                     inner: service,
@@ -129,6 +139,7 @@ where
 struct PipelineState {
     maximum: usize,
     pending_heads: AtomicUsize,
+    upgraded: AtomicBool,
 }
 
 impl PipelineState {
@@ -136,6 +147,7 @@ impl PipelineState {
         Self {
             maximum,
             pending_heads: AtomicUsize::new(0),
+            upgraded: AtomicBool::new(false),
         }
     }
 
@@ -159,6 +171,25 @@ impl PipelineState {
             "HTTP/1 service dispatch must follow a parsed request head"
         );
     }
+
+    fn activate_upgrade(&self) {
+        self.upgraded.store(true, Ordering::Release);
+    }
+
+    fn is_upgraded(&self) -> bool {
+        self.upgraded.load(Ordering::Acquire)
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct Http1UpgradeGuard {
+    pipeline: Arc<PipelineState>,
+}
+
+impl Http1UpgradeGuard {
+    pub(crate) fn activate(&self) {
+        self.pipeline.activate_upgrade();
+    }
 }
 
 #[derive(Clone)]
@@ -179,9 +210,12 @@ where
         self.inner.poll_ready(context)
     }
 
-    fn call(&mut self, request: Request<R>) -> Self::Future {
+    fn call(&mut self, mut request: Request<R>) -> Self::Future {
         if let Some(pipeline) = &self.pipeline {
             pipeline.begin_dispatch();
+            request.extensions_mut().insert(Http1UpgradeGuard {
+                pipeline: pipeline.clone(),
+            });
         }
         self.inner.call(request)
     }
@@ -190,6 +224,8 @@ where
 pub(crate) struct Http1WireGuardStream<I> {
     inner: I,
     parser: Option<Http1WireParser>,
+    metrics: Option<Arc<DataPlaneMetrics>>,
+    wire_error_recorded: bool,
 }
 
 impl<I: AsyncRead + Unpin> AsyncRead for Http1WireGuardStream<I> {
@@ -199,6 +235,13 @@ impl<I: AsyncRead + Unpin> AsyncRead for Http1WireGuardStream<I> {
         output: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         if self.parser.is_none() {
+            return Pin::new(&mut self.inner).poll_read(context, output);
+        }
+        if self
+            .parser
+            .as_ref()
+            .is_some_and(Http1WireParser::is_upgraded)
+        {
             return Pin::new(&mut self.inner).poll_read(context, output);
         }
         if output.remaining() == 0 {
@@ -213,10 +256,15 @@ impl<I: AsyncRead + Unpin> AsyncRead for Http1WireGuardStream<I> {
             Poll::Ready(Err(error)) => Poll::Ready(Err(error)),
             Poll::Ready(Ok(())) => {
                 let bytes = guarded.filled();
-                if let Some(parser) = &mut self.parser {
-                    if let Err(error) = parser.inspect(bytes) {
-                        return Poll::Ready(Err(error));
+                let inspection = self.parser.as_mut().map(|parser| parser.inspect(bytes));
+                if let Some(Err(error)) = inspection {
+                    if !self.wire_error_recorded {
+                        if let Some(metrics) = &self.metrics {
+                            metrics.record_protocol_error(ProtocolErrorKind::Http1Wire);
+                        }
+                        self.wire_error_recorded = true;
                     }
+                    return Poll::Ready(Err(error));
                 }
                 output.put_slice(bytes);
                 Poll::Ready(Ok(()))
@@ -341,6 +389,10 @@ impl Http1WireParser {
             }
         }
         Ok(())
+    }
+
+    fn is_upgraded(&self) -> bool {
+        self.pipeline.is_upgraded()
     }
 
     fn inspect_header_byte(&mut self, byte: u8) -> io::Result<()> {
@@ -658,7 +710,13 @@ fn wire_error(message: &'static str) -> io::Error {
 mod tests {
     use std::sync::{atomic::Ordering, Arc};
 
-    use super::{Http1WireParser, PipelineState, WireLimits};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    use super::{Http1WireGuardStream, Http1WireParser, PipelineState, WireLimits};
+    use crate::{
+        data_plane::metrics::{DataPlaneMetrics, ProtocolErrorKind},
+        metric_dimensions::CanonicalMetricDimensions,
+    };
 
     fn parser(maximum_body_bytes: u64) -> Http1WireParser {
         let limits = WireLimits {
@@ -787,5 +845,32 @@ mod tests {
         assert!(parser
             .inspect(b"GET /four HTTP/1.1\r\nHost: test\r\n\r\n")
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn malformed_stream_records_one_fixed_http1_wire_error() {
+        let metrics = DataPlaneMetrics::new(CanonicalMetricDimensions::default());
+        let (inner, mut peer) = tokio::io::duplex(256);
+        let mut stream = Http1WireGuardStream {
+            inner,
+            parser: Some(parser(16)),
+            metrics: Some(metrics.clone()),
+            wire_error_recorded: false,
+        };
+        peer.write_all(b"GET  / HTTP/1.1\r\n\r\n")
+            .await
+            .expect("write malformed request");
+        peer.shutdown().await.expect("close peer");
+
+        let mut output = Vec::new();
+        let error = stream
+            .read_to_end(&mut output)
+            .await
+            .expect_err("malformed HTTP/1 request must fail");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(
+            metrics.protocol_error_count(ProtocolErrorKind::Http1Wire),
+            1
+        );
     }
 }

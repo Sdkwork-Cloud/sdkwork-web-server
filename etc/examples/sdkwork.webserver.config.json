@@ -18,6 +18,7 @@
     "drainTimeoutMs": 30000,
     "maxConnections": 10000,
     "maxConcurrentRequests": 4096,
+    "maxConcurrentHealthChecks": 64,
     "maxRequestHeaderBytes": 65536,
     "maxRequestLineBytes": 8192,
     "maxRequestMethodBytes": 32,
@@ -78,9 +79,37 @@
       "indexFiles": ["index.html"],
       "spaFallback": "index.html",
       "followSymlinks": false
+    },
+    {
+      "id": "example-origin-proxy",
+      "type": "proxy",
+      "upstreamRef": "example-origin",
+      "stripPrefix": true
     }
   ],
-  "upstreams": [],
+  "upstreams": [
+    {
+      "id": "example-origin",
+      "loadBalancing": "least-connections",
+      "targets": [
+        {"url": "https://example.com", "weight": 1, "slowStartMs": 30000, "maxConnections": 32},
+        {"url": "https://example.net", "weight": 1, "backup": true, "maxConnections": 32}
+      ],
+      "connectTimeoutMs": 5000,
+      "requestTimeoutMs": 30000,
+      "maxConnections": 64,
+      "maxIdleConnections": 16,
+      "maxResponseHeaderBytes": 65536,
+      "maxResponseHeaders": 100,
+      "idleConnectionTimeoutMs": 60000,
+      "maxInFlightRequests": 256,
+      "retry": {
+        "maxAttempts": 2,
+        "timeoutMs": 30000,
+        "retryOn": ["error", "timeout", "http_502", "http_503", "http_504"]
+      }
+    }
+  ],
   "virtualHosts": [
     {
       "id": "example-web",
@@ -95,6 +124,14 @@
             "methods": ["GET", "HEAD"]
           },
           "resourceRef": "health-response"
+        },
+        {
+          "id": "upstream-example",
+          "match": {
+            "pathType": "prefix",
+            "path": "/upstream"
+          },
+          "resourceRef": "example-origin-proxy"
         },
         {
           "id": "web",
@@ -115,6 +152,23 @@
     "reload": {
       "mode": "watch",
       "pollIntervalMs": 1000
+    },
+    "resourcePressure": {
+      "sampleIntervalMs": 250,
+      "maximumProcessMemoryBytes": 1073741824,
+      "memoryReserveBytes": 67108864,
+      "memoryAdmissionPercent": 90,
+      "memoryRecoveryPercent": 80,
+      "maximumOpenHandles": 16384,
+      "openHandleReserve": 128,
+      "openHandleAdmissionPercent": 90,
+      "openHandleRecoveryPercent": 80,
+      "eventLoopLagAdmissionMs": 250,
+      "eventLoopLagRecoveryMs": 50,
+      "consecutivePressureSamples": 2,
+      "consecutiveRecoverySamples": 4,
+      "operationsReserveRequests": 16,
+      "sampleFailurePolicy": "fail-closed"
     }
   },
   "metadata": {

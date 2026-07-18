@@ -5,39 +5,55 @@ use std::{
     task::{Context, Poll},
 };
 
+use tokio::net::TcpStream;
 use tokio::{
     io::{AsyncRead, AsyncWrite, ReadBuf},
     sync::{OwnedSemaphorePermit, Semaphore},
 };
 
+use super::metrics::{ConnectionMetricLease, ConnectionRejection, DataPlaneMetrics};
+
 pub struct ConnectionLimiter {
     global_permits: Arc<Semaphore>,
     listener_permits: Arc<Semaphore>,
+    metrics: Arc<DataPlaneMetrics>,
 }
 
 impl ConnectionLimiter {
-    pub fn new(global_permits: Arc<Semaphore>, maximum_listener_connections: usize) -> Self {
+    pub fn new(
+        global_permits: Arc<Semaphore>,
+        maximum_listener_connections: usize,
+        metrics: Arc<DataPlaneMetrics>,
+    ) -> Self {
         Self {
             global_permits,
             listener_permits: Arc::new(Semaphore::new(maximum_listener_connections)),
+            metrics,
         }
     }
 
     pub fn try_admit<I>(&self, stream: I) -> io::Result<ConnectionLimitedStream<I>> {
-        let global_permit = self
-            .global_permits
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| connection_limit_error())?;
-        let listener_permit = self
-            .listener_permits
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| connection_limit_error())?;
+        let global_permit = match self.global_permits.clone().try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                self.metrics
+                    .record_connection_rejection(ConnectionRejection::Capacity);
+                return Err(connection_limit_error());
+            }
+        };
+        let listener_permit = match self.listener_permits.clone().try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                self.metrics
+                    .record_connection_rejection(ConnectionRejection::Capacity);
+                return Err(connection_limit_error());
+            }
+        };
         Ok(ConnectionLimitedStream {
             inner: stream,
             _global_permit: global_permit,
             _listener_permit: listener_permit,
+            _metrics_lease: self.metrics.begin_connection(),
         })
     }
 }
@@ -46,6 +62,13 @@ pub struct ConnectionLimitedStream<I> {
     inner: I,
     _global_permit: OwnedSemaphorePermit,
     _listener_permit: OwnedSemaphorePermit,
+    _metrics_lease: ConnectionMetricLease,
+}
+
+impl ConnectionLimitedStream<TcpStream> {
+    pub async fn peek(&self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.inner.peek(buffer).await
+    }
 }
 
 impl<I: AsyncRead + Unpin> AsyncRead for ConnectionLimitedStream<I> {

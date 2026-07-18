@@ -7,8 +7,8 @@ use sdkwork_routes_webserver_common::{
 };
 use sdkwork_web_axum::{with_web_request_context, WebFrameworkLayer};
 use sdkwork_web_core::{
-    DefaultWebRequestContextResolver, DomainContextInjector, WebRequestContext,
-    WebRequestContextProfile,
+    DefaultWebRequestContextResolver, DomainContextInjector, HttpMetricsRegistry,
+    WebRequestContext, WebRequestContextProfile,
 };
 use sdkwork_webserver_contract::WebAppRequestContext;
 
@@ -56,7 +56,18 @@ pub fn wrap_router_with_web_framework(
 ) -> Router {
     with_web_request_context(
         with_problem_correlation(router),
-        build_web_app_api_framework_layer(resolver),
+        build_web_app_api_framework_layer(resolver, None),
+    )
+}
+
+pub fn wrap_router_with_web_framework_and_metrics(
+    resolver: DefaultWebRequestContextResolver,
+    router: Router,
+    metrics: Arc<HttpMetricsRegistry>,
+) -> Router {
+    with_web_request_context(
+        with_problem_correlation(router),
+        build_web_app_api_framework_layer(resolver, Some(metrics)),
     )
 }
 
@@ -66,11 +77,14 @@ pub fn wrap_router_with_iam_database_web_framework(
 ) -> Router {
     with_web_request_context(
         with_problem_correlation(router),
-        build_web_app_api_framework_layer(resolver),
+        build_web_app_api_framework_layer(resolver, None),
     )
 }
 
-fn build_web_app_api_framework_layer<R>(resolver: R) -> WebFrameworkLayer<R>
+fn build_web_app_api_framework_layer<R>(
+    resolver: R,
+    metrics: Option<Arc<HttpMetricsRegistry>>,
+) -> WebFrameworkLayer<R>
 where
     R: sdkwork_web_core::WebRequestContextResolver + Clone,
 {
@@ -79,27 +93,47 @@ where
         .validate_public_path_prefixes(&web_app_api_public_path_prefixes())
         .expect("Web app-api public prefixes must not cover protected manifest routes");
 
-    WebFrameworkLayer::new(resolver)
+    let layer = WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
             app_api_prefix: paths::PREFIX.to_owned(),
             public_path_prefixes: web_app_api_public_path_prefixes(),
             ..WebRequestContextProfile::default()
         })
         .with_route_manifest(route_manifest)
-        .with_domain_injector(Arc::new(WebAppContextInjector))
+        .with_domain_injector(Arc::new(WebAppContextInjector));
+    match metrics {
+        Some(metrics) => layer.with_metrics(metrics),
+        None => layer,
+    }
 }
 
 pub async fn wrap_router_with_web_framework_from_env(router: Router) -> Router {
+    wrap_router_with_web_framework_from_env_and_optional_metrics(router, None).await
+}
+
+pub async fn wrap_router_with_web_framework_from_env_and_metrics(
+    router: Router,
+    metrics: Arc<HttpMetricsRegistry>,
+) -> Router {
+    wrap_router_with_web_framework_from_env_and_optional_metrics(router, Some(metrics)).await
+}
+
+async fn wrap_router_with_web_framework_from_env_and_optional_metrics(
+    router: Router,
+    metrics: Option<Arc<HttpMetricsRegistry>>,
+) -> Router {
     match web_auth_mode_from_env().await {
-        WebAuthMode::DevInline => {
-            wrap_router_with_web_framework(DefaultWebRequestContextResolver::default(), router)
-        }
+        WebAuthMode::DevInline => with_web_request_context(
+            with_problem_correlation(router),
+            build_web_app_api_framework_layer(DefaultWebRequestContextResolver::default(), metrics),
+        ),
         WebAuthMode::ProductionFailClosed => with_web_request_context(
             with_problem_correlation(router),
-            build_web_app_api_framework_layer(ProductionFailClosedResolver),
+            build_web_app_api_framework_layer(ProductionFailClosedResolver, metrics),
         ),
-        WebAuthMode::IamDatabase(resolver) => {
-            wrap_router_with_iam_database_web_framework(resolver, router)
-        }
+        WebAuthMode::IamDatabase(resolver) => with_web_request_context(
+            with_problem_correlation(router),
+            build_web_app_api_framework_layer(resolver, metrics),
+        ),
     }
 }

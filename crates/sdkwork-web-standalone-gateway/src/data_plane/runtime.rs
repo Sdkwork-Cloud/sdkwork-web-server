@@ -4,6 +4,7 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 
 use arc_swap::ArcSwap;
@@ -14,7 +15,18 @@ use sdkwork_webserver_core::{
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, Semaphore};
 
-use super::{dns::BoundedSystemResolver, proxy::ProxyUpstream, DataPlaneError};
+use crate::metric_dimensions::CanonicalMetricDimensions;
+
+use super::{
+    active_health::ActiveHealthSupervisor,
+    dns::BoundedSystemResolver,
+    metrics::{DataPlaneMetrics, ReloadResult},
+    proxy::ProxyUpstream,
+    request_gate::RequestAdmissionGate,
+    resource_pressure::{ResourcePressureController, ResourcePressureSupervisor},
+    tunnel::TunnelSupervisor,
+    DataPlaneError,
+};
 
 const MAX_TLS_MATERIAL_BYTES: u64 = 1024 * 1024;
 
@@ -22,7 +34,7 @@ pub(crate) struct RuntimeGeneration {
     pub id: u64,
     pub revision: String,
     pub app: Arc<CompiledWebServerApp>,
-    pub upstreams: HashMap<String, ProxyUpstream>,
+    pub upstreams: HashMap<String, Arc<ProxyUpstream>>,
 }
 
 impl RuntimeGeneration {
@@ -30,6 +42,7 @@ impl RuntimeGeneration {
         app: CompiledWebServerApp,
         revision: String,
         id: u64,
+        metrics: Arc<DataPlaneMetrics>,
     ) -> Result<Arc<Self>, DataPlaneError> {
         let app = Arc::new(app);
         let implicit_resolver = BoundedSystemResolver::implicit();
@@ -59,8 +72,8 @@ impl RuntimeGeneration {
                     })
                     .unwrap_or(&implicit_resolver)
                     .clone();
-                ProxyUpstream::build(&app, upstream, resolver)
-                    .map(|runtime| (upstream.id.clone(), runtime))
+                ProxyUpstream::build(&app, upstream, resolver, metrics.clone())
+                    .map(|runtime| (upstream.id.clone(), Arc::new(runtime)))
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
         Ok(Arc::new(Self {
@@ -70,43 +83,136 @@ impl RuntimeGeneration {
             upstreams,
         }))
     }
+
+    pub(crate) fn aggregate_target_health(&self) -> [u64; 4] {
+        self.upstreams
+            .values()
+            .fold([0_u64; 4], |mut total, upstream| {
+                let counts = upstream.aggregate_target_health();
+                for (target, count) in total.iter_mut().zip(counts) {
+                    *target = target.saturating_add(count);
+                }
+                total
+            })
+    }
+
+    pub(crate) fn aggregate_upstream_request_capacity(&self) -> [u64; 3] {
+        self.upstreams
+            .values()
+            .fold([0_u64; 3], |mut total, upstream| {
+                add_capacity(&mut total, upstream.request_capacity());
+                total
+            })
+    }
+
+    pub(crate) fn aggregate_upstream_connection_capacity(&self) -> [u64; 3] {
+        self.upstreams
+            .values()
+            .fold([0_u64; 3], |mut total, upstream| {
+                add_capacity(&mut total, upstream.connection_capacity());
+                total
+            })
+    }
+
+    pub(crate) fn aggregate_upstream_target_connection_capacity(&self) -> [u64; 3] {
+        self.upstreams
+            .values()
+            .fold([0_u64; 3], |mut total, upstream| {
+                add_capacity(&mut total, upstream.target_connection_capacity());
+                total
+            })
+    }
+}
+
+fn add_capacity(total: &mut [u64; 3], value: [u64; 3]) {
+    for (total, value) in total.iter_mut().zip(value) {
+        *total = total.saturating_add(value);
+    }
 }
 
 pub(crate) struct DataPlaneRuntime {
     current: ArcSwap<RuntimeGeneration>,
     topology: ReloadTopology,
     reload_lock: Mutex<()>,
+    active_health: Mutex<ActiveHealthRuntime>,
+    resource_pressure_runtime: Mutex<ResourcePressureRuntime>,
     pub connection_permits: Arc<Semaphore>,
-    pub request_permits: Arc<Semaphore>,
+    pub request_gate: RequestAdmissionGate,
+    pub resource_pressure: Arc<ResourcePressureController>,
+    pub tunnel_supervisor: Arc<TunnelSupervisor>,
+    pub metrics: Arc<DataPlaneMetrics>,
 }
 
 impl DataPlaneRuntime {
     pub fn build(app: CompiledWebServerApp) -> Result<Arc<Self>, DataPlaneError> {
         let revision = revision_for_compiled_app(&app);
-        Self::build_inner(app, revision)
+        Self::build_inner(app, revision, CanonicalMetricDimensions::default())
+    }
+
+    pub(crate) fn build_with_metric_dimensions(
+        app: CompiledWebServerApp,
+        dimensions: CanonicalMetricDimensions,
+    ) -> Result<Arc<Self>, DataPlaneError> {
+        let revision = revision_for_compiled_app(&app);
+        Self::build_inner(app, revision, dimensions)
     }
 
     pub fn build_revision(
         revision: CompiledWebServerRevision,
     ) -> Result<Arc<Self>, DataPlaneError> {
         let sha256 = revision.sha256().to_owned();
-        Self::build_inner(revision.into_app(), sha256)
+        Self::build_inner(
+            revision.into_app(),
+            sha256,
+            CanonicalMetricDimensions::default(),
+        )
+    }
+
+    pub(crate) fn build_revision_with_metric_dimensions(
+        revision: CompiledWebServerRevision,
+        dimensions: CanonicalMetricDimensions,
+    ) -> Result<Arc<Self>, DataPlaneError> {
+        let sha256 = revision.sha256().to_owned();
+        Self::build_inner(revision.into_app(), sha256, dimensions)
     }
 
     fn build_inner(
         app: CompiledWebServerApp,
         revision: String,
+        metric_dimensions: CanonicalMetricDimensions,
     ) -> Result<Arc<Self>, DataPlaneError> {
         let topology = ReloadTopology::from_app(&app)?;
         let maximum_connections = app.config().limits.max_connections;
         let maximum_requests = app.config().limits.max_concurrent_requests;
-        let initial = RuntimeGeneration::build(app, revision, 1)?;
+        let operations_reserve = app
+            .config()
+            .deployment
+            .resource_pressure
+            .as_ref()
+            .map_or(0, |policy| policy.operations_reserve_requests);
+        let resource_pressure =
+            ResourcePressureController::new(app.config().deployment.resource_pressure.is_some());
+        let metrics = DataPlaneMetrics::new(metric_dimensions);
+        let tunnel_supervisor = TunnelSupervisor::new(
+            Duration::from_millis(app.config().limits.max_connection_age_ms),
+            metrics.clone(),
+        );
+        let initial = RuntimeGeneration::build(app, revision, 1, metrics.clone())?;
         Ok(Arc::new(Self {
             current: ArcSwap::from(initial),
             topology,
             reload_lock: Mutex::new(()),
+            active_health: Mutex::new(ActiveHealthRuntime::default()),
+            resource_pressure_runtime: Mutex::new(ResourcePressureRuntime::default()),
             connection_permits: Arc::new(Semaphore::new(maximum_connections)),
-            request_permits: Arc::new(Semaphore::new(maximum_requests)),
+            request_gate: RequestAdmissionGate::new(
+                maximum_requests,
+                operations_reserve,
+                resource_pressure.clone(),
+            ),
+            resource_pressure,
+            tunnel_supervisor,
+            metrics,
         }))
     }
 
@@ -114,18 +220,89 @@ impl DataPlaneRuntime {
         self.current.load_full()
     }
 
+    pub(crate) async fn start_active_health(&self) {
+        let _reload_guard = self.reload_lock.lock().await;
+        let mut active_health = self.active_health.lock().await;
+        if active_health.started {
+            return;
+        }
+        active_health.supervisor = ActiveHealthSupervisor::start(self.current());
+        active_health.started = true;
+    }
+
+    pub(crate) async fn start_resource_pressure(&self) -> Result<(), DataPlaneError> {
+        let mut runtime = self.resource_pressure_runtime.lock().await;
+        if runtime.started {
+            return Ok(());
+        }
+        let policy = self
+            .current()
+            .app
+            .config()
+            .deployment
+            .resource_pressure
+            .clone();
+        runtime.supervisor = match policy {
+            Some(policy) => Some(
+                ResourcePressureSupervisor::start(self.resource_pressure.clone(), policy).await?,
+            ),
+            None => None,
+        };
+        runtime.started = true;
+        Ok(())
+    }
+
+    pub(crate) async fn stop_resource_pressure(&self) -> Result<(), DataPlaneError> {
+        let supervisor = {
+            let mut runtime = self.resource_pressure_runtime.lock().await;
+            runtime.started = false;
+            runtime.supervisor.take()
+        };
+        match supervisor {
+            Some(supervisor) => supervisor
+                .stop()
+                .await
+                .map_err(DataPlaneError::ResourcePressureTask),
+            None => Ok(()),
+        }
+    }
+
+    pub(crate) async fn stop_active_health(&self) -> Result<(), DataPlaneError> {
+        let _reload_guard = self.reload_lock.lock().await;
+        let supervisor = {
+            let mut active_health = self.active_health.lock().await;
+            active_health.started = false;
+            active_health.supervisor.take()
+        };
+        match supervisor {
+            Some(supervisor) => supervisor
+                .stop()
+                .await
+                .map_err(DataPlaneError::ActiveHealthTask),
+            None => Ok(()),
+        }
+    }
+
     pub async fn reload(
         &self,
         revision: CompiledWebServerRevision,
     ) -> Result<DataPlaneReloadReport, DataPlaneError> {
         let _guard = self.reload_lock.lock().await;
-        let candidate_topology = ReloadTopology::from_app(revision.app())?;
+        let candidate_topology = match ReloadTopology::from_app(revision.app()) {
+            Ok(topology) => topology,
+            Err(error) => {
+                self.metrics.record_reload(ReloadResult::Failed);
+                return Err(error);
+            }
+        };
         if candidate_topology != self.topology {
+            self.metrics.record_reload(ReloadResult::RestartRequired);
             return Err(DataPlaneError::ReloadRequiresRestart);
         }
 
         let current = self.current();
         if current.revision == revision.sha256() {
+            self.metrics.record_reload(ReloadResult::Unchanged);
             return Ok(DataPlaneReloadReport {
                 generation: current.id,
                 previous_revision: current.revision.clone(),
@@ -136,9 +313,33 @@ impl DataPlaneRuntime {
 
         let generation = current.id.saturating_add(1);
         let next_revision = revision.sha256().to_owned();
-        let candidate =
-            RuntimeGeneration::build(revision.into_app(), next_revision.clone(), generation)?;
-        self.current.store(candidate);
+        let candidate = match RuntimeGeneration::build(
+            revision.into_app(),
+            next_revision.clone(),
+            generation,
+            self.metrics.clone(),
+        ) {
+            Ok(candidate) => candidate,
+            Err(error) => {
+                self.metrics.record_reload(ReloadResult::Failed);
+                return Err(error);
+            }
+        };
+        let previous_supervisor = {
+            let mut active_health = self.active_health.lock().await;
+            let next_supervisor = active_health
+                .started
+                .then(|| ActiveHealthSupervisor::start(candidate.clone()))
+                .flatten();
+            self.current.store(candidate);
+            std::mem::replace(&mut active_health.supervisor, next_supervisor)
+        };
+        if let Some(supervisor) = previous_supervisor {
+            if let Err(error) = supervisor.stop().await {
+                tracing::warn!(%error, "previous active health generation failed while stopping");
+            }
+        }
+        self.metrics.record_reload(ReloadResult::Published);
         Ok(DataPlaneReloadReport {
             generation,
             previous_revision: current.revision.clone(),
@@ -146,6 +347,18 @@ impl DataPlaneRuntime {
             changed: true,
         })
     }
+}
+
+#[derive(Default)]
+struct ActiveHealthRuntime {
+    started: bool,
+    supervisor: Option<ActiveHealthSupervisor>,
+}
+
+#[derive(Default)]
+struct ResourcePressureRuntime {
+    started: bool,
+    supervisor: Option<ResourcePressureSupervisor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,6 +383,7 @@ struct ReloadTopology {
     max_connection_age_ms: u64,
     drain_timeout_ms: u64,
     reload: ReloadConfig,
+    resource_pressure: Option<sdkwork_webserver_core::ResourcePressureConfig>,
     protocol_limits: HttpProtocolTopology,
     listeners: Vec<ListenerTopology>,
 }
@@ -192,6 +406,7 @@ impl ReloadTopology {
                     maximum_connections: listener
                         .max_connections
                         .unwrap_or(app.config().limits.max_connections),
+                    proxy_protocol: listener.proxy_protocol.clone(),
                     tls,
                 })
             })
@@ -214,6 +429,7 @@ impl ReloadTopology {
                 .drain_timeout_ms
                 .unwrap_or(app.config().limits.drain_timeout_ms),
             reload: app.config().deployment.reload.clone(),
+            resource_pressure: app.config().deployment.resource_pressure.clone(),
             protocol_limits: HttpProtocolTopology::from_app(app),
             listeners,
         })
@@ -291,6 +507,7 @@ struct ListenerTopology {
     port: u16,
     protocols: Vec<ListenerProtocol>,
     maximum_connections: usize,
+    proxy_protocol: Option<sdkwork_webserver_core::ProxyProtocolConfig>,
     tls: Option<TlsTopology>,
 }
 

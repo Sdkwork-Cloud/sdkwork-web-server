@@ -1,10 +1,14 @@
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use http_body_util::BodyExt;
 use sdkwork_iam_web_adapter::IamWebRequestContextResolver;
 use sdkwork_routes_webserver_app_api::{
     build_router_with_shared_app_api, web_bootstrap::wrap_router_with_iam_database_web_framework,
+    wrap_router_with_web_framework_and_metrics,
 };
+use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
+use sdkwork_web_core::{DefaultWebRequestContextResolver, HttpMetricsRegistry};
 use sdkwork_webserver_contract::{
     ListSitesQuery, SitePage, WebAppApi, WebAppRequestContext, WebServiceResult,
 };
@@ -29,6 +33,57 @@ async fn app_router_web_framework_rejects_unauthenticated_requests() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn app_router_records_requests_into_the_injected_bounded_registry() {
+    let metrics = HttpMetricsRegistry::new();
+    let app = service_router(
+        wrap_router_with_web_framework_and_metrics(
+            DefaultWebRequestContextResolver::default(),
+            build_router_with_shared_app_api(Arc::new(StubAppApi)),
+            metrics.clone(),
+        ),
+        ServiceRouterConfig::default()
+            .with_always_ready()
+            .with_metrics(metrics.clone()),
+    );
+
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/app/v3/api/sites")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let metrics_response = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(metrics_response.status(), StatusCode::OK);
+    let rendered = String::from_utf8(
+        metrics_response
+            .into_body()
+            .collect()
+            .await
+            .expect("collect bounded metrics response")
+            .to_bytes()
+            .to_vec(),
+    )
+    .expect("metrics are UTF-8");
+    assert!(rendered.contains("sdkwork_http_requests_total 1"));
+    assert!(rendered.contains("route=\"/app/v3/api/sites\""));
+    assert!(rendered.contains("operationId=\"sites.list\""));
+    assert!(rendered.contains("status=\"401\""));
 }
 
 struct StubAppApi;

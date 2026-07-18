@@ -76,4 +76,4 @@ Accepted on 2026-07-15 as the bounded Phase 1 foundation slice, not as commercia
 - Proxy request and response bodies remain streams; the implementation does not collect an unbounded body before forwarding.
 - `cargo test --workspace`, full-workspace strict Clippy, and `pnpm verify` pass on the acceptance revision.
 
-The parent PRD remains active. Dynamic configuration generations, multi-certificate SNI rotation, WebSocket Upgrade, Nginx import/conformance, dynamic DNS, advanced HTTP abuse controls, cache/rate limiting, cluster rollout, observability, and production load/soak/chaos evidence are outside this accepted requirement and remain release blockers.
+The parent PRD remains active. Dynamic configuration generations, multi-certificate SNI rotation, WebSocket Upgrade, Nginx import/conformance, dynamic DNS, advanced HTTP abuse controls, cache/rate limiting, cluster rollout, observability, and production load/soak/chaos evidence were outside this accepted foundation slice. Classic bounded WebSocket/WSS was subsequently delivered by REQ-2026-0031; the other listed capabilities remain governed by their later requirements or release gates.

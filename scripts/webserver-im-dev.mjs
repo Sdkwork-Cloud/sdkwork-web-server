@@ -16,10 +16,32 @@ const pnpm = isWindows ? 'pnpm.cmd' : 'pnpm';
 
 export function createImDevPlan(config, env = process.env) {
   const baseArgs = ['--base', config.route.pathPrefix, '--strictPort'];
+  const publicOrigin = new URL(config.application.publicUrl).origin;
+  const publicWebSocketOrigin = publicOrigin.replace(/^http/u, 'ws');
+  const browserEnv = {
+    ...env,
+    VITE_SDKWORK_IM_DEPLOYMENT_PROFILE: config.deployment.profile,
+    VITE_SDKWORK_IM_APPLICATION_PUBLIC_HTTP_URL: publicOrigin,
+    VITE_SDKWORK_IM_APPLICATION_PUBLIC_WEBSOCKET_URL: publicWebSocketOrigin,
+    VITE_SDKWORK_IM_PLATFORM_API_GATEWAY_HTTP_URL: publicOrigin,
+    VITE_SDKWORK_IAM_APP_API_BASE_URL: publicOrigin,
+  };
+  const serverEnv = {
+    ...env,
+    SDKWORK_IM_DEPLOYMENT_PROFILE: config.deployment.profile,
+    SDKWORK_IM_ENVIRONMENT: config.application.environment,
+  };
   return {
     config,
     env,
     processes: [
+      {
+        label: 'sdkwork-im-standalone-gateway',
+        command: pnpm,
+        args: ['--dir', config.deployment.applicationRoot, config.deployment.serverScript],
+        cwd: config.deployment.applicationRoot,
+        env: serverEnv,
+      },
       {
         label: 'sdkwork-im-pc',
         command: pnpm,
@@ -30,6 +52,7 @@ export function createImDevPlan(config, env = process.env) {
           ...baseArgs,
         ],
         cwd: config.applications.pc.root,
+        env: browserEnv,
       },
       {
         label: 'sdkwork-im-h5',
@@ -41,6 +64,7 @@ export function createImDevPlan(config, env = process.env) {
           ...baseArgs,
         ],
         cwd: config.applications.h5.root,
+        env: browserEnv,
       },
       {
         label: 'sdkwork-im-dev-ingress',
@@ -51,6 +75,7 @@ export function createImDevPlan(config, env = process.env) {
           config.configPath,
         ],
         cwd: REPO_ROOT,
+        env,
       },
     ],
   };
@@ -102,7 +127,7 @@ async function run() {
   for (const entry of plan.processes) {
     const child = spawn(entry.command, entry.args, {
       cwd: entry.cwd,
-      env: plan.env,
+      env: entry.env ?? plan.env,
       shell: isWindows && entry.command === pnpm,
       stdio: 'inherit',
       windowsHide: true,

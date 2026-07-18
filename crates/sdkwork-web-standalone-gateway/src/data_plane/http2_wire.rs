@@ -2,6 +2,7 @@ use std::{
     future::Future,
     io,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::{Duration, Instant},
 };
@@ -11,6 +12,7 @@ use sdkwork_webserver_core::WebServerLimits;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use super::http1_wire::NegotiatedHttpProtocol;
+use super::metrics::{DataPlaneMetrics, ProtocolErrorKind};
 
 const CLIENT_PREFACE: &[u8; 24] = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 const FRAME_HEADER_BYTES: usize = 9;
@@ -49,13 +51,19 @@ impl From<&WebServerLimits> for Http2WireLimits {
 pub(crate) struct Http2WireGuardAcceptor<A> {
     inner: A,
     limits: Http2WireLimits,
+    metrics: Option<Arc<DataPlaneMetrics>>,
 }
 
 impl<A> Http2WireGuardAcceptor<A> {
-    pub(crate) fn new(inner: A, limits: &WebServerLimits) -> Self {
+    pub(crate) fn new_observed(
+        inner: A,
+        limits: &WebServerLimits,
+        metrics: Arc<DataPlaneMetrics>,
+    ) -> Self {
         Self {
             inner,
             limits: limits.into(),
+            metrics: Some(metrics),
         }
     }
 }
@@ -77,6 +85,7 @@ where
     fn accept(&self, stream: I, service: S) -> Self::Future {
         let inner = self.inner.clone();
         let limits = self.limits;
+        let metrics = self.metrics.clone();
         Box::pin(async move {
             let (stream, service) = inner.accept(stream, service).await?;
             let parser = (!stream.is_http1()).then(|| Http2WireParser::new(limits));
@@ -84,6 +93,8 @@ where
                 Http2WireGuardStream {
                     inner: stream,
                     parser,
+                    metrics,
+                    wire_error_recorded: false,
                 },
                 service,
             ))
@@ -94,6 +105,8 @@ where
 pub(crate) struct Http2WireGuardStream<I> {
     inner: I,
     parser: Option<Http2WireParser>,
+    metrics: Option<Arc<DataPlaneMetrics>>,
+    wire_error_recorded: bool,
 }
 
 impl<I: AsyncRead + Unpin> AsyncRead for Http2WireGuardStream<I> {
@@ -117,8 +130,15 @@ impl<I: AsyncRead + Unpin> AsyncRead for Http2WireGuardStream<I> {
             Poll::Ready(Err(error)) => Poll::Ready(Err(error)),
             Poll::Ready(Ok(())) => {
                 let bytes = guarded.filled();
-                if let Some(parser) = &mut self.parser {
-                    parser.inspect(bytes)?;
+                let inspection = self.parser.as_mut().map(|parser| parser.inspect(bytes));
+                if let Some(Err(error)) = inspection {
+                    if !self.wire_error_recorded {
+                        if let Some(metrics) = &self.metrics {
+                            metrics.record_protocol_error(ProtocolErrorKind::Http2Wire);
+                        }
+                        self.wire_error_recorded = true;
+                    }
+                    return Poll::Ready(Err(error));
                 }
                 output.put_slice(bytes);
                 Poll::Ready(Ok(()))
@@ -362,7 +382,13 @@ fn wire_error(message: &'static str) -> io::Error {
 mod tests {
     use std::time::Duration;
 
-    use super::{Http2WireLimits, Http2WireParser, CLIENT_PREFACE};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    use super::{Http2WireGuardStream, Http2WireLimits, Http2WireParser, CLIENT_PREFACE};
+    use crate::{
+        data_plane::metrics::{DataPlaneMetrics, ProtocolErrorKind},
+        metric_dimensions::CanonicalMetricDimensions,
+    };
 
     fn limits() -> Http2WireLimits {
         Http2WireLimits {
@@ -460,5 +486,32 @@ mod tests {
         assert!(Http2WireParser::new(limits())
             .inspect(&cross_stream)
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn malformed_stream_records_one_fixed_http2_wire_error() {
+        let metrics = DataPlaneMetrics::new(CanonicalMetricDimensions::default());
+        let (inner, mut peer) = tokio::io::duplex(64);
+        let mut stream = Http2WireGuardStream {
+            inner,
+            parser: Some(Http2WireParser::new(limits())),
+            metrics: Some(metrics.clone()),
+            wire_error_recorded: false,
+        };
+        peer.write_all(b"XRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
+            .await
+            .expect("write malformed preface");
+        peer.shutdown().await.expect("close peer");
+
+        let mut output = Vec::new();
+        let error = stream
+            .read_to_end(&mut output)
+            .await
+            .expect_err("malformed HTTP/2 preface must fail");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(
+            metrics.protocol_error_count(ProtocolErrorKind::Http2Wire),
+            1
+        );
     }
 }

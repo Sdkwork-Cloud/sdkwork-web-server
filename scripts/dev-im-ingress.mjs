@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { createServer } from 'node:https';
+import { createServer as createHttpServer, request as httpRequest } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
 import { connect } from 'node:net';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { request as httpRequest } from 'node:http';
 
 import {
   loadImDevConfig,
@@ -27,7 +27,22 @@ export function selectImDevTarget(userAgent, settings) {
     : settings.targets.pc;
 }
 
-function ensureDevelopmentCertificate(certificateConfig) {
+export function requestPathMatchesPrefix(requestUrl, pathPrefixes) {
+  let pathname;
+  try {
+    pathname = new URL(requestUrl ?? '/', 'http://sdkwork.local').pathname;
+  } catch {
+    return false;
+  }
+  return pathPrefixes.some((prefix) => {
+    if (prefix.endsWith('/')) {
+      return pathname.startsWith(prefix);
+    }
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  });
+}
+
+function ensureDevelopmentCertificate(certificateConfig, publicHost) {
   if (certificateConfig.mode === 'files') {
     if (!existsSync(certificateConfig.certificateFile) || !existsSync(certificateConfig.privateKeyFile)) {
       throw new Error('configured HTTPS certificate or private key file does not exist');
@@ -35,8 +50,8 @@ function ensureDevelopmentCertificate(certificateConfig) {
     return certificateConfig;
   }
   const certificateDirectory = certificateConfig.directory;
-  const certificateFile = path.join(certificateDirectory, 'localhost.pem');
-  const privateKeyFile = path.join(certificateDirectory, 'localhost-key.pem');
+  const certificateFile = path.join(certificateDirectory, `${publicHost}.pem`);
+  const privateKeyFile = path.join(certificateDirectory, `${publicHost}-key.pem`);
   if (existsSync(certificateFile) && existsSync(privateKeyFile)) {
     return { certificateFile, privateKeyFile };
   }
@@ -44,7 +59,7 @@ function ensureDevelopmentCertificate(certificateConfig) {
   mkdirSync(certificateDirectory, { recursive: true });
   const mkcert = spawnSync(
     'mkcert',
-    ['-cert-file', certificateFile, '-key-file', privateKeyFile, 'localhost', '127.0.0.1', '::1'],
+    ['-cert-file', certificateFile, '-key-file', privateKeyFile, publicHost, 'localhost', '127.0.0.1', '::1'],
     { encoding: 'utf8', windowsHide: true },
   );
   if (mkcert.status === 0) {
@@ -55,8 +70,8 @@ function ensureDevelopmentCertificate(certificateConfig) {
     'openssl',
     [
       'req', '-x509', '-newkey', 'rsa:2048', '-sha256', '-nodes', '-days', '30',
-      '-subj', '/CN=localhost',
-      '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1',
+      '-subj', `/CN=${publicHost}`,
+      '-addext', `subjectAltName=DNS:${publicHost},DNS:localhost,IP:127.0.0.1,IP:::1`,
       '-keyout', privateKeyFile,
       '-out', certificateFile,
     ],
@@ -73,12 +88,12 @@ function ensureDevelopmentCertificate(certificateConfig) {
   return { certificateFile, privateKeyFile };
 }
 
-function forwardedHeaders(headers, target) {
+function forwardedHeaders(headers, target, protocol) {
   return {
     ...headers,
     host: `${target.host}:${target.port}`,
     'x-forwarded-host': headers.host ?? 'localhost',
-    'x-forwarded-proto': 'https',
+    'x-forwarded-proto': protocol,
   };
 }
 
@@ -91,13 +106,13 @@ function writeText(response, statusCode, body, headers = {}) {
   response.end(body);
 }
 
-function proxyHttpRequest(request, response, target) {
+function proxyHttpRequest(request, response, target, protocol, unavailableMessage) {
   const upstream = httpRequest({
     host: target.host,
     port: target.port,
     method: request.method,
     path: request.url,
-    headers: forwardedHeaders(request.headers, target),
+    headers: forwardedHeaders(request.headers, target, protocol),
   });
   upstream.on('response', (upstreamResponse) => {
     response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
@@ -105,7 +120,7 @@ function proxyHttpRequest(request, response, target) {
   });
   upstream.on('error', () => {
     if (!response.headersSent) {
-      writeText(response, 502, 'selected IM development application is not ready\n');
+      writeText(response, 502, unavailableMessage);
     } else {
       response.destroy();
     }
@@ -114,10 +129,10 @@ function proxyHttpRequest(request, response, target) {
   request.pipe(upstream);
 }
 
-function proxyWebSocketUpgrade(request, socket, head, target) {
+function proxyWebSocketUpgrade(request, socket, head, target, protocol) {
   const upstream = connect(target.port, target.host);
   upstream.once('connect', () => {
-    const headers = forwardedHeaders(request.headers, target);
+    const headers = forwardedHeaders(request.headers, target, protocol);
     const headerLines = Object.entries(headers).flatMap(([name, value]) => {
       if (Array.isArray(value)) {
         return value.map((entry) => `${name}: ${entry}`);
@@ -135,10 +150,30 @@ function proxyWebSocketUpgrade(request, socket, head, target) {
   socket.on('error', () => upstream.destroy());
 }
 
+export function requestHostMatches(hostHeader, publicHost, publicPort) {
+  if (typeof hostHeader !== 'string' || !hostHeader) {
+    return false;
+  }
+  try {
+    const parsed = new URL(`http://${hostHeader}`);
+    const requestPort = parsed.port
+      ? Number.parseInt(parsed.port, 10)
+      : [80, 443].includes(publicPort) ? publicPort : undefined;
+    return parsed.hostname.toLowerCase() === publicHost.toLowerCase()
+      && requestPort === publicPort;
+  } catch {
+    return false;
+  }
+}
+
 export function createImDevIngressServer({ certificate, privateKey, settings }) {
-  const server = createServer({ cert: certificate, key: privateKey }, (request, response) => {
+  const requestHandler = (request, response) => {
+    if (!requestHostMatches(request.headers.host, settings.publicHost, settings.publicPort)) {
+      writeText(response, 421, 'request Host does not match the configured IM application origin\n');
+      return;
+    }
     const pathWithoutTrailingSlash = settings.pathPrefix.slice(0, -1);
-    if (request.url === pathWithoutTrailingSlash) {
+    if (pathWithoutTrailingSlash && request.url === pathWithoutTrailingSlash) {
       writeText(response, 308, '', { location: settings.pathPrefix });
       return;
     }
@@ -146,16 +181,37 @@ export function createImDevIngressServer({ certificate, privateKey, settings }) 
       writeText(response, 404, 'route was not found\n');
       return;
     }
-    const target = selectImDevTarget(request.headers['user-agent'], settings);
-    proxyHttpRequest(request, response, target);
-  });
+    const gatewayRequest = requestPathMatchesPrefix(
+      request.url,
+      settings.gateway.httpPathPrefixes,
+    );
+    const target = gatewayRequest
+      ? settings.gateway.target
+      : selectImDevTarget(request.headers['user-agent'], settings);
+    const unavailableMessage = gatewayRequest
+      ? 'standalone IM application gateway is not ready\n'
+      : 'selected IM development application is not ready\n';
+    proxyHttpRequest(request, response, target, settings.protocol, unavailableMessage);
+  };
+  const server = settings.protocol === 'https'
+    ? createHttpsServer({ cert: certificate, key: privateKey }, requestHandler)
+    : createHttpServer(requestHandler);
   server.on('upgrade', (request, socket, head) => {
+    if (!requestHostMatches(request.headers.host, settings.publicHost, settings.publicPort)) {
+      socket.destroy();
+      return;
+    }
     if (!request.url?.startsWith(settings.pathPrefix)) {
       socket.destroy();
       return;
     }
-    const target = selectImDevTarget(request.headers['user-agent'], settings);
-    proxyWebSocketUpgrade(request, socket, head, target);
+    const target = requestPathMatchesPrefix(
+      request.url,
+      settings.gateway.webSocketPathPrefixes,
+    )
+      ? settings.gateway.target
+      : selectImDevTarget(request.headers['user-agent'], settings);
+    proxyWebSocketUpgrade(request, socket, head, target, settings.protocol);
   });
   return server;
 }
@@ -167,21 +223,33 @@ async function run() {
   );
   const config = loadImDevConfig(configPath);
   const settings = {
-    host: config.https.host,
-    port: config.https.port,
+    host: config.listener.bind,
+    port: config.application.publicPort,
+    protocol: config.application.protocol,
+    publicHost: config.application.publicHost,
+    publicPort: config.application.publicPort,
+    publicUrl: config.application.publicUrl,
     pathPrefix: config.route.pathPrefix,
     mobileUserAgentTokens: config.route.mobileUserAgentTokens,
     targets: {
       pc: config.applications.pc,
       h5: config.applications.h5,
     },
+    gateway: {
+      target: {
+        host: config.deployment.gateway.host,
+        port: config.deployment.gateway.port,
+      },
+      httpPathPrefixes: config.deployment.gateway.httpPathPrefixes,
+      webSocketPathPrefixes: config.deployment.gateway.webSocketPathPrefixes,
+    },
   };
-  const { certificateFile, privateKeyFile } = ensureDevelopmentCertificate(
-    config.https.certificate,
-  );
+  const certificateFiles = settings.protocol === 'https'
+    ? ensureDevelopmentCertificate(config.listener.certificate, settings.publicHost)
+    : undefined;
   const server = createImDevIngressServer({
-    certificate: readFileSync(certificateFile),
-    privateKey: readFileSync(privateKeyFile),
+    certificate: certificateFiles ? readFileSync(certificateFiles.certificateFile) : undefined,
+    privateKey: certificateFiles ? readFileSync(certificateFiles.privateKeyFile) : undefined,
     settings,
   });
   await new Promise((resolve, reject) => {
@@ -190,7 +258,8 @@ async function run() {
   });
   process.stdout.write(
     `[sdkwork-web] IM dev config: ${config.configPath}\n`
-      + `[sdkwork-web] IM dev ingress: https://localhost:${settings.port}${settings.pathPrefix}\n`,
+      + `[sdkwork-web] IM app manifest: ${config.application.manifestPath}\n`
+      + `[sdkwork-web] IM dev ingress: ${settings.publicUrl}\n`,
   );
 }
 

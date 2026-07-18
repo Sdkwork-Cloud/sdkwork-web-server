@@ -1,7 +1,7 @@
 openapi: 3.1.2
 info:
   title: SDKWork Web Backend API
-  description: SDKWork Web Server 绠＄悊鍚庡彴 API
+  description: SDKWork Web Server management and control-plane API.
   version: 1.0.0
 servers:
 - url: https://api.web.sdkwork.com
@@ -15,7 +15,7 @@ paths:
   /backend/v3/api/nginx/configs:
     get:
       operationId: nginx.configs.list
-      summary: 鑾峰彇 Nginx 閰嶇疆鍒楄〃
+      summary: List Nginx configurations
       tags:
       - nginx
       security:
@@ -50,7 +50,7 @@ paths:
           type: boolean
       responses:
         '200':
-          description: 鎴愬姛
+          description: Nginx configuration list returned successfully.
           content:
             application/json:
               schema:
@@ -75,7 +75,7 @@ paths:
                           $ref: '#/components/schemas/PageInfo'
     post:
       operationId: nginx.configs.create
-      summary: 鍒涘缓 Nginx 閰嶇疆
+      summary: Create an Nginx configuration
       tags:
       - nginx
       security:
@@ -96,7 +96,7 @@ paths:
               $ref: '#/components/schemas/CreateNginxConfigRequest'
       responses:
         '201':
-          description: 鍒涘缓鎴愬姛
+          description: Nginx configuration created successfully.
           content:
             application/json:
               schema:
@@ -113,7 +113,7 @@ paths:
                       properties:
                         item:
                           $ref: '#/components/schemas/NginxConfigResponse'
-  /backend/v3/api/nginx/configs/{configId}:
+  /backend/v3/api/nginx/etc/{configId}:
     parameters:
     - name: configId
       in: path
@@ -123,7 +123,7 @@ paths:
         format: uuid
     get:
       operationId: nginx.configs.retrieve
-      summary: 鑾峰彇 Nginx 閰嶇疆璇︽儏
+      summary: Retrieve an Nginx configuration
       tags:
       - nginx
       security:
@@ -137,7 +137,7 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
-          description: 鎴愬姛
+          description: Nginx configuration returned successfully.
           content:
             application/json:
               schema:
@@ -158,7 +158,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     put:
       operationId: nginx.configs.update
-      summary: 鏇存柊 Nginx 閰嶇疆
+      summary: Update an Nginx configuration
       tags:
       - nginx
       security:
@@ -179,7 +179,7 @@ paths:
               $ref: '#/components/schemas/UpdateNginxConfigRequest'
       responses:
         '200':
-          description: 鏇存柊鎴愬姛
+          description: Nginx configuration updated successfully.
           content:
             application/json:
               schema:
@@ -198,7 +198,7 @@ paths:
                           $ref: '#/components/schemas/NginxConfigResponse'
         '404':
           $ref: '#/components/responses/NotFound'
-  /backend/v3/api/nginx/configs/{configId}/validate:
+  /backend/v3/api/nginx/etc/{configId}/validate:
     parameters:
     - name: configId
       in: path
@@ -208,7 +208,7 @@ paths:
         format: uuid
     post:
       operationId: nginx.configs.validate
-      summary: 鏍￠獙 Nginx 閰嶇疆
+      summary: Validate an Nginx configuration
       tags:
       - nginx
       security:
@@ -222,7 +222,7 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
-          description: 鏍￠獙缁撴灉
+          description: Nginx configuration validation result.
           content:
             application/json:
               schema:
@@ -239,7 +239,7 @@ paths:
                       properties:
                         item:
                           $ref: '#/components/schemas/NginxValidateResponse'
-  /backend/v3/api/nginx/configs/{configId}/deploy:
+  /backend/v3/api/nginx/etc/{configId}/deploy:
     parameters:
     - name: configId
       in: path
@@ -249,7 +249,7 @@ paths:
         format: uuid
     post:
       operationId: nginx.configs.deploy
-      summary: 閮ㄧ讲 Nginx 閰嶇疆
+      summary: Deploy an Nginx configuration
       tags:
       - nginx
       security:
@@ -265,7 +265,7 @@ paths:
       x-sdkwork-rate-limit-tier: auth-critical
       responses:
         '200':
-          description: 閮ㄧ讲鎴愬姛
+          description: Nginx configuration deployed successfully.
           content:
             application/json:
               schema:
@@ -287,7 +287,7 @@ paths:
   /backend/v3/api/nginx/reload:
     post:
       operationId: nginx.reload
-      summary: "鐑\uDCAD鍔犺浇 Nginx"
+      summary: Reload Nginx
       tags:
       - nginx
       security:
@@ -302,7 +302,7 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
-          description: "鐑\uDCAD鍔犺浇缁撴灉"
+          description: Nginx reload result.
           content:
             application/json:
               schema:
@@ -322,7 +322,7 @@ paths:
   /backend/v3/api/nginx/status:
     get:
       operationId: nginx.status.retrieve
-      summary: "鑾峰彇 Nginx 鐘舵\uDC80\uDC81"
+      summary: Retrieve Nginx status
       tags:
       - nginx
       security:
@@ -336,7 +336,7 @@ paths:
       x-sdkwork-owner: sdkwork-web-server
       responses:
         '200':
-          description: 鎴愬姛
+          description: Nginx status returned successfully.
           content:
             application/json:
               schema:
@@ -356,7 +356,7 @@ paths:
   /backend/v3/api/servers:
     get:
       operationId: servers.list
-      summary: "鑾峰彇鏈嶅姟鍣ㄥ垪琛\uDCA8"
+      summary: List managed servers
       tags:
       - server
       security:
@@ -373,7 +373,7 @@ paths:
       - $ref: '#/components/parameters/PageSizeParam'
       responses:
         '200':
-          description: 鎴愬姛
+          description: Managed server list returned successfully.
           content:
             application/json:
               schema:
@@ -398,7 +398,7 @@ paths:
                           $ref: '#/components/schemas/PageInfo'
     post:
       operationId: servers.create
-      summary: "娉ㄥ唽鏈嶅姟鍣\uDCA8"
+      summary: Register a managed server
       tags:
       - server
       security:
@@ -420,7 +420,7 @@ paths:
               $ref: '#/components/schemas/CreateServerRequest'
       responses:
         '201':
-          description: 娉ㄥ唽鎴愬姛
+          description: Managed server registered successfully.
           content:
             application/json:
               schema:
@@ -440,7 +440,7 @@ paths:
   /backend/v3/api/agent/heartbeat:
     post:
       operationId: agent.heartbeat
-      summary: 杈圭紭鑺傜偣蹇冭烦
+      summary: Report an edge-agent heartbeat
       tags:
       - agent
       security:
@@ -460,7 +460,7 @@ paths:
               $ref: '#/components/schemas/AgentHeartbeatRequest'
       responses:
         '200':
-          description: 鎴愬姛
+          description: Edge-agent heartbeat acknowledged successfully.
           content:
             application/json:
               schema:
@@ -482,7 +482,7 @@ paths:
   /backend/v3/api/agent/sync:
     get:
       operationId: agent.retrieve
-      summary: "鎷夊彇 nginx 閰嶇疆涓庤瘉涔\uDCA6 bundle"
+      summary: Retrieve the Nginx configuration and certificate bundle
       tags:
       - agent
       security:
@@ -503,7 +503,7 @@ paths:
           type: string
       responses:
         '200':
-          description: 鎴愬姛
+          description: Edge-agent synchronization bundle returned successfully.
           content:
             application/json:
               schema:
@@ -525,7 +525,7 @@ paths:
   /backend/v3/api/audit_logs:
     get:
       operationId: auditLogs.list
-      summary: "鑾峰彇瀹¤\uDCAE℃棩蹇楀垪琛\uDCA8"
+      summary: List audit logs
       tags:
       - audit
       security:
@@ -568,7 +568,7 @@ paths:
           format: date-time
       responses:
         '200':
-          description: 鎴愬姛
+          description: Audit log list returned successfully.
           content:
             application/json:
               schema:
@@ -1097,7 +1097,7 @@ components:
       format: int32
       minimum: 40001
       maximum: 79999
-      description: Platform or domain error code per API_SPEC.md 搂15.3.
+      description: Platform or domain error code per API_SPEC.md section 15.3.
     FieldError:
       type: object
       additionalProperties: false
@@ -1143,25 +1143,25 @@ components:
             $ref: '#/components/schemas/SdkWorkCommandData'
   responses:
     BadRequest:
-      description: "璇锋眰鍙傛暟閿欒\uDCAF\uDCAF"
+      description: Invalid request parameters.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
     Unauthorized:
-      description: "鏈\uDCAA璁よ瘉"
+      description: Authentication is required.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
     NotFound:
-      description: "璧勬簮涓嶅瓨鍦\uDCA8"
+      description: Resource not found.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
     Conflict:
-      description: 璧勬簮鍐茬獊
+      description: Resource conflict.
       content:
         application/problem+json:
           schema:

@@ -221,19 +221,19 @@ class NginxConfigsApi:
 
     def retrieve(self, config_id: str) -> NginxConfigResponse:
         """获取 Nginx 配置详情"""
-        return self._client.get(f"/backend/v3/api/nginx/configs/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}")
+        return self._client.get(f"/backend/v3/api/nginx/etc/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}")
 
     def update(self, config_id: str, body: UpdateNginxConfigRequest) -> NginxConfigResponse:
         """更新 Nginx 配置"""
-        return self._client.put(f"/backend/v3/api/nginx/configs/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}", json=body)
+        return self._client.put(f"/backend/v3/api/nginx/etc/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}", json=body)
 
     def create_validate(self, config_id: str) -> NginxValidateResponse:
         """校验 Nginx 配置"""
-        return self._client.post(f"/backend/v3/api/nginx/configs/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}/validate")
+        return self._client.post(f"/backend/v3/api/nginx/etc/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}/validate")
 
     def create_deploy(self, config_id: str) -> NginxDeployResponse:
         """部署 Nginx 配置"""
-        return self._client.post(f"/backend/v3/api/nginx/configs/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}/deploy")
+        return self._client.post(f"/backend/v3/api/nginx/etc/{serialize_path_parameter(config_id, {'name': 'configId', 'style': 'simple', 'explode': False})}/deploy")
 
 class NginxStatusApi:
     """nginx nginx.status API client."""

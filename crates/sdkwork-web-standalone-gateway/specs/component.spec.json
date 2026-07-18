@@ -62,7 +62,7 @@
   "verification": {
     "commands": [
       "cargo test -p sdkwork-web-standalone-gateway",
-      "cargo run -p sdkwork-web-standalone-gateway -- validate configs/examples/sdkwork.webserver.config.json"
+      "cargo run -p sdkwork-web-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json"
     ]
   }
 }

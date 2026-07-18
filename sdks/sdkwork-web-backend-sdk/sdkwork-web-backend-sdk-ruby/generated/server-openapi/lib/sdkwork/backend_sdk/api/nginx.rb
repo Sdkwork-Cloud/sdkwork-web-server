@@ -41,7 +41,7 @@ module Sdkwork
 
           # 获取 Nginx 配置详情
           def configs_retrieve(config_id)
-            path = interpolate_path('/backend/v3/api/nginx/configs/{configId}', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
+            path = interpolate_path('/backend/v3/api/nginx/etc/{configId}', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
             options = {}
 
             result = @client.request('GET', path, **options)
@@ -50,7 +50,7 @@ module Sdkwork
 
           # 更新 Nginx 配置
           def configs_update(config_id, body: nil)
-            path = interpolate_path('/backend/v3/api/nginx/configs/{configId}', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
+            path = interpolate_path('/backend/v3/api/nginx/etc/{configId}', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
             payload = body.respond_to?(:to_hash) ? body.to_hash : body
             options = {}
             options[:json] = payload unless payload.nil?
@@ -60,7 +60,7 @@ module Sdkwork
 
           # 校验 Nginx 配置
           def configs_validate(config_id)
-            path = interpolate_path('/backend/v3/api/nginx/configs/{configId}/validate', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
+            path = interpolate_path('/backend/v3/api/nginx/etc/{configId}/validate', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
             options = {}
 
             result = @client.request('POST', path, **options)
@@ -69,7 +69,7 @@ module Sdkwork
 
           # 部署 Nginx 配置
           def configs_deploy(config_id)
-            path = interpolate_path('/backend/v3/api/nginx/configs/{configId}/deploy', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
+            path = interpolate_path('/backend/v3/api/nginx/etc/{configId}/deploy', configId: serialize_path_parameter(config_id, PathParameterSpec.new('configId', 'simple', false)))
             options = {}
 
             result = @client.request('POST', path, **options)

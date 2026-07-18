@@ -4,38 +4,29 @@
   "title": "SDKWork Web Server IM Development Ingress Configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "route", "https", "applications"],
+  "required": ["schemaVersion", "kind", "application", "listener", "route", "deployment", "applications"],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "kind": { "const": "sdkwork.webserver.im-dev" },
-    "route": {
+    "application": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pathPrefix", "mobileUserAgentTokens"],
+      "required": ["manifestPath", "deploymentConfigPath", "environment"],
       "properties": {
-        "pathPrefix": {
-          "type": "string",
-          "pattern": "^/.*?/$",
-          "minLength": 2,
-          "maxLength": 512
-        },
-        "mobileUserAgentTokens": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 64,
-          "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        "manifestPath": { "$ref": "#/$defs/path" },
+        "deploymentConfigPath": { "$ref": "#/$defs/path" },
+        "environment": {
+          "enum": ["development", "test", "staging", "production"]
         }
       }
     },
-    "https": {
+    "listener": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["host", "port", "certificate"],
+      "required": ["bind"],
       "properties": {
-        "host": { "type": "string", "minLength": 1, "maxLength": 255 },
-        "port": { "$ref": "#/$defs/port" },
+        "bind": { "type": "string", "minLength": 1, "maxLength": 255 },
         "certificate": {
           "oneOf": [
             {
@@ -61,20 +52,68 @@
         }
       }
     },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathPrefix", "mobileUserAgentTokens"],
+      "properties": {
+        "pathPrefix": {
+          "type": "string",
+          "pattern": "^/.*$",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "mobileUserAgentTokens": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "applicationRoot", "serverScript", "gateway"],
+      "properties": {
+        "profile": { "enum": ["standalone", "cloud"] },
+        "applicationRoot": { "$ref": "#/$defs/path" },
+        "serverScript": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gateway": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host", "port", "httpPathPrefixes", "webSocketPathPrefixes"],
+          "properties": {
+            "host": { "type": "string", "minLength": 1, "maxLength": 255 },
+            "port": { "$ref": "#/$defs/port" },
+            "httpPathPrefixes": { "$ref": "#/$defs/pathPrefixes" },
+            "webSocketPathPrefixes": { "$ref": "#/$defs/pathPrefixes" }
+          }
+        }
+      }
+    },
     "applications": {
       "type": "object",
       "additionalProperties": false,
       "required": ["pc", "h5"],
       "properties": {
-        "pc": { "$ref": "#/$defs/application" },
-        "h5": { "$ref": "#/$defs/application" }
+        "pc": { "$ref": "#/$defs/applicationTarget" },
+        "h5": { "$ref": "#/$defs/applicationTarget" }
       }
     }
   },
   "$defs": {
     "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
     "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
-    "application": {
+    "pathPrefixes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^/", "minLength": 1, "maxLength": 512 }
+    },
+    "applicationTarget": {
       "type": "object",
       "additionalProperties": false,
       "required": ["root", "host", "port"],

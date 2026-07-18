@@ -20,14 +20,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,
-        "/backend/v3/api/nginx/configs/{configId}",
+        "/backend/v3/api/nginx/etc/{configId}",
         "nginx",
         "nginx.configs.retrieve",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
         HttpMethod::Put,
-        "/backend/v3/api/nginx/configs/{configId}",
+        "/backend/v3/api/nginx/etc/{configId}",
         "nginx",
         "nginx.configs.update",
     )
@@ -35,14 +35,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Post,
-        "/backend/v3/api/nginx/configs/{configId}/validate",
+        "/backend/v3/api/nginx/etc/{configId}/validate",
         "nginx",
         "nginx.configs.validate",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
         HttpMethod::Post,
-        "/backend/v3/api/nginx/configs/{configId}/deploy",
+        "/backend/v3/api/nginx/etc/{configId}/deploy",
         "nginx",
         "nginx.configs.deploy",
     )

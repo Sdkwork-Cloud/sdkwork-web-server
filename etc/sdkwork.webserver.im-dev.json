@@ -1,9 +1,17 @@
 {
   "$schema": "../specs/sdkwork.webserver.im-dev.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "sdkwork.webserver.im-dev",
+  "application": {
+    "manifestPath": "../../sdkwork-im/sdkwork.app.config.json",
+    "deploymentConfigPath": "../../sdkwork-im/etc/sdkwork.deployment.config.json",
+    "environment": "development"
+  },
+  "listener": {
+    "bind": "0.0.0.0"
+  },
   "route": {
-    "pathPrefix": "/sdkwork-im/",
+    "pathPrefix": "/",
     "mobileUserAgentTokens": [
       "Android",
       "webOS",
@@ -16,12 +24,30 @@
       "Mobile"
     ]
   },
-  "https": {
-    "host": "0.0.0.0",
-    "port": 3443,
-    "certificate": {
-      "mode": "auto",
-      "directory": "../.runtime/dev-certificates"
+  "deployment": {
+    "profile": "standalone",
+    "applicationRoot": "../../sdkwork-im",
+    "serverScript": "dev:server",
+    "gateway": {
+      "host": "127.0.0.1",
+      "port": 18079,
+      "httpPathPrefixes": [
+        "/im/v3/api",
+        "/app/v3/api",
+        "/backend/v3/api",
+        "/agent/v3/api",
+        "/openapi.json",
+        "/openapi/",
+        "/health",
+        "/healthz",
+        "/livez",
+        "/ready",
+        "/readyz",
+        "/metrics"
+      ],
+      "webSocketPathPrefixes": [
+        "/im/v3/api/realtime/ws"
+      ]
     }
   },
   "applications": {

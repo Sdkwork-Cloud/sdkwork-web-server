@@ -46,7 +46,7 @@ func (a *NginxApi) ConfigsCreate(body sdktypes.CreateNginxConfigRequest) (sdktyp
 
 // 获取 Nginx 配置详情
 func (a *NginxApi) ConfigsRetrieve(configId string) (sdktypes.NginxConfigResponse, error) {
-    raw, err := a.client.Get(BackendApiPath(fmt.Sprintf("/nginx/configs/%s", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil)
+    raw, err := a.client.Get(BackendApiPath(fmt.Sprintf("/nginx/etc/%s", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil)
     if err != nil {
         var zero sdktypes.NginxConfigResponse
         return zero, err
@@ -56,7 +56,7 @@ func (a *NginxApi) ConfigsRetrieve(configId string) (sdktypes.NginxConfigRespons
 
 // 更新 Nginx 配置
 func (a *NginxApi) ConfigsUpdate(configId string, body sdktypes.UpdateNginxConfigRequest) (sdktypes.NginxConfigResponse, error) {
-    raw, err := a.client.Put(BackendApiPath(fmt.Sprintf("/nginx/configs/%s", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+    raw, err := a.client.Put(BackendApiPath(fmt.Sprintf("/nginx/etc/%s", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
     if err != nil {
         var zero sdktypes.NginxConfigResponse
         return zero, err
@@ -66,7 +66,7 @@ func (a *NginxApi) ConfigsUpdate(configId string, body sdktypes.UpdateNginxConfi
 
 // 校验 Nginx 配置
 func (a *NginxApi) ConfigsValidate(configId string) (sdktypes.NginxValidateResponse, error) {
-    raw, err := a.client.Post(BackendApiPath(fmt.Sprintf("/nginx/configs/%s/validate", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil, nil, "")
+    raw, err := a.client.Post(BackendApiPath(fmt.Sprintf("/nginx/etc/%s/validate", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil, nil, "")
     if err != nil {
         var zero sdktypes.NginxValidateResponse
         return zero, err
@@ -76,7 +76,7 @@ func (a *NginxApi) ConfigsValidate(configId string) (sdktypes.NginxValidateRespo
 
 // 部署 Nginx 配置
 func (a *NginxApi) ConfigsDeploy(configId string) (sdktypes.NginxDeployResponse, error) {
-    raw, err := a.client.Post(BackendApiPath(fmt.Sprintf("/nginx/configs/%s/deploy", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil, nil, "")
+    raw, err := a.client.Post(BackendApiPath(fmt.Sprintf("/nginx/etc/%s/deploy", SerializePathParameter(configId, PathParameterSpec{Name: "configId", Style: "simple", Explode: false}))), nil, nil, nil, "")
     if err != nil {
         var zero sdktypes.NginxDeployResponse
         return zero, err

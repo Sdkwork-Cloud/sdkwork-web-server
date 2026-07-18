@@ -12,27 +12,47 @@ use axum::{
     },
 };
 use futures_util::StreamExt;
-use sdkwork_webserver_core::{normalize_authority_host, ResourceConfig};
+use sdkwork_webserver_core::{normalize_authority_host, ResourceConfig, RoutePathType};
 
 use super::{
+    metrics::RequestRejection,
     proxy::{proxy_request, request_body_timeout_response, text_response},
     proxy_body::RequestBodyFailure,
+    proxy_protocol::DownstreamConnectionInfo,
+    real_ip::resolve_client_ip,
     request_admission::hold_request_permit,
     request_body_timeout::RequestBodyTimeout,
+    request_gate::RequestAdmissionRejection,
     request_uri::{validate_request_uri, RequestUriError},
     static_files::serve_static,
     ListenerState,
 };
 
 pub async fn route_request(
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    ConnectInfo(connection): ConnectInfo<DownstreamConnectionInfo>,
     State(state): State<ListenerState>,
     request: Request<Body>,
 ) -> Response<Body> {
+    let peer = connection.client_peer;
+    let _transport_peer = connection.transport_peer;
+    let _proxy_protocol = connection.proxy_protocol;
     let version = request.version();
-    let permit = match state.runtime.request_permits.clone().try_acquire_owned() {
-        Ok(permit) => permit,
-        Err(_) => return overload_response(version),
+    let mut admitted = match state.runtime.request_gate.try_begin() {
+        Ok(admitted) => admitted,
+        Err(RequestAdmissionRejection::Saturated) => {
+            state
+                .runtime
+                .metrics
+                .record_request_rejection(RequestRejection::Capacity);
+            return overload_response(version);
+        }
+        Err(RequestAdmissionRejection::ResourcePressure) => {
+            state
+                .runtime
+                .metrics
+                .record_request_rejection(RequestRejection::ResourcePressure);
+            return resource_pressure_response(version);
+        }
     };
     let response_body_idle_timeout = Duration::from_millis(
         state
@@ -43,33 +63,69 @@ pub async fn route_request(
             .limits
             .response_body_idle_timeout_ms,
     );
-    let response = route_admitted_request(peer, state, request).await;
-    hold_request_permit(response, permit, response_body_idle_timeout)
+    let response = route_admitted_request(peer, state, request, &mut admitted).await;
+    hold_request_permit(response, admitted, response_body_idle_timeout)
 }
 
 async fn route_admitted_request(
     peer: SocketAddr,
     state: ListenerState,
     request: Request<Body>,
+    admitted: &mut super::request_gate::RequestAdmissionPermit,
 ) -> Response<Body> {
     if let Err((status, message)) = validate_request_framing(request.headers(), request.version()) {
+        if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+            return response;
+        }
         return text_response(status, message);
     }
     let generation = state.runtime.current();
+    let Some(listener) = generation.app.listener(&state.listener_id) else {
+        return text_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "listener configuration is unavailable\n",
+        );
+    };
+    let client_ip = match resolve_client_ip(
+        peer.ip(),
+        request.headers(),
+        listener.trusted_proxy.as_ref(),
+    ) {
+        Ok(client_ip) => client_ip,
+        Err(_) => {
+            if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+                return response;
+            }
+            return invalid_forwarded_identity_response(request.version());
+        }
+    };
     let normalized_path = match validate_request_uri(request.uri(), &generation.app.config().limits)
     {
         Ok(path) => path,
-        Err(error) => return request_uri_error_response(request.version(), error),
+        Err(error) => {
+            if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+                return response;
+            }
+            return request_uri_error_response(request.version(), error);
+        }
     };
     if content_length_exceeds(
         request.headers(),
         generation.app.config().limits.max_request_body_bytes,
     ) {
+        if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+            return response;
+        }
         return text_response(StatusCode::PAYLOAD_TOO_LARGE, "request body is too large\n");
     }
     let authority = match request_authority(&request) {
         Ok(authority) => authority,
-        Err((status, message)) => return text_response(status, message),
+        Err((status, message)) => {
+            if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+                return response;
+            }
+            return text_response(status, message);
+        }
     };
     let method = request.method().as_str().to_owned();
     let path = normalized_path;
@@ -78,17 +134,30 @@ async fn route_admitted_request(
             .app
             .select_route(&state.listener_id, &authority, &path, &method)
     else {
+        if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+            return response;
+        }
         return text_response(StatusCode::NOT_FOUND, "route was not found\n");
     };
+    let operations_reserved = is_operations_candidate(&request)
+        && selected.route.route_match.path_type == RoutePathType::Exact
+        && is_operations_path(&selected.route.route_match.path)
+        && matches!(selected.resource, ResourceConfig::Respond { .. });
+    if let Some(response) =
+        classify_request(&state, admitted, operations_reserved, request.version())
+    {
+        return response;
+    }
 
     let request_failure = RequestBodyFailure::default();
     let (parts, body) = request.into_parts();
     let limits = &generation.app.config().limits;
-    let body = RequestBodyTimeout::new(
+    let body = RequestBodyTimeout::new_observed(
         body,
         Duration::from_millis(limits.request_body_start_timeout_ms),
         Duration::from_millis(limits.request_body_idle_timeout_ms),
         request_failure.clone(),
+        state.runtime.metrics.clone(),
     );
     let request = Request::from_parts(parts, Body::new(body));
 
@@ -163,11 +232,13 @@ async fn route_admitted_request(
                     upstream_ref,
                     strip_prefix: *strip_prefix,
                     route: selected.route,
-                    peer,
+                    client_ip,
                     external_scheme: scheme,
                     external_authority: &authority,
                     normalized_path: &path,
                     request_failure,
+                    tunnel_supervisor: &state.runtime.tunnel_supervisor,
+                    metrics: &state.runtime.metrics,
                 },
                 request,
             )
@@ -190,6 +261,48 @@ async fn route_admitted_request(
     response
 }
 
+fn invalid_forwarded_identity_response(version: Version) -> Response<Body> {
+    let mut response = text_response(
+        StatusCode::BAD_REQUEST,
+        "forwarded client identity is invalid\n",
+    );
+    if version != Version::HTTP_2 {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+fn classify_request(
+    state: &ListenerState,
+    admitted: &mut super::request_gate::RequestAdmissionPermit,
+    operations_reserved: bool,
+    version: Version,
+) -> Option<Response<Body>> {
+    state
+        .runtime
+        .request_gate
+        .classify(admitted, operations_reserved)
+        .err()
+        .map(|rejection| match rejection {
+            RequestAdmissionRejection::Saturated => {
+                state
+                    .runtime
+                    .metrics
+                    .record_request_rejection(RequestRejection::Capacity);
+                overload_response(version)
+            }
+            RequestAdmissionRejection::ResourcePressure => {
+                state
+                    .runtime
+                    .metrics
+                    .record_request_rejection(RequestRejection::ResourcePressure);
+                resource_pressure_response(version)
+            }
+        })
+}
+
 fn overload_response(version: Version) -> Response<Body> {
     let mut response = text_response(StatusCode::SERVICE_UNAVAILABLE, "server is overloaded\n");
     response
@@ -201,6 +314,30 @@ fn overload_response(version: Version) -> Response<Body> {
             .insert(CONNECTION, HeaderValue::from_static("close"));
     }
     response
+}
+
+fn resource_pressure_response(version: Version) -> Response<Body> {
+    let mut response = text_response(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "server resource pressure is active\n",
+    );
+    response
+        .headers_mut()
+        .insert(RETRY_AFTER, HeaderValue::from_static("1"));
+    if version != Version::HTTP_2 {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+fn is_operations_candidate(request: &Request<Body>) -> bool {
+    matches!(request.method().as_str(), "GET" | "HEAD") && is_operations_path(request.uri().path())
+}
+
+fn is_operations_path(path: &str) -> bool {
+    matches!(path, "/healthz" | "/readyz" | "/livez")
 }
 
 fn request_uri_error_response(version: Version, error: RequestUriError) -> Response<Body> {

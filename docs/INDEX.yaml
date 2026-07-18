@@ -100,7 +100,83 @@ entries:
   - id: REQ-2026-0024
     path: docs/product/requirements/REQ-2026-0024-upstream-tls-identity-pool-isolation.md
     kind: req
-    status: in-progress
+    status: accepted
+  - id: REQ-2026-0025
+    path: docs/product/requirements/REQ-2026-0025-bounded-upstream-admission-passive-health.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0026
+    path: docs/product/requirements/REQ-2026-0026-supervised-active-upstream-health.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0027
+    path: docs/product/requirements/REQ-2026-0027-adaptive-resource-pressure-admission.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0028
+    path: docs/product/requirements/REQ-2026-0028-bounded-upstream-physical-connections.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0029
+    path: docs/product/requirements/REQ-2026-0029-bounded-upstream-response-headers.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0030
+    path: docs/product/requirements/REQ-2026-0030-weighted-upstream-selection.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0031
+    path: docs/product/requirements/REQ-2026-0031-bounded-websocket-reverse-proxy.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0032
+    path: docs/product/requirements/REQ-2026-0032-bounded-management-http-metrics.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0033
+    path: docs/product/requirements/REQ-2026-0033-bounded-data-plane-operations-metrics.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0034
+    path: docs/product/requirements/REQ-2026-0034-bounded-data-plane-red-capacity-metrics.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0035
+    path: docs/product/requirements/REQ-2026-0035-bounded-safe-upstream-retries.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0036
+    path: docs/product/requirements/REQ-2026-0036-bounded-target-physical-connections.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0037
+    path: docs/product/requirements/REQ-2026-0037-bounded-backup-upstream-targets.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0038
+    path: docs/product/requirements/REQ-2026-0038-bounded-weighted-least-connections.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0039
+    path: docs/product/requirements/REQ-2026-0039-bounded-upstream-slow-start.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0040
+    path: docs/product/requirements/REQ-2026-0040-bounded-smooth-weighted-round-robin.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0041
+    path: docs/product/requirements/REQ-2026-0041-bounded-random-two-least-connections.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0042
+    path: docs/product/requirements/REQ-2026-0042-bounded-ip-hash-affinity.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0043
+    path: docs/product/requirements/REQ-2026-0043-bounded-trusted-proxy-real-ip.md
+    kind: req
+    status: accepted
   - id: ADR-20260623-acme-certificate-authority
     path: docs/architecture/decisions/ADR-20260623-acme-certificate-authority.md
     kind: adr

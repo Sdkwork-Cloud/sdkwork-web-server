@@ -18,5 +18,7 @@ tower.workspace = true
 [dev-dependencies]
 async-trait.workspace = true
 axum.workspace = true
+http-body-util.workspace = true
 sdkwork-iam-web-adapter.workspace = true
+sdkwork-web-bootstrap.workspace = true
 tower.workspace = true

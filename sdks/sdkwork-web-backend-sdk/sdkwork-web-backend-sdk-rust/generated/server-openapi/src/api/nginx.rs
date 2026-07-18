@@ -36,25 +36,25 @@ impl NginxApi {
 
     /// 获取 Nginx 配置详情
     pub async fn configs_retrieve(&self, config_id: &str) -> Result<NginxConfigResponse, SdkworkError> {
-        let path = backend_path(&format!("/nginx/configs/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
+        let path = backend_path(&format!("/nginx/etc/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// 更新 Nginx 配置
     pub async fn configs_update(&self, config_id: &str, body: &UpdateNginxConfigRequest) -> Result<NginxConfigResponse, SdkworkError> {
-        let path = backend_path(&format!("/nginx/configs/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
+        let path = backend_path(&format!("/nginx/etc/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.put(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// 校验 Nginx 配置
     pub async fn configs_validate(&self, config_id: &str) -> Result<NginxValidateResponse, SdkworkError> {
-        let path = backend_path(&format!("/nginx/configs/{}/validate", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
+        let path = backend_path(&format!("/nginx/etc/{}/validate", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
     }
 
     /// 部署 Nginx 配置
     pub async fn configs_deploy(&self, config_id: &str) -> Result<NginxDeployResponse, SdkworkError> {
-        let path = backend_path(&format!("/nginx/configs/{}/deploy", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
+        let path = backend_path(&format!("/nginx/etc/{}/deploy", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
     }
 

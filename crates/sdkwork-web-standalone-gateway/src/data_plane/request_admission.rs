@@ -10,12 +10,13 @@ use axum::{body::Body, http::Response};
 use bytes::Bytes;
 use http_body::{Body as HttpBody, Frame, SizeHint};
 use sync_wrapper::SyncWrapper;
-use tokio::sync::OwnedSemaphorePermit;
 use tokio::time::{Instant, Sleep};
+
+use super::request_gate::RequestAdmissionPermit;
 
 pub(super) fn hold_request_permit(
     response: Response<Body>,
-    permit: OwnedSemaphorePermit,
+    permit: RequestAdmissionPermit,
     idle_timeout: Duration,
 ) -> Response<Body> {
     response.map(|body| Body::new(RequestPermitBody::new(body, permit, idle_timeout)))
@@ -23,7 +24,7 @@ pub(super) fn hold_request_permit(
 
 struct RequestPermitBody {
     inner: SyncWrapper<Pin<Box<Body>>>,
-    permit: Option<OwnedSemaphorePermit>,
+    permit: Option<RequestAdmissionPermit>,
     remaining_hint: SizeHint,
     ended: bool,
     idle_timeout: Duration,
@@ -31,7 +32,7 @@ struct RequestPermitBody {
 }
 
 impl RequestPermitBody {
-    fn new(inner: Body, permit: OwnedSemaphorePermit, idle_timeout: Duration) -> Self {
+    fn new(inner: Body, permit: RequestAdmissionPermit, idle_timeout: Duration) -> Self {
         let remaining_hint = inner.size_hint();
         let ended = inner.is_end_stream();
         Self {
@@ -131,6 +132,7 @@ mod tests {
     use tokio::sync::Semaphore;
 
     use super::RequestPermitBody;
+    use crate::data_plane::request_gate::RequestAdmissionPermit;
 
     #[tokio::test]
     async fn holds_permit_until_response_body_end() {
@@ -144,8 +146,11 @@ mod tests {
             .try_send(Frame::data(Bytes::from_static(b"one")))
             .expect("queue response frame");
         drop(sender);
-        let mut body =
-            RequestPermitBody::new(axum::body::Body::new(body), permit, Duration::from_secs(1));
+        let mut body = RequestPermitBody::new(
+            axum::body::Body::new(body),
+            RequestAdmissionPermit::single(permit),
+            Duration::from_secs(1),
+        );
 
         body.frame()
             .await
@@ -164,8 +169,11 @@ mod tests {
             .try_acquire_owned()
             .expect("acquire request permit");
         let (_sender, body) = Channel::<Bytes>::new(1);
-        let body =
-            RequestPermitBody::new(axum::body::Body::new(body), permit, Duration::from_secs(1));
+        let body = RequestPermitBody::new(
+            axum::body::Body::new(body),
+            RequestAdmissionPermit::single(permit),
+            Duration::from_secs(1),
+        );
         assert_eq!(permits.available_permits(), 0);
 
         drop(body);
@@ -182,7 +190,7 @@ mod tests {
         let (_sender, body) = Channel::<Bytes>::new(1);
         let mut body = RequestPermitBody::new(
             axum::body::Body::new(body),
-            permit,
+            RequestAdmissionPermit::single(permit),
             Duration::from_millis(100),
         );
 
@@ -208,7 +216,7 @@ mod tests {
             .expect("queue empty response Frame");
         let mut body = RequestPermitBody::new(
             axum::body::Body::new(body),
-            permit,
+            RequestAdmissionPermit::single(permit),
             Duration::from_millis(100),
         );
         tokio::time::sleep(Duration::from_millis(150)).await;

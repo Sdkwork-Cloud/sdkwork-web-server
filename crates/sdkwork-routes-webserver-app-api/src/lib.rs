@@ -10,7 +10,9 @@ pub use http_route_manifest::app_route_manifest;
 pub use routes::{build_router_with_app_api, build_router_with_shared_app_api};
 pub use sdkwork_webserver_contract::{WebAppApi, WebAppRequestContext};
 pub use web_bootstrap::{
-    web_app_api_prefixes, web_app_api_public_path_prefixes, wrap_router_with_web_framework_from_env,
+    web_app_api_prefixes, web_app_api_public_path_prefixes,
+    wrap_router_with_web_framework_and_metrics, wrap_router_with_web_framework_from_env,
+    wrap_router_with_web_framework_from_env_and_metrics,
 };
 
 use sdkwork_web_core::HttpRouteManifest;

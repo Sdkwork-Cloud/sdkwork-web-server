@@ -82,7 +82,7 @@ Executed acceptance evidence:
 - `cargo test -p sdkwork-web-standalone-gateway`: 24 unit, 30 data-plane integration, and 3 raw HTTP/1 tests passed.
 - `cargo clippy -p sdkwork-web-standalone-gateway -p sdkwork-webserver-core --all-targets -- -D warnings`: passed.
 - `cargo fmt -- --check`: passed.
-- `cargo run -p sdkwork-web-standalone-gateway -- validate configs/examples/sdkwork.webserver.config.json`: passed.
+- `cargo run -p sdkwork-web-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json`: passed.
 - Full-workspace Clippy, `pnpm verify`, the pagination/API-envelope/SDK-consumer checks applicable to this config/runtime change, documentation validation, and diff hygiene passed in the same acceptance run.
 
 This acceptance closes only request Body start/progress deadlines. HTTP/1 Keep-Alive idle reaping was subsequently delivered by accepted [REQ-2026-0016](REQ-2026-0016-http1-keep-alive-idle-timeout.md); the other listed non-goals remain separate commercial release gates.

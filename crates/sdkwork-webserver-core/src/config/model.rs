@@ -184,6 +184,26 @@ fn default_http2_max_encoded_header_block_bytes() -> usize {
     64 * 1024
 }
 
+fn default_trusted_proxy_max_hops() -> usize {
+    16
+}
+
+fn default_trusted_proxy_max_header_bytes() -> usize {
+    4 * 1024
+}
+
+fn default_proxy_protocol_versions() -> Vec<ProxyProtocolVersion> {
+    vec![ProxyProtocolVersion::V1, ProxyProtocolVersion::V2]
+}
+
+fn default_proxy_protocol_timeout_ms() -> u64 {
+    3_000
+}
+
+fn default_proxy_protocol_max_header_bytes() -> usize {
+    536
+}
+
 fn default_index_files() -> Vec<String> {
     vec!["index.html".to_owned()]
 }
@@ -198,6 +218,18 @@ fn default_connect_timeout_ms() -> u64 {
 
 fn default_max_idle_connections() -> usize {
     128
+}
+
+fn default_upstream_max_connections() -> usize {
+    256
+}
+
+fn default_upstream_max_response_header_bytes() -> usize {
+    64 * 1024
+}
+
+fn default_upstream_max_response_headers() -> usize {
+    100
 }
 
 fn default_weight() -> u16 {
@@ -220,12 +252,135 @@ fn default_idle_connection_timeout_ms() -> u64 {
     30_000
 }
 
+fn default_upstream_max_in_flight_requests() -> usize {
+    1_024
+}
+
+fn default_upstream_retry_max_attempts() -> u8 {
+    2
+}
+
+fn default_upstream_retry_timeout_ms() -> u64 {
+    30_000
+}
+
+fn default_upstream_retry_on() -> Vec<UpstreamRetryCondition> {
+    vec![
+        UpstreamRetryCondition::TransportFailure,
+        UpstreamRetryCondition::Timeout,
+    ]
+}
+
+fn default_max_concurrent_health_checks() -> usize {
+    64
+}
+
+fn default_passive_failure_threshold() -> u32 {
+    3
+}
+
+fn default_passive_ejection_time_ms() -> u64 {
+    30_000
+}
+
+fn default_passive_failure_statuses() -> Vec<u16> {
+    vec![502, 503, 504]
+}
+
+fn default_active_health_uri() -> String {
+    "/".to_owned()
+}
+
+fn default_active_health_interval_ms() -> u64 {
+    10_000
+}
+
+fn default_active_health_timeout_ms() -> u64 {
+    2_000
+}
+
+fn default_active_unhealthy_threshold() -> u32 {
+    3
+}
+
+fn default_active_healthy_threshold() -> u32 {
+    2
+}
+
+fn default_active_success_status_min() -> u16 {
+    200
+}
+
+fn default_active_success_status_max() -> u16 {
+    399
+}
+
+fn default_active_max_response_body_bytes() -> u64 {
+    65_536
+}
+
 fn default_access_log() -> bool {
     true
 }
 
 fn default_reload_poll_interval_ms() -> u64 {
     1_000
+}
+
+fn default_resource_sample_interval_ms() -> u64 {
+    250
+}
+
+fn default_maximum_process_memory_bytes() -> u64 {
+    1_073_741_824
+}
+
+fn default_memory_reserve_bytes() -> u64 {
+    67_108_864
+}
+
+fn default_memory_admission_percent() -> u8 {
+    90
+}
+
+fn default_memory_recovery_percent() -> u8 {
+    80
+}
+
+fn default_maximum_open_handles() -> u64 {
+    16_384
+}
+
+fn default_open_handle_reserve() -> u64 {
+    128
+}
+
+fn default_open_handle_admission_percent() -> u8 {
+    90
+}
+
+fn default_open_handle_recovery_percent() -> u8 {
+    80
+}
+
+fn default_event_loop_lag_admission_ms() -> u64 {
+    250
+}
+
+fn default_event_loop_lag_recovery_ms() -> u64 {
+    50
+}
+
+fn default_consecutive_pressure_samples() -> u32 {
+    2
+}
+
+fn default_consecutive_recovery_samples() -> u32 {
+    4
+}
+
+fn default_operations_reserve_requests() -> usize {
+    16
 }
 
 fn default_tls_minimum() -> TlsVersion {
@@ -312,6 +467,8 @@ pub struct WebServerLimits {
     pub max_connections: usize,
     #[serde(default = "default_max_concurrent_requests")]
     pub max_concurrent_requests: usize,
+    #[serde(default = "default_max_concurrent_health_checks")]
+    pub max_concurrent_health_checks: usize,
     #[serde(default = "default_max_request_header_bytes")]
     pub max_request_header_bytes: usize,
     #[serde(default = "default_max_request_line_bytes")]
@@ -392,6 +549,7 @@ impl Default for WebServerLimits {
             drain_timeout_ms: default_drain_timeout_ms(),
             max_connections: default_max_connections(),
             max_concurrent_requests: default_max_concurrent_requests(),
+            max_concurrent_health_checks: default_max_concurrent_health_checks(),
             max_request_header_bytes: default_max_request_header_bytes(),
             max_request_line_bytes: default_max_request_line_bytes(),
             max_request_method_bytes: default_max_request_method_bytes(),
@@ -439,6 +597,8 @@ pub struct ListenerConfig {
     pub tls_policy_ref: Option<String>,
     pub default_virtual_host_ref: Option<String>,
     pub max_connections: Option<usize>,
+    pub trusted_proxy: Option<TrustedProxyConfig>,
+    pub proxy_protocol: Option<ProxyProtocolConfig>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -446,6 +606,46 @@ pub struct ListenerConfig {
 pub enum ListenerProtocol {
     Http1,
     Http2,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TrustedProxyConfig {
+    pub trusted_cidrs: Vec<IpNet>,
+    #[serde(default)]
+    pub header: TrustedProxyHeader,
+    #[serde(default)]
+    pub recursive: bool,
+    #[serde(default = "default_trusted_proxy_max_hops")]
+    pub max_hops: usize,
+    #[serde(default = "default_trusted_proxy_max_header_bytes")]
+    pub max_header_bytes: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TrustedProxyHeader {
+    #[default]
+    XForwardedFor,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProxyProtocolConfig {
+    pub trusted_source_cidrs: Vec<IpNet>,
+    #[serde(default = "default_proxy_protocol_versions")]
+    pub versions: Vec<ProxyProtocolVersion>,
+    #[serde(default = "default_proxy_protocol_timeout_ms")]
+    pub timeout_ms: u64,
+    #[serde(default = "default_proxy_protocol_max_header_bytes")]
+    pub max_header_bytes: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProxyProtocolVersion {
+    V1,
+    V2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -570,6 +770,8 @@ impl ResourceConfig {
 pub struct UpstreamConfig {
     pub id: String,
     pub targets: Vec<UpstreamTargetConfig>,
+    #[serde(default)]
+    pub load_balancing: UpstreamLoadBalancingStrategy,
     pub resolver_ref: Option<String>,
     #[serde(default)]
     pub address_policy: UpstreamAddressPolicyConfig,
@@ -580,8 +782,55 @@ pub struct UpstreamConfig {
     pub request_timeout_ms: u64,
     #[serde(default = "default_max_idle_connections")]
     pub max_idle_connections: usize,
+    #[serde(default = "default_upstream_max_connections")]
+    pub max_connections: usize,
+    #[serde(default = "default_upstream_max_response_header_bytes")]
+    pub max_response_header_bytes: usize,
+    #[serde(default = "default_upstream_max_response_headers")]
+    pub max_response_headers: usize,
     #[serde(default = "default_idle_connection_timeout_ms")]
     pub idle_connection_timeout_ms: u64,
+    #[serde(default = "default_upstream_max_in_flight_requests")]
+    pub max_in_flight_requests: usize,
+    pub retry: Option<UpstreamRetryConfig>,
+    #[serde(default)]
+    pub passive_health: UpstreamPassiveHealthConfig,
+    pub active_health: Option<UpstreamActiveHealthConfig>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UpstreamLoadBalancingStrategy {
+    #[default]
+    RoundRobin,
+    LeastConnections,
+    RandomTwoLeastConnections,
+    IpHash,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpstreamRetryConfig {
+    #[serde(default = "default_upstream_retry_max_attempts")]
+    pub max_attempts: u8,
+    #[serde(default = "default_upstream_retry_timeout_ms")]
+    pub timeout_ms: u64,
+    #[serde(default = "default_upstream_retry_on")]
+    pub retry_on: Vec<UpstreamRetryCondition>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UpstreamRetryCondition {
+    #[serde(rename = "error")]
+    TransportFailure,
+    Timeout,
+    #[serde(rename = "http_502")]
+    Http502,
+    #[serde(rename = "http_503")]
+    Http503,
+    #[serde(rename = "http_504")]
+    Http504,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -606,6 +855,58 @@ pub struct UpstreamTlsConfig {
     pub maximum_version: TlsVersion,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpstreamPassiveHealthConfig {
+    #[serde(default = "default_passive_failure_threshold")]
+    pub failure_threshold: u32,
+    #[serde(default = "default_passive_ejection_time_ms")]
+    pub ejection_time_ms: u64,
+    #[serde(default = "default_passive_failure_statuses")]
+    pub failure_statuses: Vec<u16>,
+}
+
+impl Default for UpstreamPassiveHealthConfig {
+    fn default() -> Self {
+        Self {
+            failure_threshold: default_passive_failure_threshold(),
+            ejection_time_ms: default_passive_ejection_time_ms(),
+            failure_statuses: default_passive_failure_statuses(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpstreamActiveHealthConfig {
+    #[serde(default)]
+    pub method: UpstreamActiveHealthMethod,
+    #[serde(default = "default_active_health_uri")]
+    pub uri: String,
+    #[serde(default = "default_active_health_interval_ms")]
+    pub interval_ms: u64,
+    #[serde(default = "default_active_health_timeout_ms")]
+    pub timeout_ms: u64,
+    #[serde(default = "default_active_unhealthy_threshold")]
+    pub unhealthy_threshold: u32,
+    #[serde(default = "default_active_healthy_threshold")]
+    pub healthy_threshold: u32,
+    #[serde(default = "default_active_success_status_min")]
+    pub success_status_min: u16,
+    #[serde(default = "default_active_success_status_max")]
+    pub success_status_max: u16,
+    #[serde(default = "default_active_max_response_body_bytes")]
+    pub max_response_body_bytes: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum UpstreamActiveHealthMethod {
+    #[default]
+    Get,
+    Head,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum UpstreamTlsTrustMode {
@@ -621,6 +922,10 @@ pub struct UpstreamTargetConfig {
     pub url: String,
     #[serde(default = "default_weight")]
     pub weight: u16,
+    #[serde(default)]
+    pub backup: bool,
+    pub slow_start_ms: Option<u64>,
+    pub max_connections: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -677,6 +982,50 @@ pub struct DeploymentConfig {
     pub drain_timeout_ms: Option<u64>,
     #[serde(default)]
     pub reload: ReloadConfig,
+    pub resource_pressure: Option<ResourcePressureConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ResourcePressureConfig {
+    #[serde(default = "default_resource_sample_interval_ms")]
+    pub sample_interval_ms: u64,
+    #[serde(default = "default_maximum_process_memory_bytes")]
+    pub maximum_process_memory_bytes: u64,
+    #[serde(default = "default_memory_reserve_bytes")]
+    pub memory_reserve_bytes: u64,
+    #[serde(default = "default_memory_admission_percent")]
+    pub memory_admission_percent: u8,
+    #[serde(default = "default_memory_recovery_percent")]
+    pub memory_recovery_percent: u8,
+    #[serde(default = "default_maximum_open_handles")]
+    pub maximum_open_handles: u64,
+    #[serde(default = "default_open_handle_reserve")]
+    pub open_handle_reserve: u64,
+    #[serde(default = "default_open_handle_admission_percent")]
+    pub open_handle_admission_percent: u8,
+    #[serde(default = "default_open_handle_recovery_percent")]
+    pub open_handle_recovery_percent: u8,
+    #[serde(default = "default_event_loop_lag_admission_ms")]
+    pub event_loop_lag_admission_ms: u64,
+    #[serde(default = "default_event_loop_lag_recovery_ms")]
+    pub event_loop_lag_recovery_ms: u64,
+    #[serde(default = "default_consecutive_pressure_samples")]
+    pub consecutive_pressure_samples: u32,
+    #[serde(default = "default_consecutive_recovery_samples")]
+    pub consecutive_recovery_samples: u32,
+    #[serde(default = "default_operations_reserve_requests")]
+    pub operations_reserve_requests: usize,
+    #[serde(default)]
+    pub sample_failure_policy: ResourceSampleFailurePolicy,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ResourceSampleFailurePolicy {
+    FailOpen,
+    #[default]
+    FailClosed,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

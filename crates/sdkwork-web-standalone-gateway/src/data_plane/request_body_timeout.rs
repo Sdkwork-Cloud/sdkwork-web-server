@@ -2,6 +2,7 @@ use std::{
     future::Future,
     io,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
@@ -11,7 +12,10 @@ use http_body::{Body, Frame, SizeHint};
 use sync_wrapper::SyncWrapper;
 use tokio::time::{Instant, Sleep};
 
-use super::proxy_body::RequestBodyFailure;
+use super::{
+    metrics::{DataPlaneMetrics, ProtocolErrorKind},
+    proxy_body::RequestBodyFailure,
+};
 
 pub(super) struct RequestBodyTimeout<B> {
     inner: SyncWrapper<Pin<Box<B>>>,
@@ -20,17 +24,39 @@ pub(super) struct RequestBodyTimeout<B> {
     idle_timeout: Duration,
     deadline: Option<Pin<Box<Sleep>>>,
     failure: RequestBodyFailure,
+    metrics: Option<Arc<DataPlaneMetrics>>,
 }
 
 impl<B> RequestBodyTimeout<B>
 where
     B: Body,
 {
+    #[cfg(test)]
     pub(super) fn new(
         inner: B,
         start_timeout: Duration,
         idle_timeout: Duration,
         failure: RequestBodyFailure,
+    ) -> Self {
+        Self::build(inner, start_timeout, idle_timeout, failure, None)
+    }
+
+    pub(super) fn new_observed(
+        inner: B,
+        start_timeout: Duration,
+        idle_timeout: Duration,
+        failure: RequestBodyFailure,
+        metrics: Arc<DataPlaneMetrics>,
+    ) -> Self {
+        Self::build(inner, start_timeout, idle_timeout, failure, Some(metrics))
+    }
+
+    fn build(
+        inner: B,
+        start_timeout: Duration,
+        idle_timeout: Duration,
+        failure: RequestBodyFailure,
+        metrics: Option<Arc<DataPlaneMetrics>>,
     ) -> Self {
         let remaining_hint = inner.size_hint();
         let ended = inner.is_end_stream();
@@ -42,6 +68,7 @@ where
             idle_timeout,
             deadline,
             failure,
+            metrics,
         }
     }
 
@@ -50,6 +77,9 @@ where
         self.remaining_hint = SizeHint::with_exact(0);
         self.deadline = None;
         self.failure.record_timeout();
+        if let Some(metrics) = &self.metrics {
+            metrics.record_protocol_error(ProtocolErrorKind::RequestBodyTimeout);
+        }
         Poll::Ready(Some(Err(io::Error::new(
             io::ErrorKind::TimedOut,
             "request Body progress timeout exceeded",
@@ -102,9 +132,17 @@ where
                 self.ended = true;
                 self.remaining_hint = remaining_hint;
                 self.deadline = None;
+                if let Some(metrics) = &self.metrics {
+                    metrics.record_protocol_error(ProtocolErrorKind::RequestBodyIo);
+                }
                 Poll::Ready(Some(Err(io::Error::other(error.into()))))
             }
             (Poll::Ready(Some(Ok(frame))), ended, remaining_hint) => {
+                if let Some(data) = frame.data_ref() {
+                    if let Some(metrics) = &self.metrics {
+                        metrics.record_request_body_bytes(data.len());
+                    }
+                }
                 let made_progress = frame.data_ref().is_some_and(|data| !data.is_empty())
                     || frame.trailers_ref().is_some();
                 let deadline_elapsed = self
@@ -143,14 +181,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{io, time::Duration};
 
     use bytes::Bytes;
     use http_body::Frame;
     use http_body_util::{channel::Channel, BodyExt, Empty};
 
     use super::RequestBodyTimeout;
-    use crate::data_plane::proxy_body::RequestBodyFailure;
+    use crate::{
+        data_plane::{
+            metrics::{DataPlaneMetrics, ProtocolErrorKind},
+            proxy_body::RequestBodyFailure,
+        },
+        metric_dimensions::CanonicalMetricDimensions,
+    };
 
     #[tokio::test]
     async fn times_out_before_first_meaningful_frame() {
@@ -265,5 +309,67 @@ mod tests {
         );
         assert!(body.ended);
         assert!(body.deadline.is_none());
+    }
+
+    #[tokio::test]
+    async fn observed_body_counts_frames_and_fixed_terminal_error_kinds() {
+        let metrics = DataPlaneMetrics::new(CanonicalMetricDimensions::default());
+        let (mut sender, channel) = Channel::<Bytes, io::Error>::new(2);
+        sender
+            .try_send(Frame::data(Bytes::from_static(b"ab")))
+            .expect("queue first request frame");
+        sender
+            .try_send(Frame::data(Bytes::from_static(b"c")))
+            .expect("queue second request frame");
+        drop(sender);
+        let mut body = RequestBodyTimeout::new_observed(
+            channel,
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            RequestBodyFailure::default(),
+            metrics.clone(),
+        );
+        while let Some(frame) = body.frame().await {
+            frame.expect("valid request frame");
+        }
+        assert_eq!(metrics.request_body_bytes(), 3);
+
+        let (sender, channel) = Channel::<Bytes, io::Error>::new(1);
+        sender.abort(io::Error::new(
+            io::ErrorKind::ConnectionReset,
+            "test request reset",
+        ));
+        let mut body = RequestBodyTimeout::new_observed(
+            channel,
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            RequestBodyFailure::default(),
+            metrics.clone(),
+        );
+        body.frame()
+            .await
+            .expect("request error frame")
+            .expect_err("request body must fail");
+        assert_eq!(
+            metrics.protocol_error_count(ProtocolErrorKind::RequestBodyIo),
+            1
+        );
+
+        let (_sender, channel) = Channel::<Bytes, io::Error>::new(1);
+        let mut body = RequestBodyTimeout::new_observed(
+            channel,
+            Duration::from_millis(10),
+            Duration::from_secs(1),
+            RequestBodyFailure::default(),
+            metrics.clone(),
+        );
+        body.frame()
+            .await
+            .expect("request timeout frame")
+            .expect_err("request body must time out");
+        assert_eq!(
+            metrics.protocol_error_count(ProtocolErrorKind::RequestBodyTimeout),
+            1
+        );
     }
 }

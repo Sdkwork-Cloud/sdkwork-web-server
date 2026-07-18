@@ -65,7 +65,7 @@
     },
     {
       "method": "GET",
-      "path": "/backend/v3/api/nginx/configs/{configId}",
+      "path": "/backend/v3/api/nginx/etc/{configId}",
       "operationId": "nginx.configs.retrieve",
       "tags": [
         "nginx"
@@ -89,7 +89,7 @@
     },
     {
       "method": "PUT",
-      "path": "/backend/v3/api/nginx/configs/{configId}",
+      "path": "/backend/v3/api/nginx/etc/{configId}",
       "operationId": "nginx.configs.update",
       "tags": [
         "nginx"
@@ -113,7 +113,7 @@
     },
     {
       "method": "POST",
-      "path": "/backend/v3/api/nginx/configs/{configId}/validate",
+      "path": "/backend/v3/api/nginx/etc/{configId}/validate",
       "operationId": "nginx.configs.validate",
       "tags": [
         "nginx"
@@ -137,7 +137,7 @@
     },
     {
       "method": "POST",
-      "path": "/backend/v3/api/nginx/configs/{configId}/deploy",
+      "path": "/backend/v3/api/nginx/etc/{configId}/deploy",
       "operationId": "nginx.configs.deploy",
       "tags": [
         "nginx"

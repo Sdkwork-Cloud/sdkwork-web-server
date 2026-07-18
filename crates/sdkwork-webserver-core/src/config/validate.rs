@@ -9,7 +9,8 @@ use url::Url;
 use super::{
     is_supported_upstream_allowed_cidr, upstream_ip_is_allowed, CertificateSource,
     ConfigDiagnostic, ListenerProtocol, ResourceConfig, RouteConfig, TlsVersion,
-    UpstreamTlsTrustMode, WebServerAppConfig, WebServerConfigError, WebServerLimits,
+    UpstreamLoadBalancingStrategy, UpstreamTlsTrustMode, WebServerAppConfig, WebServerConfigError,
+    WebServerLimits,
 };
 
 const MAX_DIAGNOSTICS: usize = 128;
@@ -52,6 +53,7 @@ impl SemanticValidator {
         }
 
         self.validate_limits(config);
+        self.validate_resource_pressure(config);
         self.register_ids(config);
 
         let listeners = config
@@ -141,6 +143,103 @@ impl SemanticValidator {
                     format!("{path}/maxConnections"),
                     "listener maxConnections cannot exceed the application maximum",
                 );
+            }
+            if let Some(policy) = &listener.trusted_proxy {
+                if policy.trusted_cidrs.is_empty() {
+                    self.push(
+                        format!("{path}/trustedProxy/trustedCidrs"),
+                        "trustedCidrs must contain at least one trusted proxy network",
+                    );
+                }
+                if policy.trusted_cidrs.len() > 64 {
+                    self.push(
+                        format!("{path}/trustedProxy/trustedCidrs"),
+                        "trustedCidrs cannot contain more than 64 networks",
+                    );
+                }
+                let mut trusted_cidrs = HashSet::new();
+                for (cidr_index, cidr) in policy.trusted_cidrs.iter().enumerate() {
+                    if !trusted_cidrs.insert(cidr) {
+                        self.push(
+                            format!("{path}/trustedProxy/trustedCidrs/{cidr_index}"),
+                            "trusted proxy CIDR is duplicated",
+                        );
+                    }
+                }
+                if !(1..=64).contains(&policy.max_hops) {
+                    self.push(
+                        format!("{path}/trustedProxy/maxHops"),
+                        "maxHops must be between 1 and 64",
+                    );
+                }
+                if !(64..=65_536).contains(&policy.max_header_bytes) {
+                    self.push(
+                        format!("{path}/trustedProxy/maxHeaderBytes"),
+                        "maxHeaderBytes must be between 64 bytes and 64 KiB",
+                    );
+                }
+                if policy.max_header_bytes > config.limits.max_header_value_bytes {
+                    self.push(
+                        format!("{path}/trustedProxy/maxHeaderBytes"),
+                        "maxHeaderBytes cannot exceed limits.maxHeaderValueBytes",
+                    );
+                }
+            }
+            if let Some(policy) = &listener.proxy_protocol {
+                if listener.trusted_proxy.is_some() {
+                    self.push(
+                        format!("{path}/proxyProtocol"),
+                        "proxyProtocol and trustedProxy are mutually exclusive identity authorities",
+                    );
+                }
+                if policy.trusted_source_cidrs.is_empty() {
+                    self.push(
+                        format!("{path}/proxyProtocol/trustedSourceCidrs"),
+                        "trustedSourceCidrs must contain at least one proxy network",
+                    );
+                }
+                if policy.trusted_source_cidrs.len() > 64 {
+                    self.push(
+                        format!("{path}/proxyProtocol/trustedSourceCidrs"),
+                        "trustedSourceCidrs cannot contain more than 64 networks",
+                    );
+                }
+                let mut trusted_sources = HashSet::new();
+                for (cidr_index, cidr) in policy.trusted_source_cidrs.iter().enumerate() {
+                    if !trusted_sources.insert(cidr) {
+                        self.push(
+                            format!("{path}/proxyProtocol/trustedSourceCidrs/{cidr_index}"),
+                            "PROXY protocol trusted source CIDR is duplicated",
+                        );
+                    }
+                }
+                if policy.versions.is_empty() || policy.versions.len() > 2 {
+                    self.push(
+                        format!("{path}/proxyProtocol/versions"),
+                        "versions must contain one or both supported versions",
+                    );
+                }
+                let mut versions = HashSet::new();
+                for (version_index, version) in policy.versions.iter().enumerate() {
+                    if !versions.insert(version) {
+                        self.push(
+                            format!("{path}/proxyProtocol/versions/{version_index}"),
+                            "PROXY protocol version is duplicated",
+                        );
+                    }
+                }
+                if !(100..=10_000).contains(&policy.timeout_ms) {
+                    self.push(
+                        format!("{path}/proxyProtocol/timeoutMs"),
+                        "timeoutMs must be between 100 and 10,000 milliseconds",
+                    );
+                }
+                if !(107..=4_096).contains(&policy.max_header_bytes) {
+                    self.push(
+                        format!("{path}/proxyProtocol/maxHeaderBytes"),
+                        "maxHeaderBytes must be between 107 and 4,096 bytes",
+                    );
+                }
             }
             if let Some(default_ref) = &listener.default_virtual_host_ref {
                 match virtual_hosts.get(default_ref.as_str()) {
@@ -341,6 +440,46 @@ impl SemanticValidator {
         let mut total_targets = 0usize;
         for (index, upstream) in config.upstreams.iter().enumerate() {
             let path = format!("/upstreams/{index}");
+            if !upstream.targets.iter().any(|target| !target.backup) {
+                self.push(
+                    format!("{path}/targets"),
+                    "upstream must contain at least one non-backup primary target",
+                );
+            }
+            if upstream.load_balancing == UpstreamLoadBalancingStrategy::IpHash
+                && upstream
+                    .targets
+                    .iter()
+                    .any(|target| target.slow_start_ms.is_some())
+            {
+                self.push(
+                    format!("{path}/loadBalancing"),
+                    "ip-hash cannot be combined with target slowStartMs",
+                );
+            }
+            if upstream.max_idle_connections > upstream.max_connections {
+                self.push(
+                    format!("{path}/maxIdleConnections"),
+                    "maxIdleConnections must not exceed maxConnections",
+                );
+            }
+            if let Some(retry) = &upstream.retry {
+                if usize::from(retry.max_attempts) > upstream.targets.len() {
+                    self.push(
+                        format!("{path}/retry/maxAttempts"),
+                        "retry maxAttempts must not exceed the number of upstream targets",
+                    );
+                }
+                let maximum_useful_timeout = upstream
+                    .request_timeout_ms
+                    .saturating_mul(u64::from(retry.max_attempts));
+                if retry.timeout_ms > maximum_useful_timeout {
+                    self.push(
+                        format!("{path}/retry/timeoutMs"),
+                        "retry timeoutMs must not exceed requestTimeoutMs multiplied by maxAttempts",
+                    );
+                }
+            }
             if let Some(resolver_ref) = &upstream.resolver_ref {
                 if !resolvers.contains_key(resolver_ref.as_str()) {
                     self.push(
@@ -359,9 +498,23 @@ impl SemanticValidator {
             }
             total_targets = total_targets.saturating_add(upstream.targets.len());
             let mut target_urls = HashSet::new();
+            let mut target_authorities = HashSet::new();
+            let has_target_connection_limits = upstream
+                .targets
+                .iter()
+                .any(|target| target.max_connections.is_some());
             let mut has_plaintext_target = false;
             for (target_index, target) in upstream.targets.iter().enumerate() {
                 let target_path = format!("{path}/targets/{target_index}/url");
+                if target
+                    .max_connections
+                    .is_some_and(|maximum| maximum > upstream.max_connections)
+                {
+                    self.push(
+                        format!("{path}/targets/{target_index}/maxConnections"),
+                        "target maxConnections cannot exceed upstream maxConnections",
+                    );
+                }
                 match Url::parse(&target.url) {
                     Ok(url)
                         if matches!(url.scheme(), "http" | "https")
@@ -375,6 +528,22 @@ impl SemanticValidator {
                         let normalized = url.as_str().trim_end_matches('/').to_ascii_lowercase();
                         if !target_urls.insert(normalized) {
                             self.push(&target_path, "duplicate upstream target URL");
+                        }
+                        if has_target_connection_limits {
+                            let authority = (
+                                url.scheme().to_owned(),
+                                url.host_str()
+                                    .expect("validated upstream URL has a host")
+                                    .to_ascii_lowercase(),
+                                url.port_or_known_default()
+                                    .expect("http/https upstream URL has an effective port"),
+                            );
+                            if !target_authorities.insert(authority) {
+                                self.push(
+                                    &target_path,
+                                    "target authority must be unique when per-target maxConnections is configured",
+                                );
+                            }
                         }
                         if let Some(ip) = url.host_str().and_then(|host| host.parse::<IpAddr>().ok())
                         {
@@ -393,12 +562,6 @@ impl SemanticValidator {
                         &target_path,
                         "upstream URL must be an http/https origin without credentials, query, or fragment",
                     ),
-                }
-                if target.weight != 1 {
-                    self.push(
-                        format!("{path}/targets/{target_index}/weight"),
-                        "weighted upstream selection is not implemented by REQ-2026-0003; weight must be 1",
-                    );
                 }
             }
             if let Some(tls) = &upstream.tls {
@@ -461,6 +624,26 @@ impl SemanticValidator {
                     self.push(
                         format!("{path}/tls/maximumVersion"),
                         "maximum TLS version must not be lower than minimumVersion",
+                    );
+                }
+            }
+            if let Some(active_health) = &upstream.active_health {
+                if !valid_active_health_uri(&active_health.uri) {
+                    self.push(
+                        format!("{path}/activeHealth/uri"),
+                        "active health URI must be an origin-form path, may include a query, and must not contain an authority, fragment, backslash, or control character",
+                    );
+                }
+                if active_health.timeout_ms > active_health.interval_ms {
+                    self.push(
+                        format!("{path}/activeHealth/timeoutMs"),
+                        "active health timeout must not exceed intervalMs",
+                    );
+                }
+                if active_health.success_status_min > active_health.success_status_max {
+                    self.push(
+                        format!("{path}/activeHealth/successStatusMax"),
+                        "active health maximum success status must not be lower than successStatusMin",
                     );
                 }
             }
@@ -984,6 +1167,77 @@ impl SemanticValidator {
         }
     }
 
+    fn validate_resource_pressure(&mut self, config: &WebServerAppConfig) {
+        let Some(policy) = &config.deployment.resource_pressure else {
+            return;
+        };
+        let path = "/deployment/resourcePressure";
+        if policy.memory_reserve_bytes >= policy.maximum_process_memory_bytes {
+            self.push(
+                format!("{path}/memoryReserveBytes"),
+                "memory reserve must be lower than maximumProcessMemoryBytes",
+            );
+        }
+        if policy.memory_recovery_percent >= policy.memory_admission_percent {
+            self.push(
+                format!("{path}/memoryRecoveryPercent"),
+                "memory recovery percent must be lower than memoryAdmissionPercent",
+            );
+        }
+        if effective_pressure_threshold(
+            policy.maximum_process_memory_bytes,
+            policy.memory_reserve_bytes,
+            policy.memory_recovery_percent,
+        ) >= effective_pressure_threshold(
+            policy.maximum_process_memory_bytes,
+            policy.memory_reserve_bytes,
+            policy.memory_admission_percent,
+        ) {
+            self.push(
+                format!("{path}/memoryReserveBytes"),
+                "effective memory recovery threshold must be lower than the admission threshold",
+            );
+        }
+        if policy.open_handle_reserve >= policy.maximum_open_handles {
+            self.push(
+                format!("{path}/openHandleReserve"),
+                "open handle reserve must be lower than maximumOpenHandles",
+            );
+        }
+        if policy.open_handle_recovery_percent >= policy.open_handle_admission_percent {
+            self.push(
+                format!("{path}/openHandleRecoveryPercent"),
+                "open handle recovery percent must be lower than openHandleAdmissionPercent",
+            );
+        }
+        if effective_pressure_threshold(
+            policy.maximum_open_handles,
+            policy.open_handle_reserve,
+            policy.open_handle_recovery_percent,
+        ) >= effective_pressure_threshold(
+            policy.maximum_open_handles,
+            policy.open_handle_reserve,
+            policy.open_handle_admission_percent,
+        ) {
+            self.push(
+                format!("{path}/openHandleReserve"),
+                "effective open-handle recovery threshold must be lower than the admission threshold",
+            );
+        }
+        if policy.event_loop_lag_recovery_ms >= policy.event_loop_lag_admission_ms {
+            self.push(
+                format!("{path}/eventLoopLagRecoveryMs"),
+                "event-loop lag recovery must be lower than eventLoopLagAdmissionMs",
+            );
+        }
+        if policy.operations_reserve_requests >= config.limits.max_concurrent_requests {
+            self.push(
+                format!("{path}/operationsReserveRequests"),
+                "operations request reserve must be lower than maxConcurrentRequests",
+            );
+        }
+    }
+
     fn register_ids(&mut self, config: &WebServerAppConfig) {
         for (index, listener) in config.listeners.iter().enumerate() {
             self.register_id(&listener.id, format!("/listeners/{index}/id"));
@@ -1038,6 +1292,32 @@ impl SemanticValidator {
             })
         }
     }
+}
+
+fn effective_pressure_threshold(limit: u64, reserve: u64, percent: u8) -> u64 {
+    let percentage = ((limit as u128 * percent as u128) / 100).min(u64::MAX as u128) as u64;
+    percentage.min(limit.saturating_sub(reserve))
+}
+
+fn valid_active_health_uri(uri: &str) -> bool {
+    if !uri.starts_with('/')
+        || uri.starts_with("//")
+        || uri.contains('\\')
+        || uri.contains('#')
+        || uri.chars().any(char::is_control)
+    {
+        return false;
+    }
+    let Ok(base) = Url::parse("http://sdkwork-health.invalid/") else {
+        return false;
+    };
+    base.join(uri).is_ok_and(|parsed| {
+        parsed.scheme() == "http"
+            && parsed.host_str() == Some("sdkwork-health.invalid")
+            && parsed.username().is_empty()
+            && parsed.password().is_none()
+            && parsed.fragment().is_none()
+    })
 }
 
 fn validate_routes(

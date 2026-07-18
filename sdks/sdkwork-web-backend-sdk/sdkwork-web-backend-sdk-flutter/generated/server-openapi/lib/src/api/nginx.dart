@@ -39,7 +39,7 @@ class NginxApi {
 
   /// 获取 Nginx 配置详情
   Future<NginxConfigResponse?> configsRetrieve(String configId) async {
-    final response = await _client.get(ApiPaths.backendPath('/nginx/configs/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}'));
+    final response = await _client.get(ApiPaths.backendPath('/nginx/etc/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}'));
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : NginxConfigResponse.fromJson(map);
@@ -49,7 +49,7 @@ class NginxApi {
   /// 更新 Nginx 配置
   Future<NginxConfigResponse?> configsUpdate(String configId, UpdateNginxConfigRequest body) async {
     final payload = body.toJson();
-    final response = await _client.put(ApiPaths.backendPath('/nginx/configs/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}'), body: payload, contentType: 'application/json');
+    final response = await _client.put(ApiPaths.backendPath('/nginx/etc/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : NginxConfigResponse.fromJson(map);
@@ -58,7 +58,7 @@ class NginxApi {
 
   /// 校验 Nginx 配置
   Future<NginxValidateResponse?> configsValidate(String configId) async {
-    final response = await _client.post(ApiPaths.backendPath('/nginx/configs/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}/validate'));
+    final response = await _client.post(ApiPaths.backendPath('/nginx/etc/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}/validate'));
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : NginxValidateResponse.fromJson(map);
@@ -67,7 +67,7 @@ class NginxApi {
 
   /// 部署 Nginx 配置
   Future<NginxDeployResponse?> configsDeploy(String configId) async {
-    final response = await _client.post(ApiPaths.backendPath('/nginx/configs/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}/deploy'));
+    final response = await _client.post(ApiPaths.backendPath('/nginx/etc/${serializePathParameter(configId, const PathParameterSpec('configId', 'simple', false))}/deploy'));
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : NginxDeployResponse.fromJson(map);

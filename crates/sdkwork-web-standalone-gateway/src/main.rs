@@ -1,7 +1,8 @@
 use std::{error::Error, io, path::PathBuf};
 
 use sdkwork_web_standalone_gateway::{
-    build_router, run_data_plane_from_config_until, run_database_migrate_only,
+    build_router, run_data_plane_from_config_with_operations_until, run_database_migrate_only,
+    DataPlaneOperationsConfig,
 };
 use sdkwork_webserver_core::load_and_compile_webserver_config_revision;
 use tokio::signal;
@@ -32,8 +33,18 @@ async fn run() -> MainResult<()> {
             .map_err(|error| io::Error::other(format!("database migration failed: {error}")))?,
         Some("validate") => validate_config(config_path(arguments.next())?)?,
         Some("data-plane") => {
-            run_data_plane_from_config_until(config_path(arguments.next())?, shutdown_signal())
-                .await?;
+            let operations = DataPlaneOperationsConfig::from_env().map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("data-plane operations config is invalid: {error}"),
+                )
+            })?;
+            run_data_plane_from_config_with_operations_until(
+                config_path(arguments.next())?,
+                operations,
+                shutdown_signal(),
+            )
+            .await?;
         }
         Some("help" | "--help" | "-h") => print_help(),
         Some(command) => {
@@ -106,7 +117,8 @@ fn print_help() {
            serve-management       Start the existing management API (default).\n\
            db-migrate             Run database migration and exit.\n\
            validate <config>      Validate and compile Web Server app config.\n\
-           data-plane <config>    Start HTTP/HTTPS application listeners without a database.\n"
+           data-plane <config>    Start HTTP/HTTPS application listeners without a database.\n\
+                                  Set SDKWORK_WEB_DATA_PLANE_OPERATIONS_BIND to an explicit loopback socket for host health and metrics.\n"
     );
 }
 

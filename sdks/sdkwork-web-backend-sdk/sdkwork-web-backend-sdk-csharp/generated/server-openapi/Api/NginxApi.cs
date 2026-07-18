@@ -44,7 +44,7 @@ namespace SDKWork.Web.BackendSdk.Api
         /// </summary>
         public async Task<SDKWork.Web.BackendSdk.Models.NginxConfigResponse?> ConfigsRetrieveAsync(string configId)
         {
-            return await _client.GetAsync<SDKWork.Web.BackendSdk.Models.NginxConfigResponse>(ApiPaths.BackendPath($"/nginx/configs/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}"));
+            return await _client.GetAsync<SDKWork.Web.BackendSdk.Models.NginxConfigResponse>(ApiPaths.BackendPath($"/nginx/etc/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}"));
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace SDKWork.Web.BackendSdk.Api
         /// </summary>
         public async Task<SDKWork.Web.BackendSdk.Models.NginxConfigResponse?> ConfigsUpdateAsync(string configId, SDKWork.Web.BackendSdk.Models.UpdateNginxConfigRequest body)
         {
-            return await _client.PutAsync<SDKWork.Web.BackendSdk.Models.NginxConfigResponse>(ApiPaths.BackendPath($"/nginx/configs/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}"), body, null, null, "application/json");
+            return await _client.PutAsync<SDKWork.Web.BackendSdk.Models.NginxConfigResponse>(ApiPaths.BackendPath($"/nginx/etc/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}"), body, null, null, "application/json");
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace SDKWork.Web.BackendSdk.Api
         /// </summary>
         public async Task<SDKWork.Web.BackendSdk.Models.NginxValidateResponse?> ConfigsValidateAsync(string configId)
         {
-            return await _client.PostAsync<SDKWork.Web.BackendSdk.Models.NginxValidateResponse>(ApiPaths.BackendPath($"/nginx/configs/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}/validate"), null);
+            return await _client.PostAsync<SDKWork.Web.BackendSdk.Models.NginxValidateResponse>(ApiPaths.BackendPath($"/nginx/etc/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}/validate"), null);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace SDKWork.Web.BackendSdk.Api
         /// </summary>
         public async Task<SDKWork.Web.BackendSdk.Models.NginxDeployResponse?> ConfigsDeployAsync(string configId)
         {
-            return await _client.PostAsync<SDKWork.Web.BackendSdk.Models.NginxDeployResponse>(ApiPaths.BackendPath($"/nginx/configs/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}/deploy"), null);
+            return await _client.PostAsync<SDKWork.Web.BackendSdk.Models.NginxDeployResponse>(ApiPaths.BackendPath($"/nginx/etc/{SerializePathParameter(configId, new PathParameterSpec("configId", "simple", false))}/deploy"), null);
         }
 
         /// <summary>

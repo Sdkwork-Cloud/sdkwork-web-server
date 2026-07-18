@@ -60,15 +60,15 @@ function validateApplication(configDirectory, value, label) {
 }
 
 function validateCertificate(configDirectory, value) {
-  const certificate = assertObject(value, 'https.certificate');
+  const certificate = assertObject(value, 'listener.certificate');
   if (certificate.mode === 'auto') {
-    assertExactKeys(certificate, ['mode', 'directory'], 'https.certificate');
+    assertExactKeys(certificate, ['mode', 'directory'], 'listener.certificate');
     return {
       mode: 'auto',
       directory: resolveConfigRelativePath(
         configDirectory,
         certificate.directory,
-        'https.certificate.directory',
+        'listener.certificate.directory',
       ),
     };
   }
@@ -76,35 +76,34 @@ function validateCertificate(configDirectory, value) {
     assertExactKeys(
       certificate,
       ['mode', 'certificateFile', 'privateKeyFile'],
-      'https.certificate',
+      'listener.certificate',
     );
     return {
       mode: 'files',
       certificateFile: resolveConfigRelativePath(
         configDirectory,
         certificate.certificateFile,
-        'https.certificate.certificateFile',
+        'listener.certificate.certificateFile',
       ),
       privateKeyFile: resolveConfigRelativePath(
         configDirectory,
         certificate.privateKeyFile,
-        'https.certificate.privateKeyFile',
+        'listener.certificate.privateKeyFile',
       ),
     };
   }
-  throw new Error('https.certificate.mode must be auto or files');
+  throw new Error('listener.certificate.mode must be auto or files');
 }
 
 function validatePathPrefix(value) {
   if (
     typeof value !== 'string'
     || !value.startsWith('/')
-    || !value.endsWith('/')
     || value.includes('?')
     || value.includes('#')
     || /[\u0000-\u001f\\]/u.test(value)
   ) {
-    throw new Error('route.pathPrefix must start and end with / and contain no query or fragment');
+    throw new Error('route.pathPrefix must start with / and contain no query or fragment');
   }
   return value;
 }
@@ -119,6 +118,30 @@ function validateMobileTokens(value) {
     }
     return token;
   });
+}
+
+function validatePathPrefixes(value, label) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 64) {
+    throw new Error(`${label} must contain between 1 and 64 path prefixes`);
+  }
+  const prefixes = value.map((entry, index) => validatePathPrefixEntry(entry, `${label}[${index}]`));
+  if (new Set(prefixes).size !== prefixes.length) {
+    throw new Error(`${label} must not contain duplicate path prefixes`);
+  }
+  return prefixes;
+}
+
+function validatePathPrefixEntry(value, label) {
+  if (
+    typeof value !== 'string'
+    || !value.startsWith('/')
+    || value.includes('?')
+    || value.includes('#')
+    || /[\u0000-\u001f\\]/u.test(value)
+  ) {
+    throw new Error(`${label} must start with / and contain no query or fragment`);
+  }
+  return value;
 }
 
 export function resolveImDevConfigPath(value, cwd = process.cwd()) {
@@ -136,34 +159,165 @@ export function loadImDevConfig(configPath = DEFAULT_IM_DEV_CONFIG_PATH) {
   const config = assertObject(source, 'IM dev config');
   assertExactKeys(
     config,
-    ['$schema', 'schemaVersion', 'kind', 'route', 'https', 'applications'],
+    [
+      '$schema',
+      'schemaVersion',
+      'kind',
+      'application',
+      'listener',
+      'route',
+      'deployment',
+      'applications',
+    ],
     'IM dev config',
   );
-  if (config.schemaVersion !== 1) {
-    throw new Error('IM dev config schemaVersion must be 1');
+  if (config.schemaVersion !== 2) {
+    throw new Error('IM dev config schemaVersion must be 2');
   }
   if (config.kind !== 'sdkwork.webserver.im-dev') {
     throw new Error('IM dev config kind must be sdkwork.webserver.im-dev');
   }
 
   const configDirectory = path.dirname(resolvedConfigPath);
+  const application = assertObject(config.application, 'application');
+  assertExactKeys(
+    application,
+    ['manifestPath', 'deploymentConfigPath', 'environment'],
+    'application',
+  );
+  const manifestPath = resolveConfigRelativePath(
+    configDirectory,
+    application.manifestPath,
+    'application.manifestPath',
+  );
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`cannot read application manifest ${manifestPath}: ${error.message}`);
+  }
+  if (manifest.schemaVersion !== 3 || manifest.kind !== 'sdkwork.app') {
+    throw new Error('application manifest must be an SDKWork app manifest v3');
+  }
+  if (!['development', 'test', 'staging', 'production'].includes(application.environment)) {
+    throw new Error('application.environment is invalid');
+  }
+  const deploymentConfigPath = resolveConfigRelativePath(
+    configDirectory,
+    application.deploymentConfigPath,
+    'application.deploymentConfigPath',
+  );
+  let deploymentConfig;
+  try {
+    deploymentConfig = JSON.parse(readFileSync(deploymentConfigPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`cannot read application deployment config ${deploymentConfigPath}: ${error.message}`);
+  }
+  if (
+    deploymentConfig.schemaVersion !== 1
+    || deploymentConfig.kind !== 'sdkwork.deployment-index'
+  ) {
+    throw new Error('application deployment config must be an SDKWork deployment index v1');
+  }
+  const environmentConfig = deploymentConfig.environments?.[application.environment];
+  if (!environmentConfig || typeof environmentConfig.applicationOrigin !== 'string') {
+    throw new Error(
+      `application deployment config does not declare ${application.environment}.applicationOrigin`,
+    );
+  }
+  let publicUrl;
+  try {
+    publicUrl = new URL(environmentConfig.applicationOrigin);
+  } catch {
+    throw new Error('application environment accessUrl must be an absolute URL');
+  }
+  if (
+    !['http:', 'https:'].includes(publicUrl.protocol)
+    || publicUrl.username
+    || publicUrl.password
+    || publicUrl.pathname !== '/'
+    || publicUrl.search
+    || publicUrl.hash
+  ) {
+    throw new Error('application environment accessUrl must be an HTTP(S) origin root');
+  }
+  const publicPort = publicUrl.port
+    ? Number.parseInt(publicUrl.port, 10)
+    : publicUrl.protocol === 'https:' ? 443 : 80;
+  const listener = assertObject(config.listener, 'listener');
+  assertExactKeys(listener, ['bind', 'certificate'], 'listener');
+  const certificate = listener.certificate
+    ? validateCertificate(configDirectory, listener.certificate)
+    : undefined;
+  if (publicUrl.protocol === 'https:' && !certificate) {
+    throw new Error('listener.certificate is required for an HTTPS application accessUrl');
+  }
   const route = assertObject(config.route, 'route');
   assertExactKeys(route, ['pathPrefix', 'mobileUserAgentTokens'], 'route');
-  const https = assertObject(config.https, 'https');
-  assertExactKeys(https, ['host', 'port', 'certificate'], 'https');
+  const deployment = assertObject(config.deployment, 'deployment');
+  assertExactKeys(
+    deployment,
+    ['profile', 'applicationRoot', 'serverScript', 'gateway'],
+    'deployment',
+  );
+  if (!['standalone', 'cloud'].includes(deployment.profile)) {
+    throw new Error('deployment.profile must be standalone or cloud');
+  }
+  const applicationRoot = resolveConfigRelativePath(
+    configDirectory,
+    deployment.applicationRoot,
+    'deployment.applicationRoot',
+  );
+  if (!existsSync(path.join(applicationRoot, 'package.json'))) {
+    throw new Error(`deployment.applicationRoot does not contain package.json: ${applicationRoot}`);
+  }
+  if (typeof deployment.serverScript !== 'string' || !deployment.serverScript.trim()) {
+    throw new Error('deployment.serverScript must be a non-empty package script name');
+  }
+  const gateway = assertObject(deployment.gateway, 'deployment.gateway');
+  assertExactKeys(
+    gateway,
+    ['host', 'port', 'httpPathPrefixes', 'webSocketPathPrefixes'],
+    'deployment.gateway',
+  );
   const applications = assertObject(config.applications, 'applications');
   assertExactKeys(applications, ['pc', 'h5'], 'applications');
 
   return {
     configPath: resolvedConfigPath,
+    application: {
+      manifestPath,
+      deploymentConfigPath,
+      environment: application.environment,
+      protocol: publicUrl.protocol.slice(0, -1),
+      publicHost: publicUrl.hostname.toLowerCase(),
+      publicPort,
+      publicUrl: publicUrl.toString(),
+    },
+    listener: {
+      bind: validateHost(listener.bind, 'listener.bind'),
+      certificate,
+    },
     route: {
       pathPrefix: validatePathPrefix(route.pathPrefix),
       mobileUserAgentTokens: validateMobileTokens(route.mobileUserAgentTokens),
     },
-    https: {
-      host: validateHost(https.host, 'https.host'),
-      port: validatePort(https.port, 'https.port'),
-      certificate: validateCertificate(configDirectory, https.certificate),
+    deployment: {
+      profile: deployment.profile,
+      applicationRoot,
+      serverScript: deployment.serverScript,
+      gateway: {
+        host: validateHost(gateway.host, 'deployment.gateway.host'),
+        port: validatePort(gateway.port, 'deployment.gateway.port'),
+        httpPathPrefixes: validatePathPrefixes(
+          gateway.httpPathPrefixes,
+          'deployment.gateway.httpPathPrefixes',
+        ),
+        webSocketPathPrefixes: validatePathPrefixes(
+          gateway.webSocketPathPrefixes,
+          'deployment.gateway.webSocketPathPrefixes',
+        ),
+      },
     },
     applications: {
       pc: validateApplication(configDirectory, applications.pc, 'applications.pc'),

@@ -15,10 +15,14 @@ pub use loader::{
 };
 pub use model::{
     CertificateConfig, CertificateSource, CompatibilityConfig, DeploymentConfig, ListenerConfig,
-    ListenerProtocol, ObservabilityConfig, ReloadConfig, ReloadMode, ResolverConfig,
-    ResourceConfig, RouteConfig, RouteMatchConfig, RoutePathType, TlsPolicyConfig, TlsVersion,
-    UpstreamAddressPolicyConfig, UpstreamConfig, UpstreamTargetConfig, UpstreamTlsConfig,
-    UpstreamTlsTrustMode, VirtualHostConfig, WebServerAppConfig, WebServerLimits,
+    ListenerProtocol, ObservabilityConfig, ProxyProtocolConfig, ProxyProtocolVersion, ReloadConfig,
+    ReloadMode, ResolverConfig, ResourceConfig, ResourcePressureConfig,
+    ResourceSampleFailurePolicy, RouteConfig, RouteMatchConfig, RoutePathType, TlsPolicyConfig,
+    TlsVersion, TrustedProxyConfig, TrustedProxyHeader, UpstreamActiveHealthConfig,
+    UpstreamActiveHealthMethod, UpstreamAddressPolicyConfig, UpstreamConfig,
+    UpstreamLoadBalancingStrategy, UpstreamPassiveHealthConfig, UpstreamRetryCondition,
+    UpstreamRetryConfig, UpstreamTargetConfig, UpstreamTlsConfig, UpstreamTlsTrustMode,
+    VirtualHostConfig, WebServerAppConfig, WebServerLimits,
 };
 pub use network::{is_supported_upstream_allowed_cidr, upstream_ip_is_allowed};
 pub use uri::{normalize_uri_path, UriPathNormalizationError};

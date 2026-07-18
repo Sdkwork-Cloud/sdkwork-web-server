@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "SDKWork Web Backend API",
-    "description": "SDKWork Web Server 绠＄悊鍚庡彴 API",
+    "description": "SDKWork Web Server management and control-plane API.",
     "version": "1.0.0"
   },
   "servers": [
@@ -25,7 +25,7 @@
     "/backend/v3/api/nginx/configs": {
       "get": {
         "operationId": "nginx.configs.list",
-        "summary": "鑾峰彇 Nginx 閰嶇疆鍒楄〃",
+        "summary": "List Nginx configurations",
         "tags": [
           "nginx"
         ],
@@ -79,7 +79,7 @@
         ],
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Nginx configuration list returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -124,7 +124,7 @@
       },
       "post": {
         "operationId": "nginx.configs.create",
-        "summary": "鍒涘缓 Nginx 閰嶇疆",
+        "summary": "Create an Nginx configuration",
         "tags": [
           "nginx"
         ],
@@ -153,7 +153,7 @@
         },
         "responses": {
           "201": {
-            "description": "鍒涘缓鎴愬姛",
+            "description": "Nginx configuration created successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -189,7 +189,7 @@
         "x-sdkwork-route-auth": "dual-token"
       }
     },
-    "/backend/v3/api/nginx/configs/{configId}": {
+    "/backend/v3/api/nginx/etc/{configId}": {
       "parameters": [
         {
           "name": "configId",
@@ -203,7 +203,7 @@
       ],
       "get": {
         "operationId": "nginx.configs.retrieve",
-        "summary": "鑾峰彇 Nginx 閰嶇疆璇︽儏",
+        "summary": "Retrieve an Nginx configuration",
         "tags": [
           "nginx"
         ],
@@ -221,7 +221,7 @@
         "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Nginx configuration returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -254,7 +254,7 @@
             }
           },
           "404": {
-            "description": "璧勬簮涓嶅瓨鍦\udca8",
+            "description": "Resource not found.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -268,7 +268,7 @@
       },
       "put": {
         "operationId": "nginx.configs.update",
-        "summary": "鏇存柊 Nginx 閰嶇疆",
+        "summary": "Update an Nginx configuration",
         "tags": [
           "nginx"
         ],
@@ -297,7 +297,7 @@
         },
         "responses": {
           "200": {
-            "description": "鏇存柊鎴愬姛",
+            "description": "Nginx configuration updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -330,7 +330,7 @@
             }
           },
           "404": {
-            "description": "璧勬簮涓嶅瓨鍦\udca8",
+            "description": "Resource not found.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -343,7 +343,7 @@
         "x-sdkwork-route-auth": "dual-token"
       }
     },
-    "/backend/v3/api/nginx/configs/{configId}/validate": {
+    "/backend/v3/api/nginx/etc/{configId}/validate": {
       "parameters": [
         {
           "name": "configId",
@@ -357,7 +357,7 @@
       ],
       "post": {
         "operationId": "nginx.configs.validate",
-        "summary": "鏍￠獙 Nginx 閰嶇疆",
+        "summary": "Validate an Nginx configuration",
         "tags": [
           "nginx"
         ],
@@ -375,7 +375,7 @@
         "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
-            "description": "鏍￠獙缁撴灉",
+            "description": "Nginx configuration validation result.",
             "content": {
               "application/json": {
                 "schema": {
@@ -411,7 +411,7 @@
         "x-sdkwork-route-auth": "dual-token"
       }
     },
-    "/backend/v3/api/nginx/configs/{configId}/deploy": {
+    "/backend/v3/api/nginx/etc/{configId}/deploy": {
       "parameters": [
         {
           "name": "configId",
@@ -425,7 +425,7 @@
       ],
       "post": {
         "operationId": "nginx.configs.deploy",
-        "summary": "閮ㄧ讲 Nginx 閰嶇疆",
+        "summary": "Deploy an Nginx configuration",
         "tags": [
           "nginx"
         ],
@@ -445,7 +445,7 @@
         "x-sdkwork-rate-limit-tier": "auth-critical",
         "responses": {
           "200": {
-            "description": "閮ㄧ讲鎴愬姛",
+            "description": "Nginx configuration deployed successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -478,7 +478,7 @@
             }
           },
           "400": {
-            "description": "璇锋眰鍙傛暟閿欒\udcaf\udcaf",
+            "description": "Invalid request parameters.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -494,7 +494,7 @@
     "/backend/v3/api/nginx/reload": {
       "post": {
         "operationId": "nginx.reload",
-        "summary": "鐑\udcad鍔犺浇 Nginx",
+        "summary": "Reload Nginx",
         "tags": [
           "nginx"
         ],
@@ -513,7 +513,7 @@
         "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
-            "description": "鐑\udcad鍔犺浇缁撴灉",
+            "description": "Nginx reload result.",
             "content": {
               "application/json": {
                 "schema": {
@@ -552,7 +552,7 @@
     "/backend/v3/api/nginx/status": {
       "get": {
         "operationId": "nginx.status.retrieve",
-        "summary": "鑾峰彇 Nginx 鐘舵\udc80\udc81",
+        "summary": "Retrieve Nginx status",
         "tags": [
           "nginx"
         ],
@@ -570,7 +570,7 @@
         "x-sdkwork-owner": "sdkwork-web-server",
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Nginx status returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -609,7 +609,7 @@
     "/backend/v3/api/servers": {
       "get": {
         "operationId": "servers.list",
-        "summary": "鑾峰彇鏈嶅姟鍣ㄥ垪琛\udca8",
+        "summary": "List managed servers",
         "tags": [
           "server"
         ],
@@ -635,7 +635,7 @@
         ],
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Managed server list returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -680,7 +680,7 @@
       },
       "post": {
         "operationId": "servers.create",
-        "summary": "娉ㄥ唽鏈嶅姟鍣\udca8",
+        "summary": "Register a managed server",
         "tags": [
           "server"
         ],
@@ -710,7 +710,7 @@
         },
         "responses": {
           "201": {
-            "description": "娉ㄥ唽鎴愬姛",
+            "description": "Managed server registered successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -749,7 +749,7 @@
     "/backend/v3/api/agent/heartbeat": {
       "post": {
         "operationId": "agent.heartbeat",
-        "summary": "杈圭紭鑺傜偣蹇冭烦",
+        "summary": "Report an edge-agent heartbeat",
         "tags": [
           "agent"
         ],
@@ -773,7 +773,7 @@
         },
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Edge-agent heartbeat acknowledged successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -806,7 +806,7 @@
             }
           },
           "401": {
-            "description": "鏈\udcaa璁よ瘉",
+            "description": "Authentication is required.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -822,7 +822,7 @@
     "/backend/v3/api/agent/sync": {
       "get": {
         "operationId": "agent.retrieve",
-        "summary": "鎷夊彇 nginx 閰嶇疆涓庤瘉涔\udca6 bundle",
+        "summary": "Retrieve the Nginx configuration and certificate bundle",
         "tags": [
           "agent"
         ],
@@ -846,7 +846,7 @@
         ],
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Edge-agent synchronization bundle returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -879,7 +879,7 @@
             }
           },
           "401": {
-            "description": "鏈\udcaa璁よ瘉",
+            "description": "Authentication is required.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -895,7 +895,7 @@
     "/backend/v3/api/audit_logs": {
       "get": {
         "operationId": "auditLogs.list",
-        "summary": "鑾峰彇瀹¤\udcae℃棩蹇楀垪琛\udca8",
+        "summary": "List audit logs",
         "tags": [
           "audit"
         ],
@@ -962,7 +962,7 @@
         ],
         "responses": {
           "200": {
-            "description": "鎴愬姛",
+            "description": "Audit log list returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1706,7 +1706,7 @@
         "format": "int32",
         "minimum": 40001,
         "maximum": 79999,
-        "description": "Platform or domain error code per API_SPEC.md 搂15.3."
+        "description": "Platform or domain error code per API_SPEC.md section 15.3."
       },
       "FieldError": {
         "type": "object",
@@ -1787,7 +1787,7 @@
     },
     "responses": {
       "BadRequest": {
-        "description": "璇锋眰鍙傛暟閿欒\udcaf\udcaf",
+        "description": "Invalid request parameters.",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -1797,7 +1797,7 @@
         }
       },
       "Unauthorized": {
-        "description": "鏈\udcaa璁よ瘉",
+        "description": "Authentication is required.",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -1807,7 +1807,7 @@
         }
       },
       "NotFound": {
-        "description": "璧勬簮涓嶅瓨鍦\udca8",
+        "description": "Resource not found.",
         "content": {
           "application/problem+json": {
             "schema": {
@@ -1817,7 +1817,7 @@
         }
       },
       "Conflict": {
-        "description": "璧勬簮鍐茬獊",
+        "description": "Resource conflict.",
         "content": {
           "application/problem+json": {
             "schema": {

@@ -8,9 +8,9 @@ use sdkwork_routes_webserver_common::{
 };
 use sdkwork_web_axum::{with_web_request_context, WebFrameworkLayer};
 use sdkwork_web_core::{
-    DefaultWebRequestContextResolver, DomainContextInjector, WebAuthLevel, WebDeploymentMode,
-    WebEnvironment, WebFrameworkError, WebLoginScope, WebRequestContext, WebRequestContextProfile,
-    WebRequestContextResolver, WebRequestPrincipal, WebSubjectType,
+    DefaultWebRequestContextResolver, DomainContextInjector, HttpMetricsRegistry, WebAuthLevel,
+    WebDeploymentMode, WebEnvironment, WebFrameworkError, WebLoginScope, WebRequestContext,
+    WebRequestContextProfile, WebRequestContextResolver, WebRequestPrincipal, WebSubjectType,
 };
 use sdkwork_webserver_contract::WebBackendRequestContext;
 
@@ -50,17 +50,24 @@ fn web_backend_context_from_web_request(
     })
 }
 
-fn build_web_backend_api_framework_layer<R>(resolver: R) -> WebFrameworkLayer<R>
+fn build_web_backend_api_framework_layer<R>(
+    resolver: R,
+    metrics: Option<Arc<HttpMetricsRegistry>>,
+) -> WebFrameworkLayer<R>
 where
     R: WebRequestContextResolver + Clone,
 {
-    WebFrameworkLayer::new(resolver)
+    let layer = WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
             backend_api_prefix: paths::PREFIX.to_owned(),
             ..WebRequestContextProfile::default()
         })
         .with_route_manifest(backend_route_manifest())
-        .with_domain_injector(Arc::new(WebBackendContextInjector))
+        .with_domain_injector(Arc::new(WebBackendContextInjector));
+    match metrics {
+        Some(metrics) => layer.with_metrics(metrics),
+        None => layer,
+    }
 }
 
 /// Wraps an inner [`WebRequestContextResolver`] to intercept agent bootstrap tokens.
@@ -154,6 +161,23 @@ pub async fn wrap_router_with_web_framework_from_env(
     router: Router,
     service: Arc<WebService>,
 ) -> Router {
+    wrap_router_with_web_framework_from_env_and_optional_metrics(router, service, None).await
+}
+
+pub async fn wrap_router_with_web_framework_from_env_and_metrics(
+    router: Router,
+    service: Arc<WebService>,
+    metrics: Arc<HttpMetricsRegistry>,
+) -> Router {
+    wrap_router_with_web_framework_from_env_and_optional_metrics(router, service, Some(metrics))
+        .await
+}
+
+async fn wrap_router_with_web_framework_from_env_and_optional_metrics(
+    router: Router,
+    service: Arc<WebService>,
+    metrics: Option<Arc<HttpMetricsRegistry>>,
+) -> Router {
     // Clone service for the resolver decorator before moving the original into Extension.
     let service_for_resolver = service.clone();
     // Extension(service) is applied inside the framework layer so that agent handlers
@@ -162,24 +186,30 @@ pub async fn wrap_router_with_web_framework_from_env(
     match web_auth_mode_from_env().await {
         WebAuthMode::DevInline => with_web_request_context(
             correlated,
-            build_web_backend_api_framework_layer(AgentTokenResolverDecorator::new(
-                DefaultWebRequestContextResolver::default(),
-                service_for_resolver.clone(),
-            )),
+            build_web_backend_api_framework_layer(
+                AgentTokenResolverDecorator::new(
+                    DefaultWebRequestContextResolver::default(),
+                    service_for_resolver.clone(),
+                ),
+                metrics,
+            ),
         ),
         WebAuthMode::ProductionFailClosed => with_web_request_context(
             correlated,
-            build_web_backend_api_framework_layer(AgentTokenResolverDecorator::new(
-                ProductionFailClosedResolver,
-                service_for_resolver.clone(),
-            )),
+            build_web_backend_api_framework_layer(
+                AgentTokenResolverDecorator::new(
+                    ProductionFailClosedResolver,
+                    service_for_resolver.clone(),
+                ),
+                metrics,
+            ),
         ),
         WebAuthMode::IamDatabase(resolver) => with_web_request_context(
             correlated,
-            build_web_backend_api_framework_layer(AgentTokenResolverDecorator::new(
-                resolver,
-                service_for_resolver.clone(),
-            )),
+            build_web_backend_api_framework_layer(
+                AgentTokenResolverDecorator::new(resolver, service_for_resolver.clone()),
+                metrics,
+            ),
         ),
     }
 }

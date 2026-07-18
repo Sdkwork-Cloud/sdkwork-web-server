@@ -77,7 +77,7 @@ Executed acceptance evidence:
 - `cargo test -p sdkwork-web-standalone-gateway`: 28 unit, 36 data-plane integration, and 3 raw HTTP/1 tests passed.
 - `cargo clippy --workspace --all-targets -- -D warnings`: passed.
 - `cargo fmt -- --check`: passed.
-- `cargo run -p sdkwork-web-standalone-gateway -- validate configs/examples/sdkwork.webserver.config.json`: passed.
+- `cargo run -p sdkwork-web-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json`: passed.
 - `pnpm verify`: passed, including full-workspace tests, SQLite lifecycle, contract materialization, repository/docs/topology/database checks, and cloud gateway validation.
 
 This acceptance does not claim canonical Nginx URI normalization, rewrite ordering, filesystem canonical identity, cache-key normalization, or `proxy_pass` original-versus-normalized URI parity. Those semantics require a separate ADR and differential corpus. PostgreSQL execution remained ignored because no disposable URL was configured. The pre-existing `GET /backend/v3/api/agent/sync` operation-pattern violation remains subject to human review.

@@ -1,4 +1,9 @@
-use std::{io, net::AddrParseError, path::PathBuf};
+use std::{
+    error::Error as StdError,
+    io,
+    net::{AddrParseError, SocketAddr},
+    path::PathBuf,
+};
 
 use sdkwork_webserver_core::WebServerConfigError;
 use thiserror::Error;
@@ -17,18 +22,21 @@ pub enum DataPlaneError {
     #[error("cannot build upstream client {upstream_id}: {source}")]
     UpstreamClient {
         upstream_id: String,
-        source: reqwest::Error,
+        source: Box<dyn StdError + Send + Sync>,
     },
 
     #[error("cannot load {material} for upstream {upstream_id}: {source}")]
     UpstreamTls {
         upstream_id: String,
         material: &'static str,
-        source: reqwest::Error,
+        source: Box<dyn StdError + Send + Sync>,
     },
 
     #[error("upstream {upstream_id} CA bundle {path} contains no certificates")]
     EmptyUpstreamCaBundle { upstream_id: String, path: PathBuf },
+
+    #[error("upstream {upstream_id} CA bundle {path} contains no valid PEM certificates")]
+    InvalidUpstreamCaBundle { upstream_id: String, path: PathBuf },
 
     #[error("upstream {upstream_id} has {actual} custom root certificates; maximum is {maximum}")]
     TooManyUpstreamRootCertificates {
@@ -87,6 +95,21 @@ pub enum DataPlaneError {
     #[error("configuration reload worker failed: {0}")]
     ReloadWorker(#[source] tokio::task::JoinError),
 
+    #[error("active upstream health supervisor failed: {0}")]
+    ActiveHealthTask(#[source] tokio::task::JoinError),
+
+    #[error("resource pressure initial sample failed: {class}")]
+    ResourcePressureInitialSample { class: &'static str },
+
+    #[error("resource pressure reserve cannot fit within the effective {resource} ceiling")]
+    ResourcePressureCapacity { resource: &'static str },
+
+    #[error("resource pressure supervisor failed: {0}")]
+    ResourcePressureTask(#[source] tokio::task::JoinError),
+
+    #[error("WebSocket tunnel drain timed out with {active} active tunnels")]
+    TunnelDrainTimeout { active: usize },
+
     #[error("listener {listener_id} failed: {source}")]
     Listener {
         listener_id: String,
@@ -95,6 +118,15 @@ pub enum DataPlaneError {
 
     #[error("listener {listener_id} stopped before shutdown")]
     ListenerStopped { listener_id: String },
+
+    #[error("data-plane operations listener {address} failed: {source}")]
+    OperationsListener {
+        address: SocketAddr,
+        source: io::Error,
+    },
+
+    #[error("data-plane operations listener stopped before shutdown")]
+    OperationsListenerStopped,
 
     #[error("listener task failed: {0}")]
     ListenerTask(#[from] tokio::task::JoinError),

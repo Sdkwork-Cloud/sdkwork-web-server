@@ -1,6 +1,19 @@
-use std::{future::Future, io, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    future::Future,
+    io,
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
-use axum::{http::StatusCode, Router};
+use axum::{
+    body::Body,
+    extract::State,
+    http::StatusCode,
+    middleware::{self, Next},
+    response::Response,
+    Router,
+};
 use axum_server::{
     accept::{Accept, DefaultAcceptor},
     service::{MakeService, SendService},
@@ -13,7 +26,7 @@ use hyper_util::{
     service::TowerToHyperService,
 };
 use sdkwork_webserver_core::{
-    CompiledWebServerApp, ListenerConfig, ListenerProtocol, WebServerLimits,
+    CompiledWebServerApp, ListenerConfig, ListenerProtocol, ProxyProtocolConfig, WebServerLimits,
 };
 use tokio::{
     io::{AsyncRead, AsyncWrite},
@@ -31,6 +44,11 @@ use super::{
     http2_wire::Http2WireGuardAcceptor,
     io_timeout::WriteTimeoutAcceptor,
     keep_alive_timeout::Http1KeepAliveTimeoutAcceptor,
+    metrics::{ConnectionRejection, DataPlaneMetrics},
+    operations::{
+        prepare_operations_listener, serve_operations_listener, DataPlaneOperationsConfig,
+    },
+    proxy_protocol::{resolve_connection_info, DownstreamConnectionInfo},
     runtime::RuntimeGeneration,
     tls::build_tls_config,
     DataPlaneError, DataPlaneRuntime, ListenerState,
@@ -50,12 +68,32 @@ pub async fn run_data_plane_until<F>(
 where
     F: Future<Output = ()> + Send,
 {
-    let runtime = DataPlaneRuntime::build(app)?;
-    run_data_plane_runtime_until(runtime, shutdown).await
+    run_data_plane_with_operations_until(app, None, shutdown).await
+}
+
+pub async fn run_data_plane_with_operations_until<F>(
+    app: CompiledWebServerApp,
+    operations: Option<DataPlaneOperationsConfig>,
+    shutdown: F,
+) -> Result<(), DataPlaneError>
+where
+    F: Future<Output = ()> + Send,
+{
+    let runtime = match operations.as_ref() {
+        Some(config) => {
+            DataPlaneRuntime::build_with_metric_dimensions(app, config.dimensions.clone())?
+        }
+        None => DataPlaneRuntime::build(app)?,
+    };
+    let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
+    let health_result = runtime.stop_active_health().await;
+    let resource_result = runtime.stop_resource_pressure().await;
+    result.and(health_result).and(resource_result)
 }
 
 pub(crate) async fn run_data_plane_runtime_until<F>(
     runtime: Arc<DataPlaneRuntime>,
+    operations: Option<DataPlaneOperationsConfig>,
     shutdown: F,
 ) -> Result<(), DataPlaneError>
 where
@@ -66,6 +104,12 @@ where
     for listener in initial.app.listeners() {
         prepared.push(prepare_listener(&initial, listener).await?);
     }
+    let prepared_operations = match operations.as_ref() {
+        Some(config) => Some(prepare_operations_listener(config).await?),
+        None => None,
+    };
+    runtime.start_resource_pressure().await?;
+    runtime.start_active_health().await;
 
     let drain_timeout = Duration::from_millis(
         initial
@@ -75,6 +119,7 @@ where
             .drain_timeout_ms
             .unwrap_or(initial.app.config().limits.drain_timeout_ms),
     );
+    drop(initial);
     let mut shutdown_senders = Vec::with_capacity(prepared.len());
     let mut tasks = JoinSet::new();
     for listener in prepared {
@@ -93,19 +138,34 @@ where
             (listener_id, result)
         });
     }
+    if let Some(prepared_operations) = prepared_operations {
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        shutdown_senders.push(shutdown_tx);
+        let runtime = runtime.clone();
+        tasks.spawn(async move {
+            let result = serve_operations_listener(prepared_operations, runtime, shutdown_rx).await;
+            ("host-operations".to_owned(), result)
+        });
+    }
 
     tokio::pin!(shutdown);
-    tokio::select! {
+    let (result, drain_deadline) = tokio::select! {
         () = &mut shutdown => {
+            let drain_deadline = Instant::now() + drain_timeout;
             request_listener_shutdown(&shutdown_senders);
-            collect_shutdown_results(&mut tasks).await
+            (collect_shutdown_results(&mut tasks).await, drain_deadline)
         }
         result = tasks.join_next() => {
+            let drain_deadline = Instant::now() + drain_timeout;
             request_listener_shutdown(&shutdown_senders);
-            match result {
+            let result = match result {
                 Some(Ok((listener_id, Ok(())))) => {
                     let _ = collect_shutdown_results(&mut tasks).await;
-                    Err(DataPlaneError::ListenerStopped { listener_id })
+                    if listener_id == "host-operations" {
+                        Err(DataPlaneError::OperationsListenerStopped)
+                    } else {
+                        Err(DataPlaneError::ListenerStopped { listener_id })
+                    }
                 }
                 Some(Ok((_listener_id, Err(error)))) => {
                     let _ = collect_shutdown_results(&mut tasks).await;
@@ -116,9 +176,32 @@ where
                     Err(DataPlaneError::ListenerTask(error))
                 }
                 None => Ok(()),
-            }
+            };
+            (result, drain_deadline)
         }
+    };
+    let remaining_drain = drain_deadline.saturating_duration_since(Instant::now());
+    if runtime
+        .tunnel_supervisor
+        .stop_and_drain(remaining_drain)
+        .await
+    {
+        result
+    } else {
+        Err(DataPlaneError::TunnelDrainTimeout {
+            active: runtime.tunnel_supervisor.active(),
+        })
     }
+}
+
+async fn observe_data_plane_request(
+    State(metrics): State<Arc<DataPlaneMetrics>>,
+    request: axum::http::Request<Body>,
+    next: Next,
+) -> Response {
+    let lease = metrics.begin_request();
+    let response = next.run(request).await;
+    metrics.observe_response(response, lease)
 }
 
 async fn prepare_listener(
@@ -162,10 +245,12 @@ async fn serve_listener(
 ) -> Result<(), DataPlaneError> {
     let listener_id = listener.config.id.clone();
     let initial = runtime.current();
+    let limits = initial.app.config().limits.clone();
     let maximum_connections = listener
         .config
         .max_connections
-        .unwrap_or(initial.app.config().limits.max_connections);
+        .unwrap_or(limits.max_connections);
+    drop(initial);
     let state = ListenerState {
         runtime: runtime.clone(),
         listener_id: listener_id.clone(),
@@ -176,21 +261,24 @@ async fn serve_listener(
         .with_state(state)
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
-            Duration::from_millis(initial.app.config().limits.request_timeout_ms),
+            Duration::from_millis(limits.request_timeout_ms),
+        ))
+        .layer(middleware::from_fn_with_state(
+            runtime.metrics.clone(),
+            observe_data_plane_request,
         ));
-    let service = app.into_make_service_with_connect_info::<SocketAddr>();
+    let service = app.into_make_service_with_connect_info::<DownstreamConnectionInfo>();
     let global_permits = runtime.connection_permits.clone();
+    let resource_pressure = runtime.resource_pressure.clone();
     let http1_only = listener.config.protocols == [ListenerProtocol::Http1];
     let http2_only = listener.config.protocols == [ListenerProtocol::Http2];
-    let connection_write_timeout =
-        Duration::from_millis(initial.app.config().limits.connection_write_timeout_ms);
+    let connection_write_timeout = Duration::from_millis(limits.connection_write_timeout_ms);
     let http1_keep_alive_idle_timeout =
-        Duration::from_millis(initial.app.config().limits.http1_keep_alive_idle_timeout_ms);
-    let maximum_connection_age =
-        Duration::from_millis(initial.app.config().limits.max_connection_age_ms);
+        Duration::from_millis(limits.http1_keep_alive_idle_timeout_ms);
+    let maximum_connection_age = Duration::from_millis(limits.max_connection_age_ms);
     let mut builder = Builder::new(TokioExecutor::new());
-    configure_http_protocols(&mut builder, &initial.app.config().limits);
-    let allow_upgrades = !http1_only && !http2_only;
+    configure_http_protocols(&mut builder, &limits);
+    let allow_upgrades = !http2_only;
     let builder = if http1_only {
         builder.http1_only()
     } else if http2_only {
@@ -201,17 +289,26 @@ async fn serve_listener(
     let builder = Arc::new(builder);
 
     let result = if let Some(tls) = listener.tls {
-        let limiter = ConnectionLimiter::new(global_permits, maximum_connections);
-        let http1 = Http1WireGuardAcceptor::new(
+        let limiter =
+            ConnectionLimiter::new(global_permits, maximum_connections, runtime.metrics.clone());
+        let http1 = Http1WireGuardAcceptor::new_observed(
             RustlsAcceptor::new(tls).acceptor(DefaultAcceptor::new()),
-            &initial.app.config().limits,
+            &limits,
+            runtime.metrics.clone(),
         );
-        let http2 = Http2WireGuardAcceptor::new(http1, &initial.app.config().limits);
+        let http2 = Http2WireGuardAcceptor::new_observed(http1, &limits, runtime.metrics.clone());
         let keep_alive = Http1KeepAliveTimeoutAcceptor::new(http2, http1_keep_alive_idle_timeout);
-        let acceptor = WriteTimeoutAcceptor::new(keep_alive, connection_write_timeout);
+        let acceptor = WriteTimeoutAcceptor::new_observed(
+            keep_alive,
+            connection_write_timeout,
+            runtime.metrics.clone(),
+        );
         serve_connections(
             listener.socket,
             limiter,
+            resource_pressure,
+            runtime.metrics.clone(),
+            listener.config.proxy_protocol.clone(),
             acceptor,
             service,
             builder,
@@ -222,23 +319,30 @@ async fn serve_listener(
         )
         .await
     } else {
-        let limiter = ConnectionLimiter::new(global_permits, maximum_connections);
-        let acceptor = WriteTimeoutAcceptor::new(
+        let limiter =
+            ConnectionLimiter::new(global_permits, maximum_connections, runtime.metrics.clone());
+        let acceptor = WriteTimeoutAcceptor::new_observed(
             Http1KeepAliveTimeoutAcceptor::new(
-                Http2WireGuardAcceptor::new(
-                    Http1WireGuardAcceptor::new(
+                Http2WireGuardAcceptor::new_observed(
+                    Http1WireGuardAcceptor::new_observed(
                         DefaultAcceptor::new(),
-                        &initial.app.config().limits,
+                        &limits,
+                        runtime.metrics.clone(),
                     ),
-                    &initial.app.config().limits,
+                    &limits,
+                    runtime.metrics.clone(),
                 ),
                 http1_keep_alive_idle_timeout,
             ),
             connection_write_timeout,
+            runtime.metrics.clone(),
         );
         serve_connections(
             listener.socket,
             limiter,
+            resource_pressure,
+            runtime.metrics.clone(),
+            listener.config.proxy_protocol.clone(),
             acceptor,
             service,
             builder,
@@ -259,8 +363,11 @@ async fn serve_listener(
 async fn serve_connections<A, M>(
     listener: TcpListener,
     limiter: ConnectionLimiter,
+    resource_pressure: Arc<super::resource_pressure::ResourcePressureController>,
+    metrics: Arc<DataPlaneMetrics>,
+    proxy_protocol: Option<ProxyProtocolConfig>,
     acceptor: A,
-    mut make_service: M,
+    make_service: M,
     builder: Arc<Builder<TokioExecutor>>,
     allow_upgrades: bool,
     mut shutdown: watch::Receiver<bool>,
@@ -268,14 +375,15 @@ async fn serve_connections<A, M>(
     drain_timeout: Duration,
 ) -> io::Result<()>
 where
-    M: MakeService<SocketAddr, Request<Incoming>> + Send,
-    M::MakeFuture: Send,
+    M: MakeService<DownstreamConnectionInfo, Request<Incoming>> + Clone + Send + 'static,
+    M::MakeFuture: Send + 'static,
     A: Accept<ConnectionLimitedStream<TcpStream>, M::Service> + Clone + Send + Sync + 'static,
     A::Stream: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     A::Service: SendService<Request<Incoming>> + Send + 'static,
     A::Future: Send,
 {
     let mut connections = JoinSet::new();
+    let proxy_protocol = Arc::new(proxy_protocol);
     loop {
         tokio::select! {
             biased;
@@ -287,24 +395,41 @@ where
             }
             accepted = listener.accept() => {
                 let (stream, peer) = accepted?;
+                metrics.record_connection_accepted();
+                if resource_pressure.is_pressured() {
+                    metrics.record_connection_rejection(ConnectionRejection::ResourcePressure);
+                    drop(stream);
+                    continue;
+                }
                 let stream = match limiter.try_admit(stream) {
                     Ok(stream) => stream,
                     Err(_) => continue,
                 };
-                std::future::poll_fn(|context| make_service.poll_ready(context))
-                    .await
-                    .map_err(|error| {
-                        let error: Box<dyn std::error::Error + Send + Sync> = error.into();
-                        io::Error::other(error)
-                    })?;
-                let service = match make_service.make_service(peer).await {
-                    Ok(service) => service,
-                    Err(_) => continue,
-                };
                 let acceptor = acceptor.clone();
                 let builder = builder.clone();
+                let metrics = metrics.clone();
+                let proxy_protocol = proxy_protocol.clone();
+                let mut make_service = make_service.clone();
                 let mut connection_shutdown = shutdown.clone();
                 connections.spawn(async move {
+                    let mut stream = stream;
+                    let connection_info = match resolve_connection_info(
+                        &mut stream,
+                        peer,
+                        proxy_protocol.as_ref().as_ref(),
+                    ).await {
+                        Ok(info) => info,
+                        Err(_) => {
+                            metrics.record_connection_rejection(ConnectionRejection::ProxyProtocol);
+                            return;
+                        }
+                    };
+                    if std::future::poll_fn(|context| make_service.poll_ready(context)).await.is_err() {
+                        return;
+                    }
+                    let Ok(service) = make_service.make_service(connection_info).await else {
+                        return;
+                    };
                     let Ok((stream, service)) = acceptor.accept(stream, service).await else {
                         return;
                     };

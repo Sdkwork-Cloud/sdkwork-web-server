@@ -4,7 +4,7 @@
 id: REQ-2026-0024
 title: Verify HTTPS upstream identity with bounded trust and client credentials
 owner: sdkwork-web-server
-status: in-progress
+status: accepted
 source: security
 problem: HTTPS proxy targets currently rely only on Reqwest defaults. Operators cannot select a private trust anchor, require a client identity, constrain TLS versions, or prove that invalid TLS material prevents a configuration generation from becoming active.
 goals:
@@ -73,4 +73,15 @@ CA and client-identity files resolve beneath the configuration directory using t
 
 ## Acceptance
 
-Pending implementation and verification.
+Accepted on 2026-07-16 for the declared upstream TLS trust, client identity, version, and pool-isolation boundary.
+
+- The root Schema and Core Serde model expose optional `upstreams[].tls` with `trustMode`, bounded `caCertificateFiles`, paired `clientCertificateFile`/`clientPrivateKeyFile`, and TLS 1.2/1.3 `minimumVersion`/`maximumVersion`. Existing configurations remain compatible and HTTPS without an explicit policy keeps verified system WebPKI trust.
+- Semantic validation rejects TLS on any HTTP target, system trust with custom roots, custom/combined trust without roots, incomplete client identity, reversed version ranges, parent/absolute/backslash/NUL paths, unknown fields, and more than eight CA files. Compilation resolves regular files canonically and rejects any protected TLS resource escaping the configuration directory.
+- Runtime loading reuses the one-MiB-per-file TLS bound, distinguishes empty and invalid CA bundles without logging contents, limits parsed custom roots to 64, parses client identity through Reqwest/Rustls, and rejects mismatched certificate/private keys during client construction before listener activation.
+- Every upstream owns one immutable Reqwest client/pool containing its resolver, SSRF policy, trust roots, client identity, TLS versions, and timeouts. Watch constructs a complete candidate generation before `ArcSwap` publication. A malformed CA candidate retained the active trusted pool; a valid switch to system trust produced `502`, proving the old custom-trust pool was not reused; switching back to custom trust produced `200`.
+- Real private-CA HTTPS evidence proves system trust returns `502`, custom trust returns `200`, and a custom-trusted certificate with the wrong hostname still returns `502`. No insecure verification or SNI override exists.
+- Real mTLS evidence proves the upstream rejects an anonymous client and succeeds only with the configured CA-signed client certificate/private key. Real protocol evidence proves TLS 1.3-only policy rejects a TLS 1.2-only upstream while TLS 1.2-only policy succeeds.
+- Core verification passed 8 unit tests and 37 configuration contract tests. Gateway verification passed 38 unit tests, 52 data-plane integration tests, and 4 raw HTTP/1 connection tests.
+- `cargo clippy --workspace --all-targets -- -D warnings`, `pnpm.cmd verify`, example configuration validation, pagination, API envelope, API operation-pattern, route-collision, app-SDK import, repository-doc, formatting, and diff checks passed.
+
+Acceptance is limited to this requirement. Certificate/SPKI pinning, CRL/OCSP, certificate-transparency enforcement, PKCS#11/KMS/Vault integration, automatic secret-file watching, live upstream credential rotation, upstream HTTP/2 policy, retries, health checks, balancing, and circuit breaking remain separate gates. PostgreSQL lifecycle execution remains ignored because `SDKWORK_WEB_POSTGRES_TEST_DATABASE_URL` is not configured. Backend OpenAPI encoding corruption and the unreviewed public `agent.sync` to `agent.retrieve` operation rename still require human review. Adaptive RSS/cgroup admission, 100,000-connection and 24-hour soak evidence, HA/failover/rolling upgrade, signed SBOM/provenance, and commercial operations remain unresolved.

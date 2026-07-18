@@ -37,8 +37,10 @@ test('IM dev plan mounts both applications at the shared path', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /sdkwork-im-pc/u);
   assert.match(result.stdout, /sdkwork-im-h5/u);
+  assert.match(result.stdout, /sdkwork-im-standalone-gateway/u);
+  assert.match(result.stdout, /sdkwork-im dev:server/u);
   assert.match(result.stdout, /etc[\\/]sdkwork\.webserver\.im-dev\.json/u);
-  assert.match(result.stdout, /--base \/sdkwork-im\//u);
+  assert.match(result.stdout, /--base \//u);
   assert.doesNotMatch(result.stdout, / dev -- --host/u);
   assert.match(result.stdout, /dev-im-ingress\.mjs/u);
 });

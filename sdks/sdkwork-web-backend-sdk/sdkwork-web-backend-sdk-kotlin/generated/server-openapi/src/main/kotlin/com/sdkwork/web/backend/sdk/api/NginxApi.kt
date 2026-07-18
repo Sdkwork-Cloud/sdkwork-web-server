@@ -29,25 +29,25 @@ class NginxApi(private val client: HttpClient) {
 
     /** 获取 Nginx 配置详情 */
     suspend fun configsRetrieve(configId: String): NginxConfigResponse? {
-        val raw = client.get(ApiPaths.backendPath("/nginx/configs/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}"))
+        val raw = client.get(ApiPaths.backendPath("/nginx/etc/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}"))
         return client.convertValue(raw, object : TypeReference<NginxConfigResponse>() {})
     }
 
     /** 更新 Nginx 配置 */
     suspend fun configsUpdate(configId: String, body: UpdateNginxConfigRequest): NginxConfigResponse? {
-        val raw = client.put(ApiPaths.backendPath("/nginx/configs/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}"), body, null, null, "application/json")
+        val raw = client.put(ApiPaths.backendPath("/nginx/etc/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}"), body, null, null, "application/json")
         return client.convertValue(raw, object : TypeReference<NginxConfigResponse>() {})
     }
 
     /** 校验 Nginx 配置 */
     suspend fun configsValidate(configId: String): NginxValidateResponse? {
-        val raw = client.post(ApiPaths.backendPath("/nginx/configs/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}/validate"), null)
+        val raw = client.post(ApiPaths.backendPath("/nginx/etc/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}/validate"), null)
         return client.convertValue(raw, object : TypeReference<NginxValidateResponse>() {})
     }
 
     /** 部署 Nginx 配置 */
     suspend fun configsDeploy(configId: String): NginxDeployResponse? {
-        val raw = client.post(ApiPaths.backendPath("/nginx/configs/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}/deploy"), null)
+        val raw = client.post(ApiPaths.backendPath("/nginx/etc/${serializePathParameter(configId, PathParameterSpec("configId", "simple", false))}/deploy"), null)
         return client.convertValue(raw, object : TypeReference<NginxDeployResponse>() {})
     }
 

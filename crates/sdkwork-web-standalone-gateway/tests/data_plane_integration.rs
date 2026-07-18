@@ -11,17 +11,22 @@ use std::{
 
 use axum::{
     body::Body,
-    http::{Request, Response, Version},
+    http::{Request, Response, StatusCode, Version},
     routing::any,
     Router,
 };
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http_body_util::{channel::Channel, BodyExt};
-use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
+use rcgen::{
+    BasicConstraints, Certificate, CertificateParams, DistinguishedName, DnType,
+    ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
+};
 use rustls::{
-    pki_types::{CertificateDer, ServerName},
-    ClientConfig, RootCertStore,
+    pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, ServerName},
+    server::WebPkiClientVerifier,
+    version::{TLS12, TLS13},
+    ClientConfig, RootCertStore, ServerConfig,
 };
 use sdkwork_web_standalone_gateway::{run_data_plane_from_config_until, run_data_plane_until};
 use sdkwork_webserver_core::load_and_compile_webserver_config;
@@ -33,9 +38,19 @@ use tokio::{
     task::JoinHandle,
     time::timeout,
 };
-use tokio_rustls::TlsConnector;
+use tokio_rustls::{TlsAcceptor, TlsConnector};
 
 type UpstreamTask = JoinHandle<()>;
+
+struct TestCertificateAuthority {
+    certificate: Certificate,
+    key: KeyPair,
+}
+
+struct TestTlsIdentity {
+    certificate: CertificateDer<'static>,
+    private_key: PrivateKeyDer<'static>,
+}
 
 fn available_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").expect("reserve an available port");
@@ -156,6 +171,57 @@ async fn spawn_frame_echo_upstream() -> (std::net::SocketAddr, oneshot::Sender<(
     (address, shutdown_tx, task)
 }
 
+async fn spawn_tls_upstream(
+    server_config: ServerConfig,
+) -> (std::net::SocketAddr, oneshot::Sender<()>, UpstreamTask) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind TLS upstream");
+    let address = listener.local_addr().expect("TLS upstream address");
+    let acceptor = TlsAcceptor::from(Arc::new(server_config));
+    let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
+    let task = tokio::spawn(async move {
+        let mut connections = tokio::task::JoinSet::new();
+        loop {
+            let accepted = tokio::select! {
+                _ = &mut shutdown_rx => break,
+                accepted = listener.accept() => accepted,
+            };
+            let Ok((stream, _)) = accepted else {
+                continue;
+            };
+            let acceptor = acceptor.clone();
+            connections.spawn(async move {
+                let Ok(mut stream) = acceptor.accept(stream).await else {
+                    return;
+                };
+                let headers = read_header_block(&mut stream).await;
+                let request_line = headers
+                    .split(|byte| *byte == b'\n')
+                    .next()
+                    .unwrap_or_default();
+                let body = if request_line.starts_with(b"GET /secure ") {
+                    "secure-upstream"
+                } else {
+                    "tls-upstream"
+                };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                stream
+                    .write_all(response.as_bytes())
+                    .await
+                    .expect("write TLS upstream response");
+                let _ = stream.shutdown().await;
+            });
+        }
+        connections.abort_all();
+        while connections.join_next().await.is_some() {}
+    });
+    (address, shutdown_tx, task)
+}
+
 async fn spawn_held_response_upstream() -> (
     std::net::SocketAddr,
     Arc<Notify>,
@@ -197,6 +263,50 @@ async fn spawn_held_response_upstream() -> (
             .expect("serve held-response upstream");
     });
     (address, release, shutdown_tx, task)
+}
+
+async fn spawn_toggle_health_upstream(
+    initially_healthy: bool,
+    healthy_body: &'static str,
+) -> (
+    std::net::SocketAddr,
+    Arc<AtomicBool>,
+    Arc<AtomicUsize>,
+    oneshot::Sender<()>,
+    UpstreamTask,
+) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind health upstream");
+    let address = listener.local_addr().expect("health upstream address");
+    let healthy = Arc::new(AtomicBool::new(initially_healthy));
+    let requests = Arc::new(AtomicUsize::new(0));
+    let task_healthy = healthy.clone();
+    let task_requests = requests.clone();
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    let task = tokio::spawn(async move {
+        let app = Router::new().fallback(any(move || {
+            let healthy = task_healthy.clone();
+            let requests = task_requests.clone();
+            async move {
+                requests.fetch_add(1, Ordering::AcqRel);
+                if healthy.load(Ordering::Acquire) {
+                    Response::new(Body::from(healthy_body))
+                } else {
+                    let mut response = Response::new(Body::from("target-unhealthy"));
+                    *response.status_mut() = StatusCode::SERVICE_UNAVAILABLE;
+                    response
+                }
+            }
+        }));
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                let _ = shutdown_rx.await;
+            })
+            .await
+            .expect("serve health upstream");
+    });
+    (address, healthy, requests, shutdown_tx, task)
 }
 
 async fn spawn_body_sink_upstream() -> (std::net::SocketAddr, oneshot::Sender<()>, UpstreamTask) {
@@ -341,6 +451,124 @@ fn write_self_signed_certificate(directory: &Path, stem: &str, names: &[&str]) -
     fs::write(directory.join(format!("{stem}.key")), key.serialize_pem())
         .expect("write private key");
     certificate.der().as_ref().to_vec()
+}
+
+fn write_test_ca(directory: &Path, stem: &str) -> TestCertificateAuthority {
+    let mut params = CertificateParams::new(Vec::new()).expect("CA certificate parameters");
+    params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    params.distinguished_name = DistinguishedName::new();
+    params
+        .distinguished_name
+        .push(DnType::CommonName, format!("{stem} test CA"));
+    params.key_usages = vec![
+        KeyUsagePurpose::DigitalSignature,
+        KeyUsagePurpose::KeyCertSign,
+        KeyUsagePurpose::CrlSign,
+    ];
+    let key = KeyPair::generate().expect("generate CA key");
+    let certificate = params.self_signed(&key).expect("self-sign test CA");
+    fs::write(directory.join(format!("{stem}.pem")), certificate.pem())
+        .expect("write test CA certificate");
+    TestCertificateAuthority { certificate, key }
+}
+
+fn write_signed_identity(
+    directory: &Path,
+    stem: &str,
+    names: &[&str],
+    authority: &TestCertificateAuthority,
+    client: bool,
+) -> TestTlsIdentity {
+    let mut params = CertificateParams::new(
+        names
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect::<Vec<_>>(),
+    )
+    .expect("signed certificate parameters");
+    params.distinguished_name = DistinguishedName::new();
+    params.distinguished_name.push(DnType::CommonName, names[0]);
+    params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
+    params.extended_key_usages = vec![if client {
+        ExtendedKeyUsagePurpose::ClientAuth
+    } else {
+        ExtendedKeyUsagePurpose::ServerAuth
+    }];
+    let key = KeyPair::generate().expect("generate signed identity key");
+    let certificate = params
+        .signed_by(&key, &authority.certificate, &authority.key)
+        .expect("sign test identity");
+    fs::write(directory.join(format!("{stem}.pem")), certificate.pem())
+        .expect("write signed certificate");
+    fs::write(directory.join(format!("{stem}.key")), key.serialize_pem())
+        .expect("write signed private key");
+    TestTlsIdentity {
+        certificate: CertificateDer::from(certificate.der().to_vec()),
+        private_key: PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key.serialize_der())),
+    }
+}
+
+fn tls_upstream_server_config(
+    identity: TestTlsIdentity,
+    client_ca: Option<&TestCertificateAuthority>,
+    tls12_only: bool,
+) -> ServerConfig {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    let versions = if tls12_only {
+        vec![&TLS12]
+    } else {
+        vec![&TLS13, &TLS12]
+    };
+    let builder = ServerConfig::builder_with_protocol_versions(&versions);
+    let builder = if let Some(client_ca) = client_ca {
+        let mut roots = RootCertStore::empty();
+        roots
+            .add(CertificateDer::from(client_ca.certificate.der().to_vec()))
+            .expect("add test client CA");
+        let verifier = WebPkiClientVerifier::builder(Arc::new(roots))
+            .build()
+            .expect("build client certificate verifier");
+        builder.with_client_cert_verifier(verifier)
+    } else {
+        builder.with_no_client_auth()
+    };
+    let mut config = builder
+        .with_single_cert(vec![identity.certificate], identity.private_key)
+        .expect("build TLS upstream config");
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    config
+}
+
+fn upstream_tls_proxy_config(
+    port: u16,
+    upstream_address: std::net::SocketAddr,
+    authority: &str,
+    tls: Option<Value>,
+) -> Value {
+    let mut config = base_config(
+        port,
+        json!([{
+            "id": "proxy",
+            "type": "proxy",
+            "upstreamRef": "tls-upstream"
+        }]),
+        json!([{
+            "id": "tls-upstream",
+            "targets": [{"url": format!("https://{authority}:{}", upstream_address.port())}],
+            "connectTimeoutMs": 1_000,
+            "requestTimeoutMs": 2_000,
+            "idleConnectionTimeoutMs": 100
+        }]),
+        json!([{
+            "id": "proxy-route",
+            "match": {"pathType": "prefix", "path": "/"},
+            "resourceRef": "proxy"
+        }]),
+    );
+    if let Some(tls) = tls {
+        config["upstreams"][0]["tls"] = tls;
+    }
+    config
 }
 
 fn base_config(port: u16, resources: Value, mut upstreams: Value, routes: Value) -> Value {
@@ -601,6 +829,27 @@ async fn wait_for_body(client: &reqwest::Client, url: &str, host: &str, expected
     }
 }
 
+async fn wait_for_status(
+    client: &reqwest::Client,
+    url: &str,
+    host: &str,
+    expected: reqwest::StatusCode,
+) {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Ok(response) = client.get(url).header("host", host).send().await {
+            if response.status() == expected {
+                return;
+            }
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "watched data plane did not publish status {expected}"
+        );
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+}
+
 fn watched_response_config(port: u16, body: &str) -> Value {
     let mut config = base_config(
         port,
@@ -765,7 +1014,24 @@ fn raw_status_code(response: &[u8]) -> Option<u16> {
 }
 
 async fn assert_raw_request_rejected(port: u16, request: &[u8]) {
-    let response = raw_http_response(port, request).await;
+    let mut stream = tokio::net::TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect rejected raw HTTP client");
+    stream
+        .write_all(request)
+        .await
+        .expect("write rejected raw request");
+    let mut response = Vec::new();
+    let read = timeout(Duration::from_secs(2), stream.read_to_end(&mut response))
+        .await
+        .expect("rejected raw response completes");
+    if let Err(error) = read {
+        assert_eq!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionReset,
+            "a rejected request may close or reset, but no other read error is valid"
+        );
+    }
     assert!(
         raw_status_code(&response).is_none_or(|status| !(200..300).contains(&status)),
         "ambiguous request must close or return a non-success status"
@@ -1242,6 +1508,655 @@ async fn system_dns_denies_loopback_by_default_and_allows_explicit_local_policy(
         "/allowed"
     );
     stop_data_plane(allowed_shutdown, allowed_task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn upstream_admission_holds_capacity_through_streaming_response_lifetime() {
+    let (upstream_address, release, upstream_shutdown, upstream_task) =
+        spawn_held_response_upstream().await;
+    let directory = TempDir::new().expect("create temp directory");
+    let port = available_port();
+    let mut config = held_http_proxy_config(port, upstream_address);
+    config["limits"]["maxConcurrentRequests"] = json!(4);
+    config["upstreams"][0]["maxInFlightRequests"] = json!(1);
+    let path = write_config(directory.path(), &config);
+    let (shutdown, task) = spawn_data_plane(&path);
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{port}");
+
+    let held = wait_for_http(&client, &format!("{url}/held"), "test.localhost").await;
+    assert_eq!(held.status(), reqwest::StatusCode::OK);
+
+    let saturated = client
+        .get(format!("{url}/excess"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("upstream admission returns a response without queueing");
+    assert_eq!(saturated.status(), reqwest::StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(saturated.headers().get("retry-after").unwrap(), "1");
+    assert_eq!(
+        saturated.text().await.expect("read saturation response"),
+        "upstream is saturated\n"
+    );
+
+    drop(held);
+    release.notify_waiters();
+    wait_for_body(
+        &client,
+        &format!("{url}/recovered"),
+        "test.localhost",
+        "recovered",
+    )
+    .await;
+    stop_data_plane(shutdown, task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn passive_health_ejects_failure_and_recovers_with_one_later_probe() {
+    let (failing_address, failing_healthy, failing_requests, failing_shutdown, failing_task) =
+        spawn_toggle_health_upstream(false, "recovered-target").await;
+    let (healthy_address, _, healthy_requests, healthy_shutdown, healthy_task) =
+        spawn_toggle_health_upstream(true, "healthy-target").await;
+    let directory = TempDir::new().expect("create temp directory");
+    let port = available_port();
+    let config = base_config(
+        port,
+        json!([{
+            "id": "proxy",
+            "type": "proxy",
+            "upstreamRef": "health-upstream"
+        }]),
+        json!([{
+            "id": "health-upstream",
+            "targets": [
+                {"url": format!("http://{failing_address}")},
+                {"url": format!("http://{healthy_address}")}
+            ],
+            "maxInFlightRequests": 8,
+            "passiveHealth": {
+                "failureThreshold": 1,
+                "ejectionTimeMs": 500,
+                "failureStatuses": [503]
+            }
+        }]),
+        json!([{
+            "id": "proxy-route",
+            "match": {"pathType": "prefix", "path": "/"},
+            "resourceRef": "proxy"
+        }]),
+    );
+    let path = write_config(directory.path(), &config);
+    let (shutdown, task) = spawn_data_plane(&path);
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{port}/health");
+
+    let failed = wait_for_http(&client, &url, "test.localhost").await;
+    assert_eq!(failed.status(), reqwest::StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        failed.text().await.expect("read target failure"),
+        "target-unhealthy"
+    );
+    assert_eq!(failing_requests.load(Ordering::Acquire), 1);
+
+    for _ in 0..4 {
+        let response = client
+            .get(&url)
+            .header("host", "test.localhost")
+            .send()
+            .await
+            .expect("healthy alternative response");
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        assert_eq!(
+            response.text().await.expect("read healthy response"),
+            "healthy-target"
+        );
+    }
+    assert_eq!(failing_requests.load(Ordering::Acquire), 1);
+    assert_eq!(healthy_requests.load(Ordering::Acquire), 4);
+
+    failing_healthy.store(true, Ordering::Release);
+    tokio::time::sleep(Duration::from_millis(550)).await;
+    let mut observed_recovery = false;
+    for _ in 0..2 {
+        let response = client
+            .get(&url)
+            .header("host", "test.localhost")
+            .send()
+            .await
+            .expect("half-open recovery response");
+        if response.text().await.expect("read recovery response") == "recovered-target" {
+            observed_recovery = true;
+        }
+    }
+    assert!(
+        observed_recovery,
+        "expired target receives one recovery probe"
+    );
+    assert_eq!(failing_requests.load(Ordering::Acquire), 2);
+
+    stop_data_plane(shutdown, task).await;
+    stop_upstream(failing_shutdown, failing_task).await;
+    stop_upstream(healthy_shutdown, healthy_task).await;
+}
+
+#[tokio::test]
+async fn all_ejected_targets_fail_locally_and_reload_starts_fresh_health_state() {
+    let (upstream_address, _, upstream_requests, upstream_shutdown, upstream_task) =
+        spawn_toggle_health_upstream(false, "unused").await;
+    let directory = TempDir::new().expect("create temp directory");
+    let port = available_port();
+    let mut config = base_config(
+        port,
+        json!([{
+            "id": "proxy",
+            "type": "proxy",
+            "upstreamRef": "health-upstream"
+        }]),
+        json!([{
+            "id": "health-upstream",
+            "targets": [{"url": format!("http://{upstream_address}")}],
+            "passiveHealth": {
+                "failureThreshold": 1,
+                "ejectionTimeMs": 5_000,
+                "failureStatuses": [503]
+            }
+        }]),
+        json!([{
+            "id": "proxy-route",
+            "match": {"pathType": "prefix", "path": "/"},
+            "resourceRef": "proxy"
+        }]),
+    );
+    config["deployment"] = json!({
+        "drainTimeoutMs": 1_000,
+        "reload": {"mode": "watch", "pollIntervalMs": 100}
+    });
+    let path = write_config(directory.path(), &config);
+    let (shutdown, task) = spawn_watched_data_plane(&path);
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{port}/health");
+
+    let first = wait_for_http(&client, &url, "test.localhost").await;
+    assert_eq!(first.status(), reqwest::StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        first.text().await.expect("read upstream 503"),
+        "target-unhealthy"
+    );
+    assert_eq!(upstream_requests.load(Ordering::Acquire), 1);
+
+    let unavailable = client
+        .get(&url)
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("all-ejected response");
+    assert_eq!(
+        unavailable.status(),
+        reqwest::StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(unavailable.headers().get("retry-after").unwrap(), "1");
+    assert_eq!(
+        unavailable.text().await.expect("read all-ejected response"),
+        "all upstream targets are unavailable\n"
+    );
+    assert_eq!(
+        upstream_requests.load(Ordering::Acquire),
+        1,
+        "local rejection performs no hidden retry"
+    );
+
+    config["upstreams"][0]["passiveHealth"]["failureThreshold"] = json!(2);
+    write_config(directory.path(), &config);
+    timeout(Duration::from_secs(5), async {
+        while upstream_requests.load(Ordering::Acquire) < 2 {
+            let _ = client
+                .get(&url)
+                .header("host", "test.localhost")
+                .send()
+                .await;
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .expect("valid reload publishes fresh health state");
+
+    stop_data_plane(shutdown, task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn private_ca_https_upstream_requires_custom_trust_and_correct_hostname() {
+    let directory = TempDir::new().expect("create temp directory");
+    let authority = write_test_ca(directory.path(), "upstream-ca");
+    let server_identity = write_signed_identity(
+        directory.path(),
+        "upstream-server",
+        &["localhost"],
+        &authority,
+        false,
+    );
+    let server_config = tls_upstream_server_config(server_identity, None, false);
+    let (upstream_address, upstream_shutdown, upstream_task) =
+        spawn_tls_upstream(server_config).await;
+    let client = reqwest::Client::new();
+
+    let system_port = available_port();
+    let system = upstream_tls_proxy_config(system_port, upstream_address, "localhost", None);
+    let system_path = write_config(directory.path(), &system);
+    let (system_shutdown, system_task) = spawn_data_plane(&system_path);
+    let system_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{system_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(system_response.status(), reqwest::StatusCode::BAD_GATEWAY);
+    stop_data_plane(system_shutdown, system_task).await;
+
+    let trusted_port = available_port();
+    let trusted = upstream_tls_proxy_config(
+        trusted_port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["upstream-ca.pem"],
+            "minimumVersion": "tls1.2",
+            "maximumVersion": "tls1.3"
+        })),
+    );
+    let trusted_path = write_config(directory.path(), &trusted);
+    let (trusted_shutdown, trusted_task) = spawn_data_plane(&trusted_path);
+    let trusted_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{trusted_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(trusted_response.status(), reqwest::StatusCode::OK);
+    assert_eq!(
+        trusted_response
+            .text()
+            .await
+            .expect("read trusted response"),
+        "secure-upstream"
+    );
+    stop_data_plane(trusted_shutdown, trusted_task).await;
+
+    let wrong_name_port = available_port();
+    let wrong_name = upstream_tls_proxy_config(
+        wrong_name_port,
+        upstream_address,
+        "127.0.0.1",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["upstream-ca.pem"]
+        })),
+    );
+    let wrong_name_path = write_config(directory.path(), &wrong_name);
+    let (wrong_name_shutdown, wrong_name_task) = spawn_data_plane(&wrong_name_path);
+    let wrong_name_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{wrong_name_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(
+        wrong_name_response.status(),
+        reqwest::StatusCode::BAD_GATEWAY
+    );
+    stop_data_plane(wrong_name_shutdown, wrong_name_task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn mutual_tls_upstream_requires_the_configured_client_identity() {
+    let directory = TempDir::new().expect("create temp directory");
+    let authority = write_test_ca(directory.path(), "mtls-ca");
+    let server_identity = write_signed_identity(
+        directory.path(),
+        "mtls-server",
+        &["localhost"],
+        &authority,
+        false,
+    );
+    write_signed_identity(
+        directory.path(),
+        "mtls-client",
+        &["sdkwork-client"],
+        &authority,
+        true,
+    );
+    let server_config = tls_upstream_server_config(server_identity, Some(&authority), false);
+    let (upstream_address, upstream_shutdown, upstream_task) =
+        spawn_tls_upstream(server_config).await;
+    let client = reqwest::Client::new();
+
+    let anonymous_port = available_port();
+    let anonymous = upstream_tls_proxy_config(
+        anonymous_port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["mtls-ca.pem"]
+        })),
+    );
+    let anonymous_path = write_config(directory.path(), &anonymous);
+    let (anonymous_shutdown, anonymous_task) = spawn_data_plane(&anonymous_path);
+    let anonymous_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{anonymous_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(
+        anonymous_response.status(),
+        reqwest::StatusCode::BAD_GATEWAY
+    );
+    stop_data_plane(anonymous_shutdown, anonymous_task).await;
+
+    let authenticated_port = available_port();
+    let authenticated = upstream_tls_proxy_config(
+        authenticated_port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["mtls-ca.pem"],
+            "clientCertificateFile": "mtls-client.pem",
+            "clientPrivateKeyFile": "mtls-client.key"
+        })),
+    );
+    let authenticated_path = write_config(directory.path(), &authenticated);
+    let (authenticated_shutdown, authenticated_task) = spawn_data_plane(&authenticated_path);
+    let authenticated_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{authenticated_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(authenticated_response.status(), reqwest::StatusCode::OK);
+    assert_eq!(
+        authenticated_response
+            .text()
+            .await
+            .expect("read mutual TLS response"),
+        "secure-upstream"
+    );
+    stop_data_plane(authenticated_shutdown, authenticated_task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn upstream_tls_version_policy_rejects_incompatible_peers() {
+    let directory = TempDir::new().expect("create temp directory");
+    let authority = write_test_ca(directory.path(), "tls12-ca");
+    let server_identity = write_signed_identity(
+        directory.path(),
+        "tls12-server",
+        &["localhost"],
+        &authority,
+        false,
+    );
+    let server_config = tls_upstream_server_config(server_identity, None, true);
+    let (upstream_address, upstream_shutdown, upstream_task) =
+        spawn_tls_upstream(server_config).await;
+    let client = reqwest::Client::new();
+
+    let incompatible_port = available_port();
+    let incompatible = upstream_tls_proxy_config(
+        incompatible_port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["tls12-ca.pem"],
+            "minimumVersion": "tls1.3",
+            "maximumVersion": "tls1.3"
+        })),
+    );
+    let incompatible_path = write_config(directory.path(), &incompatible);
+    let (incompatible_shutdown, incompatible_task) = spawn_data_plane(&incompatible_path);
+    let incompatible_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{incompatible_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(
+        incompatible_response.status(),
+        reqwest::StatusCode::BAD_GATEWAY
+    );
+    stop_data_plane(incompatible_shutdown, incompatible_task).await;
+
+    let compatible_port = available_port();
+    let compatible = upstream_tls_proxy_config(
+        compatible_port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["tls12-ca.pem"],
+            "minimumVersion": "tls1.2",
+            "maximumVersion": "tls1.2"
+        })),
+    );
+    let compatible_path = write_config(directory.path(), &compatible);
+    let (compatible_shutdown, compatible_task) = spawn_data_plane(&compatible_path);
+    let compatible_response = wait_for_http(
+        &client,
+        &format!("http://127.0.0.1:{compatible_port}/secure"),
+        "test.localhost",
+    )
+    .await;
+    assert_eq!(compatible_response.status(), reqwest::StatusCode::OK);
+    stop_data_plane(compatible_shutdown, compatible_task).await;
+    stop_upstream(upstream_shutdown, upstream_task).await;
+}
+
+#[tokio::test]
+async fn invalid_upstream_tls_material_fails_before_listener_activation() {
+    let directory = TempDir::new().expect("create temp directory");
+    let port = available_port();
+    fs::write(directory.path().join("invalid-ca.pem"), "not a certificate")
+        .expect("write malformed CA");
+    let malformed = upstream_tls_proxy_config(
+        port,
+        "127.0.0.1:443".parse().expect("test upstream address"),
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["invalid-ca.pem"]
+        })),
+    );
+    let malformed_path = write_config(directory.path(), &malformed);
+    let malformed_app = load_and_compile_webserver_config(&malformed_path)
+        .expect("malformed PEM remains a runtime material check");
+    let malformed_error = run_data_plane_until(malformed_app, std::future::pending::<()>())
+        .await
+        .expect_err("malformed CA must fail before listener activation");
+    assert!(
+        matches!(
+            &malformed_error,
+            sdkwork_web_standalone_gateway::DataPlaneError::InvalidUpstreamCaBundle { .. }
+        ),
+        "{malformed_error:?}"
+    );
+
+    fs::write(directory.path().join("empty-ca.pem"), b"").expect("write empty CA");
+    let empty = upstream_tls_proxy_config(
+        port,
+        "127.0.0.1:443".parse().expect("test upstream address"),
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["empty-ca.pem"]
+        })),
+    );
+    let empty_path = write_config(directory.path(), &empty);
+    let empty_app = load_and_compile_webserver_config(&empty_path).expect("compile empty CA path");
+    let empty_error = run_data_plane_until(empty_app, std::future::pending::<()>())
+        .await
+        .expect_err("empty CA must fail before listener activation");
+    assert!(matches!(
+        empty_error,
+        sdkwork_web_standalone_gateway::DataPlaneError::EmptyUpstreamCaBundle { .. }
+    ));
+
+    fs::write(
+        directory.path().join("oversized-ca.pem"),
+        vec![b'x'; 1024 * 1024 + 1],
+    )
+    .expect("write oversized CA");
+    let oversized = upstream_tls_proxy_config(
+        port,
+        "127.0.0.1:443".parse().expect("test upstream address"),
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["oversized-ca.pem"]
+        })),
+    );
+    let oversized_path = write_config(directory.path(), &oversized);
+    let oversized_app =
+        load_and_compile_webserver_config(&oversized_path).expect("compile oversized CA path");
+    let oversized_error = run_data_plane_until(oversized_app, std::future::pending::<()>())
+        .await
+        .expect_err("oversized CA must fail before listener activation");
+    assert!(matches!(
+        oversized_error,
+        sdkwork_web_standalone_gateway::DataPlaneError::TlsMaterialTooLarge { .. }
+    ));
+
+    let many_roots_authority = write_test_ca(directory.path(), "many-roots-ca");
+    fs::write(
+        directory.path().join("many-roots.pem"),
+        many_roots_authority.certificate.pem().repeat(65),
+    )
+    .expect("write excessive root bundle");
+    let many_roots = upstream_tls_proxy_config(
+        port,
+        "127.0.0.1:443".parse().expect("test upstream address"),
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["many-roots.pem"]
+        })),
+    );
+    let many_roots_path = write_config(directory.path(), &many_roots);
+    let many_roots_app =
+        load_and_compile_webserver_config(&many_roots_path).expect("compile bounded root path");
+    let many_roots_error = run_data_plane_until(many_roots_app, std::future::pending::<()>())
+        .await
+        .expect_err("more than 64 custom roots must fail before listener activation");
+    assert!(matches!(
+        many_roots_error,
+        sdkwork_web_standalone_gateway::DataPlaneError::TooManyUpstreamRootCertificates { .. }
+    ));
+
+    let authority = write_test_ca(directory.path(), "identity-ca");
+    write_signed_identity(
+        directory.path(),
+        "identity-client",
+        &["sdkwork-client"],
+        &authority,
+        true,
+    );
+    let wrong_key = KeyPair::generate().expect("generate mismatched client key");
+    fs::write(
+        directory.path().join("identity-client.key"),
+        wrong_key.serialize_pem(),
+    )
+    .expect("replace client key with mismatch");
+    let mismatched = upstream_tls_proxy_config(
+        port,
+        "127.0.0.1:443".parse().expect("test upstream address"),
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["identity-ca.pem"],
+            "clientCertificateFile": "identity-client.pem",
+            "clientPrivateKeyFile": "identity-client.key"
+        })),
+    );
+    let mismatched_path = write_config(directory.path(), &mismatched);
+    let mismatched_app = load_and_compile_webserver_config(&mismatched_path)
+        .expect("compile mismatched identity paths");
+    let mismatched_error = run_data_plane_until(mismatched_app, std::future::pending::<()>())
+        .await
+        .expect_err("mismatched client identity must fail before listener activation");
+    assert!(matches!(
+        mismatched_error,
+        sdkwork_web_standalone_gateway::DataPlaneError::UpstreamClient { .. }
+    ));
+}
+
+#[tokio::test]
+async fn upstream_tls_watch_reload_retains_failure_and_replaces_security_pool() {
+    let directory = TempDir::new().expect("create temp directory");
+    let authority = write_test_ca(directory.path(), "reload-ca");
+    let server_identity = write_signed_identity(
+        directory.path(),
+        "reload-server",
+        &["localhost"],
+        &authority,
+        false,
+    );
+    let server_config = tls_upstream_server_config(server_identity, None, false);
+    let (upstream_address, upstream_shutdown, upstream_task) =
+        spawn_tls_upstream(server_config).await;
+    let port = available_port();
+    let mut trusted = upstream_tls_proxy_config(
+        port,
+        upstream_address,
+        "localhost",
+        Some(json!({
+            "trustMode": "custom",
+            "caCertificateFiles": ["reload-ca.pem"]
+        })),
+    );
+    trusted["deployment"] = json!({
+        "drainTimeoutMs": 1_000,
+        "reload": {"mode": "watch", "pollIntervalMs": 100}
+    });
+    let path = write_config(directory.path(), &trusted);
+    let (shutdown, task) = spawn_watched_data_plane(&path);
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{port}/secure");
+    wait_for_body(&client, &url, "test.localhost", "secure-upstream").await;
+
+    fs::write(directory.path().join("broken-ca.pem"), "not a certificate")
+        .expect("write invalid reload CA");
+    let mut invalid = trusted.clone();
+    invalid["upstreams"][0]["tls"]["caCertificateFiles"] = json!(["broken-ca.pem"]);
+    write_config(directory.path(), &invalid);
+    tokio::time::sleep(Duration::from_millis(350)).await;
+    let retained = client
+        .get(&url)
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request retained TLS generation");
+    assert_eq!(retained.status(), reqwest::StatusCode::OK);
+
+    let mut system = trusted.clone();
+    system["upstreams"][0]["tls"] = json!({"trustMode": "system"});
+    write_config(directory.path(), &system);
+    wait_for_status(
+        &client,
+        &url,
+        "test.localhost",
+        reqwest::StatusCode::BAD_GATEWAY,
+    )
+    .await;
+
+    write_config(directory.path(), &trusted);
+    wait_for_body(&client, &url, "test.localhost", "secure-upstream").await;
+    stop_data_plane(shutdown, task).await;
     stop_upstream(upstream_shutdown, upstream_task).await;
 }
 

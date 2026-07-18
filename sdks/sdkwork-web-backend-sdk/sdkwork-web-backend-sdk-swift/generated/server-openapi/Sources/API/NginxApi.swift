@@ -26,22 +26,22 @@ public class NginxApi {
 
     /// 获取 Nginx 配置详情
     public func configsRetrieve(configId: String) async throws -> NginxConfigResponse? {
-        return try await client.get(ApiPaths.backendPath("/nginx/configs/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))"), responseType: NginxConfigResponse.self)
+        return try await client.get(ApiPaths.backendPath("/nginx/etc/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))"), responseType: NginxConfigResponse.self)
     }
 
     /// 更新 Nginx 配置
     public func configsUpdate(configId: String, body: UpdateNginxConfigRequest) async throws -> NginxConfigResponse? {
-        return try await client.put(ApiPaths.backendPath("/nginx/configs/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: NginxConfigResponse.self)
+        return try await client.put(ApiPaths.backendPath("/nginx/etc/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: NginxConfigResponse.self)
     }
 
     /// 校验 Nginx 配置
     public func configsValidate(configId: String) async throws -> NginxValidateResponse? {
-        return try await client.post(ApiPaths.backendPath("/nginx/configs/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))/validate"), body: nil, responseType: NginxValidateResponse.self)
+        return try await client.post(ApiPaths.backendPath("/nginx/etc/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))/validate"), body: nil, responseType: NginxValidateResponse.self)
     }
 
     /// 部署 Nginx 配置
     public func configsDeploy(configId: String) async throws -> NginxDeployResponse? {
-        return try await client.post(ApiPaths.backendPath("/nginx/configs/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))/deploy"), body: nil, responseType: NginxDeployResponse.self)
+        return try await client.post(ApiPaths.backendPath("/nginx/etc/\(serializePathParameter(configId, PathParameterSpec(name: "configId", style: "simple", explode: false)))/deploy"), body: nil, responseType: NginxDeployResponse.self)
     }
 
     /// 热加载 Nginx

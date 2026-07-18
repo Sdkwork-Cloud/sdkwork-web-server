@@ -72,6 +72,12 @@ struct ProxyRequestBodyControlInner {
 }
 
 impl ProxyRequestBodyControl {
+    pub(super) fn completed() -> Self {
+        let control = Self::default();
+        control.record_completed();
+        control
+    }
+
     pub(super) fn pause_if_incomplete(&self) -> bool {
         if self
             .inner

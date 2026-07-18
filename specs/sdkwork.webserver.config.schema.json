@@ -220,6 +220,13 @@
           "default": 4096,
           "description": "Process-wide admitted request limit across all listeners. Saturation is rejected without queueing, and permits remain held through response Body completion."
         },
+        "maxConcurrentHealthChecks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 64,
+          "description": "Process-wide active upstream health probe task ceiling for one immutable runtime generation."
+        },
         "maxRequestHeaderBytes": {
           "type": "integer",
           "minimum": 8192,
@@ -459,6 +466,88 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 1000000
+        },
+        "trustedProxy": {
+          "$ref": "#/$defs/trustedProxy"
+        },
+        "proxyProtocol": {
+          "$ref": "#/$defs/proxyProtocol"
+        }
+      }
+    },
+    "trustedProxy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trustedCidrs"],
+      "properties": {
+        "trustedCidrs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64
+          },
+          "description": "TCP peer networks authorized to supply the configured real-IP Header. Omission of trustedProxy trusts no forwarding Header."
+        },
+        "header": {
+          "type": "string",
+          "enum": ["x-forwarded-for"],
+          "default": "x-forwarded-for"
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, scan right-to-left through trusted proxy hops and select the first non-trusted address; an all-trusted chain resolves to its leftmost address."
+        },
+        "maxHops": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 16
+        },
+        "maxHeaderBytes": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 65536,
+          "default": 4096
+        }
+      }
+    },
+    "proxyProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trustedSourceCidrs"],
+      "properties": {
+        "trustedSourceCidrs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 3, "maxLength": 64},
+          "description": "Immediate TCP peer networks authorized to send a mandatory PROXY protocol header."
+        },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"enum": ["v1", "v2"]},
+          "default": ["v1", "v2"]
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 10000,
+          "default": 3000
+        },
+        "maxHeaderBytes": {
+          "type": "integer",
+          "minimum": 107,
+          "maximum": 4096,
+          "default": 536
         }
       }
     },
@@ -721,6 +810,12 @@
             "$ref": "#/$defs/upstreamTarget"
           }
         },
+        "loadBalancing": {
+          "type": "string",
+          "enum": ["round-robin", "least-connections", "random-two-least-connections", "ip-hash"],
+          "default": "round-robin",
+          "description": "Business-request selection strategy. Least-connections minimizes active request or HTTP/2 Stream load divided by target weight. Random-two-least-connections samples two distinct eligible targets by effective weight and compares the same weighted load. Ip-hash uses the listener-resolved effective client IP, which defaults to the direct peer, and cannot be combined with target slowStartMs."
+        },
         "resolverRef": {
           "$ref": "#/$defs/id"
         },
@@ -748,12 +843,49 @@
           "maximum": 100000,
           "default": 128
         },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 256,
+          "description": "Aggregate process-local hard ceiling for connecting, active, HTTP/2-multiplexed, and idle physical connections owned by one immutable upstream generation."
+        },
+        "maxResponseHeaderBytes": {
+          "type": "integer",
+          "minimum": 8192,
+          "maximum": 1048576,
+          "default": 65536,
+          "description": "Maximum decoded upstream response Header bytes, counted across every field occurrence before proxy forwarding."
+        },
+        "maxResponseHeaders": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 100,
+          "description": "Maximum number of decoded upstream response Header field occurrences before proxy forwarding."
+        },
         "idleConnectionTimeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 3600000,
           "default": 30000,
           "description": "Maximum idle lifetime of a pooled upstream connection before it is removed and the next connection resolves again."
+        },
+        "maxInFlightRequests": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 1024,
+          "description": "Non-queuing per-upstream admitted request limit held through streaming response completion or cancellation."
+        },
+        "retry": {
+          "$ref": "#/$defs/upstreamRetry"
+        },
+        "passiveHealth": {
+          "$ref": "#/$defs/upstreamPassiveHealth"
+        },
+        "activeHealth": {
+          "$ref": "#/$defs/upstreamActiveHealth"
         }
       }
     },
@@ -814,6 +946,125 @@
         }
       }
     },
+    "upstreamPassiveHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "failureThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3
+        },
+        "ejectionTimeMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 600000,
+          "default": 30000
+        },
+        "failureStatuses": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 500,
+            "maximum": 599
+          },
+          "default": [502, 503, 504]
+        }
+      }
+    },
+    "upstreamRetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxAttempts": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "default": 2,
+          "description": "Total sequential upstream attempts, including the first attempt."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "default": 30000,
+          "description": "Total wall-clock budget shared by all attempts."
+        },
+        "retryOn": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["error", "timeout", "http_502", "http_503", "http_504"]
+          },
+          "default": ["error", "timeout"]
+        }
+      }
+    },
+    "upstreamActiveHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": ["GET", "HEAD"],
+          "default": "GET"
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^/",
+          "default": "/"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 600000,
+          "default": 10000
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 2000
+        },
+        "unhealthyThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3
+        },
+        "healthyThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2
+        },
+        "successStatusMin": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "default": 200
+        },
+        "successStatusMax": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "default": 399
+        },
+        "maxResponseBodyBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "default": 65536
+        }
+      }
+    },
     "upstreamTarget": {
       "type": "object",
       "additionalProperties": false,
@@ -828,7 +1079,25 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 1000,
-          "default": 1
+          "default": 1,
+          "description": "Relative business-traffic selection slots among targets that currently pass active and passive health."
+        },
+        "backup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reserve this target for selection only when no unattempted primary target is currently eligible."
+        },
+        "slowStartMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000,
+          "description": "Optional monotonic interval for recovering effective selection weight from one integer slot to nominal after active or passive unavailability."
+        },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "description": "Optional physical connection ceiling for this unique target authority, including connecting, TLS, active HTTP/1, multiplexed HTTP/2, and idle sockets."
         }
       }
     },
@@ -937,6 +1206,103 @@
         },
         "reload": {
           "$ref": "#/$defs/reload"
+        },
+        "resourcePressure": {
+          "$ref": "#/$defs/resourcePressure"
+        }
+      }
+    },
+    "resourcePressure": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sampleIntervalMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 10000,
+          "default": 250
+        },
+        "maximumProcessMemoryBytes": {
+          "type": "integer",
+          "minimum": 134217728,
+          "maximum": 17592186044416,
+          "default": 1073741824
+        },
+        "memoryReserveBytes": {
+          "type": "integer",
+          "minimum": 16777216,
+          "maximum": 68719476736,
+          "default": 67108864
+        },
+        "memoryAdmissionPercent": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 99,
+          "default": 90
+        },
+        "memoryRecoveryPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 98,
+          "default": 80
+        },
+        "maximumOpenHandles": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 1048576,
+          "default": 16384
+        },
+        "openHandleReserve": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 65536,
+          "default": 128
+        },
+        "openHandleAdmissionPercent": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 99,
+          "default": 90
+        },
+        "openHandleRecoveryPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 98,
+          "default": 80
+        },
+        "eventLoopLagAdmissionMs": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 10000,
+          "default": 250
+        },
+        "eventLoopLagRecoveryMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9999,
+          "default": 50
+        },
+        "consecutivePressureSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2
+        },
+        "consecutiveRecoverySamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 4
+        },
+        "operationsReserveRequests": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 16
+        },
+        "sampleFailurePolicy": {
+          "enum": ["fail-open", "fail-closed"],
+          "default": "fail-closed"
         }
       }
     },

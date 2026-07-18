@@ -53,22 +53,22 @@ export class NginxConfigsApi {
 
 /** 获取 Nginx 配置详情 */
   async retrieve(configId: string): Promise<NginxConfigResponse> {
-    return this.client.get<NginxConfigResponse>(backendApiPath(`/nginx/configs/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`));
+    return this.client.get<NginxConfigResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`));
   }
 
 /** 更新 Nginx 配置 */
   async update(configId: string, body: UpdateNginxConfigRequest): Promise<NginxConfigResponse> {
-    return this.client.put<NginxConfigResponse>(backendApiPath(`/nginx/configs/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+    return this.client.put<NginxConfigResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 
 /** 校验 Nginx 配置 */
   async validate(configId: string): Promise<NginxValidateResponse> {
-    return this.client.post<NginxValidateResponse>(backendApiPath(`/nginx/configs/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/validate`));
+    return this.client.post<NginxValidateResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/validate`));
   }
 
 /** 部署 Nginx 配置 */
   async deploy(configId: string): Promise<NginxDeployResponse> {
-    return this.client.post<NginxDeployResponse>(backendApiPath(`/nginx/configs/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/deploy`));
+    return this.client.post<NginxDeployResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/deploy`));
   }
 }
 

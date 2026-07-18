@@ -22,7 +22,7 @@ Standards-aligned HTTP backend for site, domain, deployment, certificate, nginx,
 | `crates/` | Rust service, repository, route, and gateway crates |
 | `database/` | Database contract, baseline DDL, migrations, seeds |
 | `specs/` | Component and topology contracts |
-| `configs/` | Topology profile env templates |
+| `etc/` | Topology profile env templates |
 | `deployments/` | Docker and Kubernetes descriptors |
 | `docs/` | PRD, architecture, ADRs, standards alignment |
 | `tests/` | Cross-package contract tests |

@@ -1,4 +1,10 @@
-use reqwest::{tls::Version, Certificate, ClientBuilder, Identity};
+use std::{io::Cursor, sync::Arc};
+
+use rustls::{
+    pki_types::{CertificateDer, PrivateKeyDer},
+    version::{TLS12, TLS13},
+    ClientConfig, RootCertStore,
+};
 use sdkwork_webserver_core::{
     CompiledWebServerApp, TlsVersion, UpstreamConfig, UpstreamTlsTrustMode,
 };
@@ -7,40 +13,92 @@ use super::{runtime::read_bounded_tls_material, DataPlaneError};
 
 const MAX_CUSTOM_ROOT_CERTIFICATES: usize = 64;
 
-pub(crate) fn configure_upstream_tls(
-    mut builder: ClientBuilder,
+pub(crate) fn build_upstream_tls_config(
     app: &CompiledWebServerApp,
     upstream: &UpstreamConfig,
-) -> Result<ClientBuilder, DataPlaneError> {
-    let Some(policy) = &upstream.tls else {
-        return Ok(builder);
-    };
-
-    builder = builder
-        .use_rustls_tls()
-        .tls_built_in_root_certs(matches!(
+) -> Result<ClientConfig, DataPlaneError> {
+    let policy = upstream.tls.as_ref();
+    let mut roots = RootCertStore::empty();
+    if policy.is_none_or(|policy| {
+        matches!(
             policy.trust_mode,
             UpstreamTlsTrustMode::System | UpstreamTlsTrustMode::SystemAndCustom
-        ))
-        .min_tls_version(reqwest_tls_version(policy.minimum_version))
-        .max_tls_version(reqwest_tls_version(policy.maximum_version));
+        )
+    }) {
+        roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    }
+    add_custom_roots(&mut roots, app, upstream)?;
 
+    let versions = match policy.map(|policy| (policy.minimum_version, policy.maximum_version)) {
+        Some((TlsVersion::Tls12, TlsVersion::Tls12)) => vec![&TLS12],
+        Some((TlsVersion::Tls13, TlsVersion::Tls13)) => vec![&TLS13],
+        _ => vec![&TLS13, &TLS12],
+    };
+    let provider = Arc::new(rustls::crypto::aws_lc_rs::default_provider());
+    let builder = ClientConfig::builder_with_provider(provider)
+        .with_protocol_versions(&versions)
+        .map_err(|source| DataPlaneError::UpstreamClient {
+            upstream_id: upstream.id.clone(),
+            source: Box::new(source),
+        })?
+        .with_root_certificates(roots);
+    let mut config = if let Some((certificate_path, private_key_path)) =
+        app.upstream_tls_client_identity_paths(&upstream.id)
+    {
+        let certificates = read_certificate_chain(certificate_path).map_err(|source| {
+            DataPlaneError::UpstreamTls {
+                upstream_id: upstream.id.clone(),
+                material: "client certificate",
+                source,
+            }
+        })?;
+        let private_key =
+            read_private_key(private_key_path).map_err(|source| DataPlaneError::UpstreamTls {
+                upstream_id: upstream.id.clone(),
+                material: "client private key",
+                source,
+            })?;
+        builder
+            .with_client_auth_cert(certificates, private_key)
+            .map_err(|source| DataPlaneError::UpstreamClient {
+                upstream_id: upstream.id.clone(),
+                source: Box::new(source),
+            })?
+    } else {
+        builder.with_no_client_auth()
+    };
+    config.enable_sni = true;
+    Ok(config)
+}
+
+fn add_custom_roots(
+    roots: &mut RootCertStore,
+    app: &CompiledWebServerApp,
+    upstream: &UpstreamConfig,
+) -> Result<(), DataPlaneError> {
     let ca_paths = app
         .upstream_tls_ca_certificate_paths(&upstream.id)
-        .expect("compilation resolves every configured upstream TLS policy");
+        .unwrap_or_default();
     let mut root_count = 0usize;
     for path in ca_paths {
         let pem = read_bounded_tls_material(path)?;
-        let certificates =
-            Certificate::from_pem_bundle(&pem).map_err(|source| DataPlaneError::UpstreamTls {
-                upstream_id: upstream.id.clone(),
-                material: "CA certificate bundle",
-                source,
-            })?;
-        if certificates.is_empty() {
-            return Err(DataPlaneError::EmptyUpstreamCaBundle {
+        let certificates = rustls_pemfile::certs(&mut Cursor::new(&pem))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| DataPlaneError::InvalidUpstreamCaBundle {
                 upstream_id: upstream.id.clone(),
                 path: path.clone(),
+            })?;
+        if certificates.is_empty() {
+            return Err(if pem.iter().all(u8::is_ascii_whitespace) {
+                DataPlaneError::EmptyUpstreamCaBundle {
+                    upstream_id: upstream.id.clone(),
+                    path: path.clone(),
+                }
+            } else {
+                DataPlaneError::InvalidUpstreamCaBundle {
+                    upstream_id: upstream.id.clone(),
+                    path: path.clone(),
+                }
             });
         }
         root_count = root_count.saturating_add(certificates.len());
@@ -52,41 +110,33 @@ pub(crate) fn configure_upstream_tls(
             });
         }
         for certificate in certificates {
-            builder = builder.add_root_certificate(certificate);
+            roots
+                .add(certificate)
+                .map_err(|_| DataPlaneError::InvalidUpstreamCaBundle {
+                    upstream_id: upstream.id.clone(),
+                    path: path.clone(),
+                })?;
         }
     }
-
-    if let Some((certificate_path, private_key_path)) =
-        app.upstream_tls_client_identity_paths(&upstream.id)
-    {
-        let certificate = read_bounded_tls_material(certificate_path)?;
-        let private_key = read_bounded_tls_material(private_key_path)?;
-        let mut identity_pem = Vec::with_capacity(
-            certificate
-                .len()
-                .saturating_add(private_key.len())
-                .saturating_add(2),
-        );
-        identity_pem.extend_from_slice(&certificate);
-        if !identity_pem.ends_with(b"\n") {
-            identity_pem.push(b'\n');
-        }
-        identity_pem.extend_from_slice(&private_key);
-        let identity =
-            Identity::from_pem(&identity_pem).map_err(|source| DataPlaneError::UpstreamTls {
-                upstream_id: upstream.id.clone(),
-                material: "client identity",
-                source,
-            })?;
-        builder = builder.identity(identity);
-    }
-
-    Ok(builder)
+    Ok(())
 }
 
-fn reqwest_tls_version(version: TlsVersion) -> Version {
-    match version {
-        TlsVersion::Tls12 => Version::TLS_1_2,
-        TlsVersion::Tls13 => Version::TLS_1_3,
+fn read_certificate_chain(
+    path: &std::path::Path,
+) -> Result<Vec<CertificateDer<'static>>, Box<dyn std::error::Error + Send + Sync>> {
+    let pem = read_bounded_tls_material(path)?;
+    let certificates =
+        rustls_pemfile::certs(&mut Cursor::new(pem)).collect::<Result<Vec<_>, _>>()?;
+    if certificates.is_empty() {
+        return Err("client certificate file contains no certificates".into());
     }
+    Ok(certificates)
+}
+
+fn read_private_key(
+    path: &std::path::Path,
+) -> Result<PrivateKeyDer<'static>, Box<dyn std::error::Error + Send + Sync>> {
+    let pem = read_bounded_tls_material(path)?;
+    rustls_pemfile::private_key(&mut Cursor::new(pem))?
+        .ok_or_else(|| "client private key file contains no private key".into())
 }

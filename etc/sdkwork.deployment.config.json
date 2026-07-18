@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.deployment-index",
+  "application": "sdkwork-web",
+  "defaultProfile": "standalone.development",
+  "profiles": {
+    "standalone.development": {
+      "config": "sdkwork.webserver.im-dev.json"
+    }
+  }
+}

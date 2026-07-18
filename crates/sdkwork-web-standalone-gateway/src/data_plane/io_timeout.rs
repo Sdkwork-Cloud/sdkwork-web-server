@@ -2,6 +2,7 @@ use std::{
     future::Future,
     io,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
@@ -12,15 +13,26 @@ use tokio::{
     time::{Instant, Sleep},
 };
 
+use super::metrics::{DataPlaneMetrics, ProtocolErrorKind};
+
 #[derive(Clone)]
 pub(crate) struct WriteTimeoutAcceptor<A> {
     inner: A,
     timeout: Duration,
+    metrics: Option<Arc<DataPlaneMetrics>>,
 }
 
 impl<A> WriteTimeoutAcceptor<A> {
-    pub(crate) fn new(inner: A, timeout: Duration) -> Self {
-        Self { inner, timeout }
+    pub(crate) fn new_observed(
+        inner: A,
+        timeout: Duration,
+        metrics: Arc<DataPlaneMetrics>,
+    ) -> Self {
+        Self {
+            inner,
+            timeout,
+            metrics: Some(metrics),
+        }
     }
 }
 
@@ -41,9 +53,13 @@ where
     fn accept(&self, stream: I, service: S) -> Self::Future {
         let inner = self.inner.clone();
         let timeout = self.timeout;
+        let metrics = self.metrics.clone();
         Box::pin(async move {
             let (stream, service) = inner.accept(stream, service).await?;
-            Ok((WriteTimeoutStream::new(stream, timeout), service))
+            Ok((
+                WriteTimeoutStream::new_observed(stream, timeout, metrics),
+                service,
+            ))
         })
     }
 }
@@ -51,13 +67,28 @@ where
 pub(crate) struct WriteTimeoutStream<I> {
     inner: I,
     deadline: WriteDeadline,
+    metrics: Option<Arc<DataPlaneMetrics>>,
+    timeout_recorded: bool,
 }
 
 impl<I> WriteTimeoutStream<I> {
-    fn new(inner: I, timeout: Duration) -> Self {
+    fn new_observed(inner: I, timeout: Duration, metrics: Option<Arc<DataPlaneMetrics>>) -> Self {
         Self {
             inner,
             deadline: WriteDeadline::new(timeout),
+            metrics,
+            timeout_recorded: false,
+        }
+    }
+
+    fn record_deadline_timeout<T>(&mut self, result: &Poll<io::Result<T>>) {
+        if !self.timeout_recorded
+            && matches!(result, Poll::Ready(Err(error)) if error.kind() == io::ErrorKind::TimedOut)
+        {
+            if let Some(metrics) = &self.metrics {
+                metrics.record_protocol_error(ProtocolErrorKind::DownstreamWriteTimeout);
+            }
+            self.timeout_recorded = true;
         }
     }
 }
@@ -83,7 +114,11 @@ impl<I: AsyncWrite + Unpin> AsyncWrite for WriteTimeoutStream<I> {
                 self.deadline.disarm();
                 Poll::Ready(result)
             }
-            Poll::Pending => self.deadline.poll_timeout(context),
+            Poll::Pending => {
+                let result = self.deadline.poll_timeout(context);
+                self.record_deadline_timeout(&result);
+                result
+            }
         }
     }
 
@@ -93,10 +128,11 @@ impl<I: AsyncWrite + Unpin> AsyncWrite for WriteTimeoutStream<I> {
                 self.deadline.disarm();
                 Poll::Ready(result)
             }
-            Poll::Pending => self
-                .deadline
-                .poll_timeout(context)
-                .map(|result| result.map(|_| ())),
+            Poll::Pending => {
+                let result = self.deadline.poll_timeout(context);
+                self.record_deadline_timeout(&result);
+                result.map(|result| result.map(|_| ()))
+            }
         }
     }
 
@@ -106,10 +142,11 @@ impl<I: AsyncWrite + Unpin> AsyncWrite for WriteTimeoutStream<I> {
                 self.deadline.disarm();
                 Poll::Ready(result)
             }
-            Poll::Pending => self
-                .deadline
-                .poll_timeout(context)
-                .map(|result| result.map(|_| ())),
+            Poll::Pending => {
+                let result = self.deadline.poll_timeout(context);
+                self.record_deadline_timeout(&result);
+                result.map(|result| result.map(|_| ()))
+            }
         }
     }
 }
@@ -164,6 +201,10 @@ mod tests {
     use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
     use super::WriteTimeoutStream;
+    use crate::{
+        data_plane::metrics::{DataPlaneMetrics, ProtocolErrorKind},
+        metric_dimensions::CanonicalMetricDimensions,
+    };
 
     struct PendingWriter;
 
@@ -198,7 +239,12 @@ mod tests {
     #[tokio::test]
     async fn times_out_pending_write_flush_and_shutdown() {
         for operation in 0..3 {
-            let mut stream = WriteTimeoutStream::new(PendingWriter, Duration::from_millis(50));
+            let metrics = DataPlaneMetrics::new(CanonicalMetricDimensions::default());
+            let mut stream = WriteTimeoutStream::new_observed(
+                PendingWriter,
+                Duration::from_millis(50),
+                Some(metrics.clone()),
+            );
             let result = poll_fn(|context| match operation {
                 0 => Pin::new(&mut stream)
                     .poll_write(context, b"blocked")
@@ -212,6 +258,10 @@ mod tests {
                     .expect_err("pending write operation must time out")
                     .kind(),
                 io::ErrorKind::TimedOut
+            );
+            assert_eq!(
+                metrics.protocol_error_count(ProtocolErrorKind::DownstreamWriteTimeout),
+                1
             );
         }
     }
