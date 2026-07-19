@@ -13,4 +13,5 @@ sdkwork-database-sqlx.workspace = true
 [dev-dependencies]
 sdkwork-database-drift.workspace = true
 sqlx.workspace = true
+tempfile.workspace = true
 tokio.workspace = true

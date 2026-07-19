@@ -26,6 +26,7 @@
     "standardProfile": "sdkwork-v3"
   },
   "contracts": {
+    "layerRole": "sdk-generated",
     "sdkDependencies": [
       {
         "family": "sdkwork-iam-app-sdk",

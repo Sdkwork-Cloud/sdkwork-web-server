@@ -1,6 +1,6 @@
 use std::{
     fs,
-    net::{Ipv6Addr, SocketAddr, TcpListener as StdTcpListener},
+    net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener as StdTcpListener},
     path::Path,
     sync::Arc,
     time::Duration,
@@ -12,6 +12,7 @@ use axum::{
     routing::any,
     Router,
 };
+use crc::{Crc, CRC_32_ISCSI};
 use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
 use rustls::{
     pki_types::{CertificateDer, ServerName},
@@ -31,6 +32,7 @@ use tokio::{
 use tokio_rustls::TlsConnector;
 
 const V2_SIGNATURE: &[u8; 12] = b"\r\n\r\n\0\r\nQUIT\n";
+const CRC32C: Crc<u32> = Crc::<u32>::new(&CRC_32_ISCSI);
 
 struct Upstream {
     address: SocketAddr,
@@ -179,6 +181,12 @@ async fn assert_connection_closed(mut stream: TcpStream) {
     }
 }
 
+async fn assert_header_rejected(port: u16, header: &[u8]) {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    stream.write_all(header).await.unwrap();
+    assert_connection_closed(stream).await;
+}
+
 fn v2_ipv6(source: Ipv6Addr, tlv: &[u8]) -> Vec<u8> {
     let mut header = Vec::with_capacity(52 + tlv.len());
     header.extend_from_slice(V2_SIGNATURE);
@@ -190,6 +198,46 @@ fn v2_ipv6(source: Ipv6Addr, tlv: &[u8]) -> Vec<u8> {
     header.extend_from_slice(&443_u16.to_be_bytes());
     header.extend_from_slice(tlv);
     header
+}
+
+fn v2_ipv4(source: Ipv4Addr, tlv: &[u8]) -> Vec<u8> {
+    let mut header = Vec::with_capacity(28 + tlv.len());
+    header.extend_from_slice(V2_SIGNATURE);
+    header.extend_from_slice(&[0x21, 0x11]);
+    header.extend_from_slice(&((12 + tlv.len()) as u16).to_be_bytes());
+    header.extend_from_slice(&source.octets());
+    header.extend_from_slice(&Ipv4Addr::LOCALHOST.octets());
+    header.extend_from_slice(&44321_u16.to_be_bytes());
+    header.extend_from_slice(&80_u16.to_be_bytes());
+    header.extend_from_slice(tlv);
+    header
+}
+
+fn v2_local(tlv: &[u8]) -> Vec<u8> {
+    let mut header = Vec::with_capacity(16 + tlv.len());
+    header.extend_from_slice(V2_SIGNATURE);
+    header.extend_from_slice(&[0x20, 0x00]);
+    header.extend_from_slice(&(tlv.len() as u16).to_be_bytes());
+    header.extend_from_slice(tlv);
+    header
+}
+
+fn with_crc32c(mut header: Vec<u8>) -> Vec<u8> {
+    let payload_bytes = u16::from_be_bytes([header[14], header[15]]);
+    let payload_bytes = payload_bytes
+        .checked_add(7)
+        .expect("bounded v2 test Header");
+    header[14..16].copy_from_slice(&payload_bytes.to_be_bytes());
+    header.extend_from_slice(&[0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
+    let checksum = CRC32C.checksum(&header);
+    let value_offset = header.len() - 4;
+    header[value_offset..].copy_from_slice(&checksum.to_be_bytes());
+    header
+}
+
+fn set_crc32c_policy(config: &mut Value, policy: &str) {
+    config["listeners"][0]["proxyProtocol"]["crc32cPolicy"] = json!(policy);
+    config["listeners"][1]["proxyProtocol"]["crc32cPolicy"] = json!(policy);
 }
 
 fn tls_client(root: CertificateDer<'static>, alpn: &[u8]) -> TlsConnector {
@@ -274,13 +322,116 @@ async fn proxy_v1_http_and_v2_https_h2_preserve_payload_and_effective_identity()
     assert!(fragmented.ends_with("\r\n\r\n198.51.100.7"));
     let unknown = raw_http(http_port, b"PROXY UNKNOWN ignored opaque fields\r\n").await;
     assert!(unknown.ends_with("\r\n\r\n127.0.0.1"));
+    let ipv6 = raw_http(http_port, b"PROXY TCP6 2001:db8::7 ::1 45680 80\r\n").await;
+    assert!(ipv6.ends_with("\r\n\r\n2001:db8::7"));
     let mut local = Vec::from(V2_SIGNATURE.as_slice());
     local.extend_from_slice(&[0x20, 0x00, 0x00, 0x00]);
     let local = raw_http(http_port, &local).await;
     assert!(local.ends_with("\r\n\r\n127.0.0.1"));
+    let ipv4 = raw_http(
+        http_port,
+        &v2_ipv4("203.0.113.19".parse().unwrap(), &[0x05, 0x00, 0x00]),
+    )
+    .await;
+    assert!(ipv4.ends_with("\r\n\r\n203.0.113.19"));
     let source = "2001:db8::1234".parse().unwrap();
     let body = proxy_h2(https_port, &v2_ipv6(source, &[0x04, 0x00, 0x00]), root).await;
     assert_eq!(body, "2001:db8::1234");
+    let mut ignored_crc = with_crc32c(v2_ipv4("203.0.113.20".parse().unwrap(), &[]));
+    let last = ignored_crc.len() - 1;
+    ignored_crc[last] ^= 0x01;
+    let ignored_crc = raw_http(http_port, &ignored_crc).await;
+    assert!(ignored_crc.ends_with("\r\n\r\n203.0.113.20"));
+
+    stop_gateway(shutdown, task).await;
+    upstream.shutdown.send(()).unwrap();
+    upstream.task.await.unwrap();
+}
+
+#[tokio::test]
+async fn proxy_v2_tlv_crc32c_policy_is_bounded_strict_and_restart_only() {
+    assert_eq!(CRC32C.checksum(b"123456789"), 0xe306_9283);
+    let upstream = spawn_upstream().await;
+    let directory = TempDir::new().unwrap();
+    let root = write_certificate(directory.path());
+    let path = directory.path().join("config.json");
+    let http_port = available_port();
+    let https_port = available_port();
+    let mut value = config(
+        http_port,
+        https_port,
+        upstream.address,
+        &["127.0.0.0/8"],
+        &["v1", "v2"],
+    );
+    set_crc32c_policy(&mut value, "validate-if-present");
+    write_config(&path, &value);
+    load_and_compile_webserver_config(&path).expect("compile CRC validation policy");
+    let (shutdown, task) = spawn_gateway(&path);
+    wait_port(http_port).await;
+    wait_port(https_port).await;
+
+    let valid = with_crc32c(v2_ipv4(
+        "198.51.100.45".parse().unwrap(),
+        &[0xee, 0x00, 0x03, 0x01, 0x02, 0x03],
+    ));
+    let split = valid.len() - 2;
+    let response =
+        fragmented_http(http_port, &[&valid[..5], &valid[5..split], &valid[split..]]).await;
+    assert!(response.ends_with("\r\n\r\n198.51.100.45"));
+
+    let source = "2001:db8::46".parse().unwrap();
+    let valid_h2 = with_crc32c(v2_ipv6(source, &[0xef, 0x00, 0x00]));
+    assert_eq!(
+        proxy_h2(https_port, &valid_h2, root.clone()).await,
+        source.to_string()
+    );
+
+    let missing = raw_http(http_port, &v2_ipv4("198.51.100.47".parse().unwrap(), &[])).await;
+    assert!(missing.ends_with("\r\n\r\n198.51.100.47"));
+
+    let mut wrong = with_crc32c(v2_ipv4("198.51.100.48".parse().unwrap(), &[]));
+    let last = wrong.len() - 1;
+    wrong[last] ^= 0x01;
+    assert_header_rejected(http_port, &wrong).await;
+    for malformed in [
+        v2_ipv4("198.51.100.49".parse().unwrap(), &[0xee, 0x00]),
+        v2_ipv4(
+            "198.51.100.49".parse().unwrap(),
+            &[0xee, 0x00, 0x04, 0x01, 0x02],
+        ),
+        v2_ipv4(
+            "198.51.100.49".parse().unwrap(),
+            &[0x03, 0x00, 0x04, 0, 0, 0, 0, 0x03, 0x00, 0x04, 0, 0, 0, 0],
+        ),
+        v2_ipv4(
+            "198.51.100.49".parse().unwrap(),
+            &[0x03, 0x00, 0x03, 0, 0, 0],
+        ),
+    ] {
+        assert_header_rejected(http_port, &malformed).await;
+    }
+    stop_gateway(shutdown, task).await;
+
+    set_crc32c_policy(&mut value, "required");
+    write_config(&path, &value);
+    let (shutdown, task) = spawn_gateway(&path);
+    wait_port(http_port).await;
+    let local = raw_http(http_port, &with_crc32c(v2_local(&[]))).await;
+    assert!(local.ends_with("\r\n\r\n127.0.0.1"));
+    assert_header_rejected(http_port, &v2_ipv4("198.51.100.50".parse().unwrap(), &[])).await;
+    assert_header_rejected(http_port, &v2_local(&[])).await;
+
+    set_crc32c_policy(&mut value, "ignore");
+    write_config(&path, &value);
+    tokio::time::sleep(Duration::from_millis(350)).await;
+    assert_header_rejected(http_port, &v2_ipv4("198.51.100.51".parse().unwrap(), &[])).await;
+    let still_required = raw_http(
+        http_port,
+        &with_crc32c(v2_ipv4("198.51.100.52".parse().unwrap(), &[])),
+    )
+    .await;
+    assert!(still_required.ends_with("\r\n\r\n198.51.100.52"));
 
     stop_gateway(shutdown, task).await;
     upstream.shutdown.send(()).unwrap();
@@ -311,9 +462,27 @@ async fn proxy_policy_rejects_missing_malformed_untrusted_and_restart_only_chang
         b"GET / HTTP/1.1\r\n".as_slice(),
         b"PROXY TCP4 999.1.1.1 127.0.0.1 1 80\r\n",
         b"PROXY TCP4 192.0.2.1 127.0.0.1 01 80\r\n",
+        b"PROXY TCP4 192.0.2.1 127.0.0.1 1 80\nGET / HTTP/1.1\r\n",
     ] {
         let mut stream = TcpStream::connect(("127.0.0.1", http_port)).await.unwrap();
         stream.write_all(invalid).await.unwrap();
+        assert_connection_closed(stream).await;
+    }
+    let mut partial = TcpStream::connect(("127.0.0.1", http_port)).await.unwrap();
+    partial.write_all(b"PROXY ").await.unwrap();
+    assert_connection_closed(partial).await;
+
+    for invalid_fixed in [
+        [0x22, 0x11, 0x00, 0x0c],
+        [0x31, 0x11, 0x00, 0x0c],
+        [0x21, 0x11, 0x00, 0x0b],
+        [0x21, 0x00, 0x00, 0x00],
+    ] {
+        let mut invalid_v2 = Vec::from(V2_SIGNATURE.as_slice());
+        invalid_v2.extend_from_slice(&invalid_fixed);
+        invalid_v2.extend_from_slice(&[0_u8; 12]);
+        let mut stream = TcpStream::connect(("127.0.0.1", http_port)).await.unwrap();
+        stream.write_all(&invalid_v2).await.unwrap();
         assert_connection_closed(stream).await;
     }
     let mut oversized = Vec::from(V2_SIGNATURE.as_slice());

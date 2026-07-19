@@ -3,21 +3,34 @@ name = "sdkwork-web-agent"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+name = "sdkwork_web_node_daemon"
+path = "src/main.rs"
+
 [[bin]]
 name = "sdkwork-web-agent"
-path = "src/main.rs"
+path = "src/bin/sdkwork-web-agent.rs"
+
+# Canonical product entrypoint. The v3 Agent binary above remains available as
+# a compatibility alias until the reviewed public migration is complete.
+[[bin]]
+name = "sdkwork-web-node-daemon"
+path = "src/bin/sdkwork-web-node-daemon.rs"
 
 [dependencies]
 anyhow.workspace = true
 dotenvy.workspace = true
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-urlencoding = "2.1"
 
 sdkwork-webserver-edge-runtime.workspace = true
 sdkwork-webserver-contract.workspace = true
 sdkwork-webserver-acme-service.workspace = true
+sdkwork-utils-rust.workspace = true

@@ -6,7 +6,10 @@ use serde_json::json;
 use sqlx::{any::AnyRow, Row};
 
 use crate::agents::{generate_agent_token, hash_agent_token, parse_last_heartbeat_at};
-use crate::support::{new_uuid, next_id, now_rfc3339, pagination, store_error};
+use crate::support::{
+    instant_write_expression, json_from_row, json_write_expression, new_uuid, next_id, now_rfc3339,
+    pagination, store_error,
+};
 use crate::WebRepository;
 
 impl WebRepository {
@@ -27,10 +30,12 @@ impl WebRepository {
         let total: i64 = count_row.try_get("total").unwrap_or(0);
 
         let rows = sqlx::query(
-            "SELECT uuid, name, host, ssh_port, status, metadata, created_at
+            "SELECT uuid, name, host, ssh_port, status,
+                    CAST(metadata AS TEXT) AS metadata,
+                    CAST(created_at AS TEXT) AS created_at
              FROM web_server
              WHERE tenant_id = $1
-             ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
+             ORDER BY updated_at DESC, id DESC LIMIT $2 OFFSET $3",
         )
         .bind(tenant_id)
         .bind(page_size)
@@ -61,26 +66,31 @@ impl WebRepository {
         let metadata = json!({
             "agentTokenHash": hash_agent_token(&agent_token),
         });
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let metadata_expression = json_write_expression(engine, "$7");
+        let now_expression = instant_write_expression(engine, "$8");
+        let insert_sql = format!(
             "INSERT INTO web_server (
                 id, uuid, tenant_id, name, host, ssh_port, status, metadata,
                 created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, 0, $7, $8, $8, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(&request.name)
-        .bind(&request.host)
-        .bind(request.ssh_port)
-        .bind(metadata.to_string())
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_server", error))?;
+                $1, $2, $3, $4, $5, $6, 0, {metadata_expression},
+                {now_expression}, {now_expression}, 0
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(tenant_id)
+            .bind(&request.name)
+            .bind(&request.host)
+            .bind(request.ssh_port)
+            .bind(metadata.to_string())
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_server", error))?;
 
         Ok(CreateServerResponse {
             server: ServerResponse {
@@ -98,7 +108,9 @@ impl WebRepository {
 }
 
 fn map_server_row(row: &AnyRow) -> Result<ServerResponse, sqlx::Error> {
-    let metadata_raw: String = row.try_get("metadata").unwrap_or_else(|_| "{}".to_string());
+    let metadata_raw = json_from_row(row, "metadata")?
+        .unwrap_or_else(|| json!({}))
+        .to_string();
     Ok(ServerResponse {
         id: row.try_get("uuid")?,
         name: row.try_get("name")?,

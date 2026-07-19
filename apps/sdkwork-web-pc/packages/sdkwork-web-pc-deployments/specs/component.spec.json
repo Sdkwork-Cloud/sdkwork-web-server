@@ -17,5 +17,10 @@
   "dependencies": {
     "packages": ["@sdkwork/web-pc-core"],
     "sdkFamilies": ["sdkwork-web-app-sdk"]
+  },
+  "contracts": {
+    "layerRole": "frontend-feature",
+    "providedPorts": [],
+    "requiredPorts": []
   }
 }

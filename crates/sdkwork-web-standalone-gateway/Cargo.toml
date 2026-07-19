@@ -18,6 +18,7 @@ arc-swap.workspace = true
 axum.workspace = true
 axum-server.workspace = true
 bytes.workspace = true
+crc.workspace = true
 futures-util.workspace = true
 hex.workspace = true
 http.workspace = true

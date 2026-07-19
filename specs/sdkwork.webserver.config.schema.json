@@ -548,6 +548,12 @@
           "minimum": 107,
           "maximum": 4096,
           "default": 536
+        },
+        "crc32cPolicy": {
+          "type": "string",
+          "enum": ["ignore", "validate-if-present", "required"],
+          "default": "ignore",
+          "description": "PROXY v2 CRC32C handling. validate-if-present and required need v2 in versions; CRC is integrity detection, not peer authentication."
         }
       }
     },

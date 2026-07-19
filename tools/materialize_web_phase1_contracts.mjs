@@ -358,6 +358,7 @@ function writeComponentSpec(profile) {
       standardProfile: "sdkwork-v3",
     },
     contracts: {
+      layerRole: "sdk-generated",
       sdkDependencies: sdkDependenciesFor(profile.surface),
       publicExports: ["."],
       runtimeEntrypoints: [],

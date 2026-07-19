@@ -6,7 +6,8 @@ use sdkwork_webserver_contract::{
 use sqlx::{any::AnyRow, Row};
 
 use crate::support::{
-    bool_from_row, new_uuid, next_id, now_rfc3339, resolve_site_internal_id, store_error,
+    bool_from_row, instant_write_expression, new_uuid, next_id, now_rfc3339,
+    resolve_site_internal_id, store_error,
 };
 use crate::WebRepository;
 
@@ -105,27 +106,31 @@ impl WebRepository {
         } else {
             request.value.clone()
         };
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$9");
+        let insert_sql = format!(
             "INSERT INTO web_env_variable (
                 id, uuid, tenant_id, site_id, environment, key, value_encrypted, is_secret,
                 status, created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $9, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(&request.environment)
-        .bind(&request.key)
-        .bind(&stored_value)
-        .bind(request.is_secret)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_env_variable", error))?;
+                $1, $2, $3, $4, $5, $6, $7, $8, 1,
+                {now_expression}, {now_expression}, 0
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(tenant_id)
+            .bind(site_internal_id)
+            .bind(&request.environment)
+            .bind(&request.key)
+            .bind(&stored_value)
+            .bind(request.is_secret)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_env_variable", error))?;
 
         // 响应中机密值返回掩码，不回传明文/密文，避免泄漏。
         Ok(EnvVariableResponse {

@@ -13,3 +13,6 @@ sdkwork-iam-web-adapter.workspace = true
 sdkwork-utils-rust.workspace = true
 sdkwork-web-core.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

@@ -29,6 +29,7 @@ arc-swap = "1"
 axum = "0.8"
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 bytes = "1"
+crc = "3"
 dotenvy = "0.15"
 http = "1.4"
 http-body = "1"
@@ -67,6 +68,7 @@ aes-gcm = "0.10"
 instant-acme = { version = "0.8", features = ["rcgen"] }
 rcgen = "0.13"
 x509-parser = "0.16"
+time = "0.3"
 tokio-rustls = "0.26"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
 

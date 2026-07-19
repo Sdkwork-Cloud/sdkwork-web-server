@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-database-host",
+    "displayName": "SDKWork Web Server Database Host",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-database-host",
+    "domain": "platform",
+    "capability": "webserver-database-lifecycle",
+    "surface": "backend-service",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored module boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Rust component naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure and verification."},
+    {"file": "DATABASE_SPEC.md", "path": "../../../sdkwork-specs/DATABASE_SPEC.md", "purpose": "Portable database and engine parity rules."},
+    {"file": "DATABASE_FRAMEWORK_SPEC.md", "path": "../../../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md", "purpose": "Database lifecycle and SPI orchestration."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Dual-engine lifecycle evidence."}
+  ],
+  "contracts": {
+    "layerRole": "backend-provider",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "webDatabaseLifecycle", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "databaseLifecycleFramework", "export": "crate-root", "provider": "sdkwork-database-lifecycle"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": ["SDKWORK_WEB_DATABASE_URL", "SDKWORK_WEB_APP_ROOT"]
+  },
+  "verification": {
+    "commands": [
+      "cargo test -p sdkwork-webserver-database-host --test sqlite_lifecycle",
+      "cargo test -p sdkwork-webserver-database-host --test sqlite_recovery",
+      "cargo test -p sdkwork-webserver-database-host --test postgres_lifecycle -- --ignored"
+    ]
+  }
+}

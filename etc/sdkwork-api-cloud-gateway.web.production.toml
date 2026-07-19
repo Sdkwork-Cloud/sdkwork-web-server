@@ -24,8 +24,8 @@ serviceId = "sdkwork-web-app-api"
 baseUrl = "http://127.0.0.1:8080"
 
 [cors]
-allowAnyOrigin = true
-allowedOrigins = []
+allowAnyOrigin = false
+allowedOrigins = ["https://web.sdkwork.com"]
 
 [request]
 maxBodyBytes = 33554432

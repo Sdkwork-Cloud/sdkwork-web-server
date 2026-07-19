@@ -6,6 +6,9 @@
   "profiles": {
     "standalone.development": {
       "config": "sdkwork.webserver.im-dev.json"
+    },
+    "cloud.development": {
+      "config": "node-daemon/cloud.development.json"
     }
   }
 }

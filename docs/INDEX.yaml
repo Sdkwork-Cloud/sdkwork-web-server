@@ -177,6 +177,70 @@ entries:
     path: docs/product/requirements/REQ-2026-0043-bounded-trusted-proxy-real-ip.md
     kind: req
     status: accepted
+  - id: REQ-2026-0044
+    path: docs/product/requirements/REQ-2026-0044-bounded-proxy-protocol-v1-v2.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0045
+    path: docs/product/requirements/REQ-2026-0045-bounded-control-plane-collections.md
+    kind: req
+    status: draft
+  - id: REQ-2026-0046
+    path: docs/product/requirements/REQ-2026-0046-bounded-proxy-v2-tlv-crc32c.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0047
+    path: docs/product/requirements/REQ-2026-0047-fail-closed-bounded-nginx-edge-activation.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0048
+    path: docs/product/requirements/REQ-2026-0048-bounded-acme-certificate-lifecycle.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0049
+    path: docs/product/requirements/REQ-2026-0049-mandatory-postgresql-ci-gate.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0050
+    path: docs/product/requirements/REQ-2026-0050-bounded-database-recovery-drill.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0051
+    path: docs/product/requirements/REQ-2026-0051-bounded-postgresql-streaming-failover.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0052
+    path: docs/product/requirements/REQ-2026-0052-durable-agent-sync-generation.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0053
+    path: docs/product/requirements/REQ-2026-0053-web-node-daemon-terminology.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0054
+    path: docs/product/requirements/REQ-2026-0054-bounded-node-sync-manifest.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0055
+    path: docs/product/requirements/REQ-2026-0055-exclusive-node-daemon-process-lock.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0056
+    path: docs/product/requirements/REQ-2026-0056-paired-deployment-profile-dev-release.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0057
+    path: docs/product/requirements/REQ-2026-0057-frozen-workspace-bounded-release-archive.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0058
+    path: docs/product/requirements/REQ-2026-0058-linux-x64-release-runtime-smoke.md
+    kind: req
+    status: accepted
+  - id: REQ-2026-0059
+    path: docs/product/requirements/REQ-2026-0059-linux-arm64-release-runtime-smoke.md
+    kind: req
+    status: accepted
   - id: ADR-20260623-acme-certificate-authority
     path: docs/architecture/decisions/ADR-20260623-acme-certificate-authority.md
     kind: adr

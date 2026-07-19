@@ -2,8 +2,8 @@ use std::{fs, path::Path};
 
 use sdkwork_webserver_core::{
     inspect_webserver_config_revision, load_and_compile_webserver_config,
-    load_and_compile_webserver_config_revision, ProxyProtocolVersion, ResourceConfig,
-    ResourceSampleFailurePolicy, TrustedProxyHeader, WebServerConfigError,
+    load_and_compile_webserver_config_revision, ProxyProtocolCrc32cPolicy, ProxyProtocolVersion,
+    ResourceConfig, ResourceSampleFailurePolicy, TrustedProxyHeader, WebServerConfigError,
 };
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -264,6 +264,7 @@ fn proxy_protocol_contract_is_mandatory_trusted_bounded_and_versioned() {
     );
     assert_eq!(policy.timeout_ms, 3_000);
     assert_eq!(policy.max_header_bytes, 536);
+    assert_eq!(policy.crc32c_policy, ProxyProtocolCrc32cPolicy::Ignore);
 }
 
 #[test]
@@ -277,6 +278,9 @@ fn proxy_protocol_schema_and_semantics_reject_unsafe_or_ambiguous_policy() {
         json!({"trustedSourceCidrs": ["127.0.0.0/8"], "timeoutMs": 10_001}),
         json!({"trustedSourceCidrs": ["127.0.0.0/8"], "maxHeaderBytes": 106}),
         json!({"trustedSourceCidrs": ["127.0.0.0/8"], "maxHeaderBytes": 4_097}),
+        json!({"trustedSourceCidrs": ["127.0.0.0/8"], "crc32cPolicy": "unknown"}),
+        json!({"trustedSourceCidrs": ["127.0.0.0/8"], "versions": ["v1"], "crc32cPolicy": "validate-if-present"}),
+        json!({"trustedSourceCidrs": ["127.0.0.0/8"], "versions": ["v1"], "crc32cPolicy": "required"}),
         json!({"trustedSourceCidrs": ["127.0.0.0/8"], "optional": true}),
     ];
     for (index, policy) in invalid.into_iter().enumerate() {

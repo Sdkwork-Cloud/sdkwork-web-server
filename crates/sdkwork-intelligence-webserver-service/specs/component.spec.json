@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-intelligence-webserver-service",
+    "displayName": "SDKWork Web Server Business Service",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-intelligence-webserver-service",
+    "domain": "platform",
+    "capability": "webserver-business-operations",
+    "surface": "backend-service",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored module boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Rust service naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure and verification."},
+    {"file": "WEB_BACKEND_SPEC.md", "path": "../../../sdkwork-specs/WEB_BACKEND_SPEC.md", "purpose": "Service and repository port separation."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Tenant, certificate, and secret safety."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Business service verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-service",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "webServerBusinessService", "export": "crate-root"},
+      {"name": "webRepositoryPort", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "certificateIssuer", "export": "crate-root", "provider": "sdkwork-webserver-acme-service"},
+      {"name": "edgeRuntime", "export": "crate-root", "provider": "sdkwork-webserver-edge-runtime"},
+      {"name": "webServerContracts", "export": "crate-root", "provider": "sdkwork-webserver-contract"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-intelligence-webserver-service"]
+  }
+}

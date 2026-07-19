@@ -27,6 +27,7 @@ acceptance_criteria:
   - Both engine baselines use explicitly supplied int64 business ids and produce zero error-level drift.
   - Named unique indexes and partial-index predicates match the database contract on both engines.
   - PostgreSQL/SQLite repository integration tests cover transaction rollback, unique/idempotency conflicts, tenant filters, and store-level pagination before commercial acceptance.
+  - Every public repository path that reads or writes PostgreSQL JSONB or TIMESTAMPTZ values uses an engine-compatible bind/projection boundary and has representative dual-engine integration evidence.
   - Production topology rejects SQLite for shared/cloud multi-replica deployment.
 non_functional_requirements:
   security: Test tooling refuses to run PostgreSQL lifecycle tests against a schema that already contains Web business tables; credentials remain environment-owned.
@@ -54,4 +55,39 @@ verification:
   - pnpm verify
 ```
 
-Current evidence on 2026-07-15: SQLite lifecycle and drift are verified and automated. PostgreSQL test code compiles, but execution remains pending because this workstation has neither an explicit disposable PostgreSQL URL nor an available Docker service. The requirement remains `in-progress` until PostgreSQL and repository transaction/parity evidence pass.
+## Evidence
+
+Evidence collected on 2026-07-19 against isolated build targets and disposable PostgreSQL 16
+containers:
+
+- SQLite lifecycle, repeat seed, explicit-id, and zero-error drift verification passes.
+- PostgreSQL lifecycle, repeat seed, explicit-id, and zero-error drift verification passes.
+- The shared drift matcher recognizes redundant boolean grouping and PostgreSQL
+  `x = ANY (ARRAY[...])` output as equivalent to contract `x IN (...)`; positive and
+  negative matcher tests pass, and drift policy contains no ignore workaround.
+- SQLite and PostgreSQL repository parity pass through the real `WebRepositoryPort` for
+  tenant isolation, tenant-scoped uniqueness, filtered/store-level pagination, stable
+  tied-row ordering, bounded `i32::MAX` deep pages, idempotent replay/conflict,
+  concurrent idempotent create, and atomic rollback on forced insert failure.
+- The same dual-engine scenario now executes site update/delete, domain primary/verify/delete,
+  public and encrypted environment variables, health checks, tenant/global Nginx list/update/
+  activation, certificate create/finalize/renewal/failure, server token authentication and
+  heartbeat, agent configuration/certificate sync, and audit insert/list paths.
+- SQLx `Any` JSONB/TIMESTAMPTZ boundaries use explicit engine-compatible write casts and text
+  projections. PostgreSQL BOOLEAN columns use standard `TRUE`/`FALSE`, structured JSON token
+  lookup replaces serialization-dependent `LIKE`, and database instant parsing covers SQLite
+  RFC3339 plus PostgreSQL text projections.
+- `cargo test -p sdkwork-database-drift` passes all 24 unit/integration tests and strict
+  crate Clippy passes with warnings denied.
+- `cargo test -p sdkwork-intelligence-webserver-repository-sqlx` passes; the explicit
+  disposable PostgreSQL parity test passes when its ignored environment gate is enabled.
+- Strict component-port validation, pagination validation, database-framework validation,
+  and strict repository Clippy pass.
+
+The requirement remains `in-progress` only because its bounded-query non-functional criterion is
+not yet true for every growing collection. `list_env_variables` and `list_health_checks` still
+return complete matching sets, and agent sync still constructs tenant-wide configuration and
+certificate vectors. The breaking public pagination and agent delta-sync contract is tracked by
+[REQ-2026-0045](REQ-2026-0045-bounded-control-plane-collections.md) and requires human review before
+OpenAPI/SDK/agent implementation. Database engine parity is proven; commercial bounded-collection
+parity is not claimed yet.

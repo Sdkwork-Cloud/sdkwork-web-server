@@ -1,5 +1,8 @@
+use sdkwork_database_config::DatabaseEngine;
 use sdkwork_database_id::SnowflakeIdGenerator;
+use sdkwork_webserver_contract::WebServiceError;
 use sqlx::AnyPool;
+use std::sync::{Arc, OnceLock};
 
 mod agents;
 mod audit;
@@ -26,6 +29,7 @@ pub type SecretEncryptionKey = [u8; 32];
 #[derive(Clone)]
 pub struct WebRepository {
     pool: AnyPool,
+    database_engine: Arc<OnceLock<DatabaseEngine>>,
     id_generator: SnowflakeIdGenerator,
     secret_key: SecretEncryptionKey,
 }
@@ -38,6 +42,23 @@ impl WebRepository {
     ) -> Self {
         Self {
             pool,
+            database_engine: Arc::new(OnceLock::new()),
+            id_generator,
+            secret_key,
+        }
+    }
+
+    pub fn new_with_engine(
+        pool: AnyPool,
+        database_engine: DatabaseEngine,
+        id_generator: SnowflakeIdGenerator,
+        secret_key: SecretEncryptionKey,
+    ) -> Self {
+        let engine = OnceLock::new();
+        let _ = engine.set(database_engine);
+        Self {
+            pool,
+            database_engine: Arc::new(engine),
             id_generator,
             secret_key,
         }
@@ -53,5 +74,31 @@ impl WebRepository {
 
     pub fn secret_key(&self) -> &SecretEncryptionKey {
         &self.secret_key
+    }
+
+    pub(crate) async fn database_engine(&self) -> Result<DatabaseEngine, WebServiceError> {
+        if let Some(engine) = self.database_engine.get() {
+            return Ok(*engine);
+        }
+
+        let detected = if sqlx::query("SELECT sqlite_version()")
+            .fetch_optional(&self.pool)
+            .await
+            .is_ok()
+        {
+            DatabaseEngine::Sqlite
+        } else if sqlx::query("SELECT current_database()")
+            .fetch_optional(&self.pool)
+            .await
+            .is_ok()
+        {
+            DatabaseEngine::Postgres
+        } else {
+            return Err(WebServiceError::Internal(
+                "unable to detect repository database engine".to_string(),
+            ));
+        };
+        let _ = self.database_engine.set(detected);
+        Ok(*self.database_engine.get().unwrap_or(&detected))
     }
 }

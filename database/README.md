@@ -27,6 +27,12 @@ pnpm run db:status
 pnpm run db:drift:check
 pnpm run db:test:sqlite
 SDKWORK_WEB_POSTGRES_TEST_DATABASE_URL=<disposable-url> pnpm run db:test:postgres
+pnpm run test:database:recovery
+pnpm run test:postgres:ha
 ```
 
 `db:test:postgres` is intentionally ignored by the default Cargo test run and requires an explicitly configured disposable, empty PostgreSQL database. The test refuses to continue when the target schema already contains `web_*` tables. SQLite is an explicit single-node profile only; PostgreSQL remains the default for standalone shared and cloud control-plane deployments.
+
+`test:database:recovery` is a destructive recovery drill that owns only its temporary SQLite directory and one disposable PostgreSQL container. It proves a consistent SQLite snapshot and PostgreSQL custom-format dump can restore schema integrity and a tenant-scoped canary. It is not a production backup command and does not establish encrypted off-host retention, PostgreSQL PITR, managed-provider recovery, or the product RPO/RTO.
+
+`test:postgres:ha` owns two disposable PostgreSQL containers and one internal Docker network. It proves physical base backup, asynchronous WAL streaming, replay to a recorded flush LSN, primary shutdown, standby promotion, and post-promotion tenant writes. It does not establish automatic leader election, client connection rerouting, synchronous-replication RPO, split-brain fencing, managed-provider behavior, multi-zone capacity, or production RTO.

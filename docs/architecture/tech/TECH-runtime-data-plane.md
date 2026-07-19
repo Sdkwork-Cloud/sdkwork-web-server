@@ -2,8 +2,8 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-16
-Requirements: REQ-2026-0003, REQ-2026-0005 through REQ-2026-0033
+Updated: 2026-07-19
+Requirements: REQ-2026-0003, REQ-2026-0005 through REQ-2026-0044
 Decisions: ADR-20260715-rust-webserver-data-plane; ADR-20260716-canonical-uri-dual-representation (proposed, human review required)
 Specs: RUST_CODE_SPEC.md, CONFIG_SPEC.md, SECURITY_SPEC.md, DEPLOYMENT_SPEC.md, NGINX_SPEC.md, OBSERVABILITY_SPEC.md, TEST_SPEC.md
 
@@ -55,14 +55,15 @@ The existing `sdkwork-webserver-edge-runtime` name predates the current naming s
 ## 4. Request Flow
 
 1. Listener accepts the socket, checks the atomic resource-pressure state, and obtains non-queuing process/listener connection capacity before task creation.
-2. Rustls negotiates TLS/ALPN for HTTPS listeners.
-3. Hyper/Axum parses HTTP under configured header/body/time limits and obtains one total request permit.
-4. The gateway preserves raw Path and Query, validates their finite budgets, and produces one bounded canonical Path.
-5. The compiled core selects listener, virtual host, and route deterministically.
-6. Exact fixed `GET`/`HEAD` operations routes retain total capacity; all other routes must obtain business capacity and pass the pressure check. Rejection releases total capacity before constructing the fixed overload response.
-7. The action adapter serves a fixed response, redirect, static resource, or reverse proxy.
-8. Backpressure and cancellation flow through the body stream while request permits remain attached to response ownership.
-9. Bounded structured telemetry records result, duration, bytes, and selected ids without secrets.
+2. When configured, the connection task validates the immediate peer and parses one mandatory bounded PROXY v1/v2 Header before any TLS or HTTP bytes.
+3. Rustls negotiates TLS/ALPN for HTTPS listeners.
+4. Hyper/Axum parses HTTP under configured header/body/time limits and obtains one total request permit.
+5. The gateway preserves raw Path and Query, validates their finite budgets, and produces one bounded canonical Path.
+6. The compiled core selects listener, virtual host, and route deterministically.
+7. Exact fixed `GET`/`HEAD` operations routes retain total capacity; all other routes must obtain business capacity and pass the pressure check. Rejection releases total capacity before constructing the fixed overload response.
+8. The action adapter serves a fixed response, redirect, static resource, or reverse proxy.
+9. Backpressure and cancellation flow through the body stream while request permits remain attached to response ownership.
+10. Bounded structured telemetry records result, duration, bytes, and selected ids without secrets.
 
 The foundation rejects unsupported regex/Nginx constructs during semantic validation. It never silently falls back to approximate behavior.
 
@@ -76,6 +77,8 @@ The foundation rejects unsupported regex/Nginx constructs during semantic valida
 - Hyper legacy client plus Hyper-Rustls provides upstream HTTP/HTTPS pooling, streaming, HTTP/2 multiplexing, and generation-level physical connection ownership. Proxy transport does not implement redirect following.
 
 The bounded ingress profile configures Hyper directly. HTTP/1 uses explicit parser-buffer bytes, header count, and a Tokio-timer-backed complete-header deadline. HTTP/2 uses explicit concurrent-stream, header-list, pending-reset, local-error-reset, stream send-buffer, fixed flow-control windows, and frame-size limits.
+
+For a listener with `proxyProtocol`, the admitted TCP stream first enters a connection-local parser under one finite timeout. The immediate peer must match an immutable trusted CIDR before any bytes are consumed. Exact reads distinguish the 12-byte v2 signature from the v1 `PROXY ` prefix without reading TLS/HTTP payload bytes. v1 uses a fixed 107-byte line buffer and strict CRLF; v2 validates version, command, TCP family/protocol, address length, and configured total length, then discards remaining TLVs through a fixed 256-byte scratch buffer. `LOCAL` and `UNKNOWN` preserve the transport peer. A successful `PROXY` command creates immutable transport/client connection info for Axum; all failures close before TLS/HTTP and increment only a fixed `proxy_protocol` rejection counter.
 
 An incremental HTTP/1 Framing Guard wraps the accepted stream after Rustls and before Hyper. It bounds and validates request-line structure, method tokens, visible-ASCII request targets, Header/Trailer field names and values, Chunked input, and Trailers; rejects original-wire TE/CL ambiguity and duplicate lengths; then passes unchanged valid bytes to Hyper. A line buffer cannot grow beyond the smaller applicable total/individual ceiling. One connection-local Atomic counter bounds complete request heads observed by the Guard but not yet submitted to the paired Service; dispatch releases a slot synchronously without retaining a Body or creating a queue. TLS ALPN `h2` streams bypass the Guard and Pipeline counter.
 
@@ -205,4 +208,8 @@ REQ-2026-0042 adds bounded direct-peer IP-hash affinity with exact Nginx IPv4/IP
 
 REQ-2026-0043 adds listener-local trusted-proxy real-IP with no trust by default, bounded single-XFF parsing, Nginx-compatible recursive and non-recursive selection, canonical upstream identity, effective-IP IP-hash/retry composition, atomic Watch policy changes, and real HTTP/HTTPS/H2 evidence. It intentionally excludes PROXY protocol, RFC 7239 `Forwarded`, hostname trust sources, and dynamic cloud CIDR discovery.
 
-This evidence does not establish the parent PRD's commercial release. No claim is made yet for hard allocator/OOM immunity, CPU/PSI/disk pressure governance, per-tenant fairness, persisted operator rollback, live certificate-map rotation and served-fingerprint convergence, listener socket handoff, executable upgrade, undeclared cross-protocol Trailer synthesis, full gRPC proxy conformance, complete HTTP/1 parser differential/fuzz and timeout conformance, exhaustive HTTP/2 malformed-frame/HPACK CPU/fuzz and Nginx differential conformance, RFC 8441 or WebSocket frame/heartbeat/idle policy, SSE heartbeat, PCRE2 location semantics, Nginx import/render/differential conformance, PROXY protocol, RFC 7239 `Forwarded`, dynamic proxy CIDR discovery, custom DNS transport or authoritative TTL/cache/stale/CNAME behavior, upstream pinning/revocation/dynamic secret providers, Nginx shared-zone/cross-process/cluster connection, current-weight, active-load, and slow-start accounting, accept/TLS/cache phase telemetry, authoritative Hyper idle-pool occupancy, tracing/exporters, authenticated remote operations, dashboards/alerts, cluster-global health, arbitrary/consistent-hash and sticky balancing, sub-integer/exact Nginx slow-start ticks, or Nginx-internal tie behavior, non-idempotent/idempotency-key or Body replay, shared retry budgets, hedging and cluster circuit state, cache/compression/rate limiting, complete production observability, 100,000 concurrent connections, 24-hour soak, chaos/failover, Kubernetes high availability, backup/restore, signed SBOM/provenance, or commercial support operations.
+REQ-2026-0044 adds mandatory trusted-source HAProxy PROXY v1/v2 before TLS/HTTP, finite preface time/byte budgets, TCP4/TCP6 plus `UNKNOWN`/`LOCAL`, bounded TLV discard, effective-IP routing composition, fixed-cardinality rejection telemetry, and Restart-only policy enforcement. REQ-2026-0046 extends that parser with exact TLV framing and one streaming Castagnoli CRC32C digest under `ignore`, `validate-if-present`, or `required`; it retains only fixed metadata/value/scratch arrays and never trusts non-CRC TLVs. CRC remains integrity detection rather than peer authentication. AF_UNIX/UDP families, outbound `send-proxy`, and insecure optional auto-detection remain excluded.
+
+REQ-2026-0047 removes false external-Nginx validation and reload success. The host adapter validates the exact staged site through an isolated generated main config and real `nginx -t`, bounds candidate/diagnostic/time/process state, confines domain paths, atomically persists only valid candidates, and propagates disabled, unavailable, timeout, syntax, deploy, and reload failures. Backend request tasks isolate blocking host work through `spawn_blocking`; Repository code no longer claims syntax validity without an edge provider. Database desired/active state and an external Nginx master still require a later durable reconciliation state machine for cross-system atomicity.
+
+This evidence does not establish the parent PRD's commercial release. No claim is made yet for hard allocator/OOM immunity, CPU/PSI/disk pressure governance, per-tenant fairness, persisted operator rollback, live certificate-map rotation and served-fingerprint convergence, listener socket handoff, executable upgrade, undeclared cross-protocol Trailer synthesis, full gRPC proxy conformance, complete HTTP/1 parser differential/fuzz and timeout conformance, exhaustive HTTP/2 malformed-frame/HPACK CPU/fuzz and Nginx differential conformance, RFC 8441 or WebSocket frame/heartbeat/idle policy, SSE heartbeat, PCRE2 location semantics, Nginx import/render/differential conformance, trust or forwarding of non-CRC PROXY v2 TLVs, cryptographic PROXY Header authentication, PROXY AF_UNIX/UDP or outbound `send-proxy`, RFC 7239 `Forwarded`, dynamic proxy CIDR discovery, custom DNS transport or authoritative TTL/cache/stale/CNAME behavior, upstream pinning/revocation/dynamic secret providers, Nginx shared-zone/cross-process/cluster connection, current-weight, active-load, and slow-start accounting, accept/TLS/cache phase telemetry, authoritative Hyper idle-pool occupancy, tracing/exporters, authenticated remote operations, dashboards/alerts, cluster-global health, arbitrary/consistent-hash and sticky balancing, sub-integer/exact Nginx slow-start ticks, or Nginx-internal tie behavior, non-idempotent/idempotency-key or Body replay, shared retry budgets, hedging and cluster circuit state, cache/compression/rate limiting, complete production observability, 100,000 concurrent connections, 24-hour soak, chaos/failover, Kubernetes high availability, backup/restore, signed SBOM/provenance, or commercial support operations.

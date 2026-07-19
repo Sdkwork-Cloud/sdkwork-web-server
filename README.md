@@ -1,7 +1,7 @@
 # SDKWork Web Server
 repository-kind: application
 
-Standards-aligned HTTP backend for site, domain, deployment, certificate, nginx, and edge-agent management. Exposes **app-api** and **backend-api** surfaces integrated with SDKWork platform frameworks.
+Standards-aligned HTTP backend for site, domain, deployment, certificate, Nginx, and Web Node management. Exposes **app-api** and **backend-api** surfaces integrated with SDKWork platform frameworks.
 
 ## Framework Integration
 

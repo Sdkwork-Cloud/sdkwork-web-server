@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.web-node-daemon-profile",
+  "environment": "development",
+  "deploymentProfile": "cloud",
+  "runtimeTarget": "server",
+  "apiSurfaces": {
+    "backendApiBaseUrl": "https://api-dev.sdkwork.com"
+  }
+}

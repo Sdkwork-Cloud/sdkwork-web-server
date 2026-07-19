@@ -5,8 +5,8 @@ use sdkwork_webserver_contract::{
 use sqlx::{any::AnyRow, Row};
 
 use crate::support::{
-    bool_from_row, new_uuid, next_id, now_rfc3339, pagination, resolve_site_internal_id,
-    store_error,
+    bool_from_row, instant_write_expression, new_uuid, next_id, now_rfc3339, pagination,
+    resolve_site_internal_id, store_error,
 };
 use crate::WebRepository;
 
@@ -33,10 +33,11 @@ impl WebRepository {
         let total: i64 = count_row.try_get("total").unwrap_or(0);
 
         let rows = sqlx::query(
-            "SELECT uuid, hostname, is_primary, is_verified, ssl_enabled, ssl_provider, status, created_at
+            "SELECT uuid, hostname, is_primary, is_verified, ssl_enabled, ssl_provider, status,
+                    CAST(created_at AS TEXT) AS created_at
              FROM web_domain
              WHERE tenant_id = $1 AND site_id = $2 AND deleted_at IS NULL
-             ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+             ORDER BY created_at DESC, id DESC LIMIT $3 OFFSET $4",
         )
         .bind(tenant_id)
         .bind(site_internal_id)
@@ -67,6 +68,22 @@ impl WebRepository {
         let uuid = new_uuid();
         let now = now_rfc3339();
         let verify_token = new_uuid();
+        let engine = self.database_engine().await?;
+        let clear_primary_time = instant_write_expression(engine, "$3");
+        let insert_time = instant_write_expression(engine, "$10");
+        let clear_primary_sql = format!(
+            "UPDATE web_domain SET is_primary = FALSE, updated_at = {clear_primary_time}
+             WHERE tenant_id = $1 AND site_id = $2 AND deleted_at IS NULL"
+        );
+        let insert_sql = format!(
+            "INSERT INTO web_domain (
+                id, uuid, tenant_id, site_id, hostname, is_primary, is_verified, verify_token,
+                ssl_enabled, ssl_provider, status, metadata, created_at, updated_at, version
+             ) VALUES (
+                $1, $2, $3, $4, $5, $6, FALSE, $7, $8, $9, 0, '{{}}',
+                {insert_time}, {insert_time}, 0
+             )"
+        );
 
         // 事务边界：清除旧 primary + 插入新 domain 必须原子完成，
         // 避免清除成功但插入失败导致站点丢失主域名。
@@ -77,39 +94,29 @@ impl WebRepository {
             .map_err(|error| store_error("begin create web_domain transaction", error))?;
 
         if request.is_primary {
-            sqlx::query(
-                "UPDATE web_domain SET is_primary = 0, updated_at = $3
-                 WHERE tenant_id = $1 AND site_id = $2 AND deleted_at IS NULL",
-            )
+            sqlx::query(&clear_primary_sql)
+                .bind(tenant_id)
+                .bind(site_internal_id)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| store_error("clear primary web_domain", error))?;
+        }
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
             .bind(tenant_id)
             .bind(site_internal_id)
+            .bind(&request.hostname)
+            .bind(request.is_primary)
+            .bind(&verify_token)
+            .bind(request.ssl_enabled)
+            .bind(&request.ssl_provider)
             .bind(&now)
             .execute(&mut *tx)
             .await
-            .map_err(|error| store_error("clear primary web_domain", error))?;
-        }
-
-        sqlx::query(
-            "INSERT INTO web_domain (
-                id, uuid, tenant_id, site_id, hostname, is_primary, is_verified, verify_token,
-                ssl_enabled, ssl_provider, status, metadata, created_at, updated_at, version
-             ) VALUES (
-                $1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 0, '{}', $10, $10, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(&request.hostname)
-        .bind(request.is_primary)
-        .bind(&verify_token)
-        .bind(request.ssl_enabled)
-        .bind(&request.ssl_provider)
-        .bind(&now)
-        .execute(&mut *tx)
-        .await
-        .map_err(|error| store_error("insert web_domain", error))?;
+            .map_err(|error| store_error("insert web_domain", error))?;
 
         tx.commit()
             .await
@@ -126,7 +133,8 @@ impl WebRepository {
     ) -> WebServiceResult<DomainResponse> {
         let site_internal_id = resolve_site_internal_id(&self.pool, tenant_id, site_id).await?;
         let row = sqlx::query(
-            "SELECT uuid, hostname, is_primary, is_verified, ssl_enabled, ssl_provider, status, created_at
+            "SELECT uuid, hostname, is_primary, is_verified, ssl_enabled, ssl_provider, status,
+                    CAST(created_at AS TEXT) AS created_at
              FROM web_domain
              WHERE tenant_id = $1 AND site_id = $2 AND uuid = $3 AND deleted_at IS NULL",
         )
@@ -149,18 +157,22 @@ impl WebRepository {
     ) -> WebServiceResult<()> {
         let site_internal_id = resolve_site_internal_id(&self.pool, tenant_id, site_id).await?;
         let now = now_rfc3339();
-        let result = sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$4");
+        let update_sql = format!(
             "UPDATE web_domain
-             SET deleted_at = $4, updated_at = $4, version = version + 1
-             WHERE tenant_id = $1 AND site_id = $2 AND uuid = $3 AND deleted_at IS NULL",
-        )
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(domain_id)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("delete web_domain", error))?;
+             SET deleted_at = {now_expression}, updated_at = {now_expression},
+                 version = version + 1
+             WHERE tenant_id = $1 AND site_id = $2 AND uuid = $3 AND deleted_at IS NULL"
+        );
+        let result = sqlx::query(&update_sql)
+            .bind(tenant_id)
+            .bind(site_internal_id)
+            .bind(domain_id)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("delete web_domain", error))?;
 
         if result.rows_affected() == 0 {
             return Err(WebServiceError::not_found("domain not found"));
@@ -198,18 +210,22 @@ impl WebRepository {
         }
 
         let now = now_rfc3339();
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$4");
+        let update_sql = format!(
             "UPDATE web_domain
-             SET is_verified = 1, status = 1, updated_at = $4, version = version + 1
-             WHERE tenant_id = $1 AND site_id = $2 AND uuid = $3 AND deleted_at IS NULL",
-        )
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(domain_id)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("verify web_domain", error))?;
+             SET is_verified = TRUE, status = 1, updated_at = {now_expression},
+                 version = version + 1
+             WHERE tenant_id = $1 AND site_id = $2 AND uuid = $3 AND deleted_at IS NULL"
+        );
+        sqlx::query(&update_sql)
+            .bind(tenant_id)
+            .bind(site_internal_id)
+            .bind(domain_id)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("verify web_domain", error))?;
 
         Ok(DomainVerifyResponse {
             verified: true,

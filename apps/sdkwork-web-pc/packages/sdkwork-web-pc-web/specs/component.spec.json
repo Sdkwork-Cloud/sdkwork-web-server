@@ -24,5 +24,10 @@
       "@sdkwork/web-pc-console-nginx",
       "@sdkwork/web-pc-console-servers"
     ]
+  },
+  "contracts": {
+    "layerRole": "frontend-host",
+    "providedPorts": [],
+    "requiredPorts": []
   }
 }

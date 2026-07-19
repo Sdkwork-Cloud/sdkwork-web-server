@@ -17,5 +17,10 @@
   "dependencies": {
     "packages": ["@sdkwork/web-pc-core"]
   },
+  "contracts": {
+    "layerRole": "frontend-shell",
+    "providedPorts": [],
+    "requiredPorts": []
+  },
   "notes": "Routes, layout, providers, IAM session bootstrap."
 }

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-edge-runtime",
+    "displayName": "SDKWork Web Server Edge Runtime",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-edge-runtime",
+    "domain": "platform",
+    "capability": "webserver-edge-materialization",
+    "surface": "host-native",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored host adapter boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Runtime and file naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure."},
+    {"file": "CONFIG_SPEC.md", "path": "../../../sdkwork-specs/CONFIG_SPEC.md", "purpose": "Typed edge runtime configuration."},
+    {"file": "DEPLOYMENT_SPEC.md", "path": "../../../sdkwork-specs/DEPLOYMENT_SPEC.md", "purpose": "Nginx process and filesystem deployment."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Path, process, and private-key safety."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Host adapter verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-provider",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "edgeRuntime", "export": "crate-root"},
+      {"name": "nginxRuntime", "export": "crate-root"},
+      {"name": "certificateBundleMaterializer", "export": "crate-root"}
+    ],
+    "requiredPorts": [],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": [
+      "SDKWORK_WEB_NGINX_ENABLED",
+      "SDKWORK_WEB_NGINX_BINARY",
+      "SDKWORK_WEB_NGINX_MAIN_CONF",
+      "SDKWORK_WEB_NGINX_SITES_ROOT",
+      "SDKWORK_WEB_NGINX_SITE_FAMILY",
+      "SDKWORK_WEB_NGINX_COMMAND_TIMEOUT_MS",
+      "SDKWORK_WEB_CERT_LIVE_ROOT",
+      "SDKWORK_WEB_EDGE_ROOT"
+    ]
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-webserver-edge-runtime"]
+  }
+}

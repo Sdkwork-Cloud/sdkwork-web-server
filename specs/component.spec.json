@@ -27,6 +27,7 @@
     { "file": "API_SPEC.md", "path": "../sdkwork-specs/API_SPEC.md", "purpose": "HTTP/OpenAPI contract rules." }
   ],
   "contracts": {
+    "layerRole": "runtime-gateway",
     "publicExports": [
       "crates/sdkwork-web-standalone-gateway",
       "crates/sdkwork-routes-webserver-app-api",

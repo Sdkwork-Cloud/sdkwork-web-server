@@ -6,6 +6,8 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 chrono.workspace = true
+futures-util.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
 
@@ -20,3 +22,7 @@ sdkwork-webserver-acme-service.workspace = true
 sdkwork-webserver-edge-runtime.workspace = true
 sdkwork-utils-rust.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true

@@ -4,7 +4,9 @@ use sdkwork_webserver_contract::{
 };
 use sqlx::{any::AnyRow, Row};
 
-use crate::support::{new_uuid, next_id, now_rfc3339, resolve_site_internal_id, store_error};
+use crate::support::{
+    instant_write_expression, new_uuid, next_id, now_rfc3339, resolve_site_internal_id, store_error,
+};
 use crate::WebRepository;
 
 impl WebRepository {
@@ -58,25 +60,28 @@ impl WebRepository {
         let id = next_id(self.id_generator())?;
         let uuid = new_uuid();
         let now = now_rfc3339();
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$7");
+        let insert_sql = format!(
             "INSERT INTO web_health_check (
                 id, uuid, tenant_id, site_id, check_type, check_url, status,
                 created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, 1, $7, $7, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(request.check_type)
-        .bind(&request.url)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_health_check", error))?;
+                $1, $2, $3, $4, $5, $6, 1, {now_expression}, {now_expression}, 0
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(tenant_id)
+            .bind(site_internal_id)
+            .bind(request.check_type)
+            .bind(&request.url)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_health_check", error))?;
 
         Ok(HealthCheckResponse {
             id: uuid,

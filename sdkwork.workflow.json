@@ -24,15 +24,39 @@
       "tokenSecret": "SDKWORK_RELEASE_TOKEN"
     },
     {
+      "id": "sdkwork-core",
+      "repository": "Sdkwork-Cloud/sdkwork-core",
+      "refInput": "SDKWORK_CORE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-ui",
+      "repository": "Sdkwork-Cloud/sdkwork-ui",
+      "refInput": "SDKWORK_UI_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
       "id": "sdkwork-web-framework",
       "repository": "Sdkwork-Cloud/sdkwork-web-framework",
       "refInput": "SDKWORK_WEB_FRAMEWORK_REF",
       "tokenSecret": "SDKWORK_RELEASE_TOKEN"
     },
     {
+      "id": "sdkwork-iam",
+      "repository": "Sdkwork-Cloud/sdkwork-iam",
+      "refInput": "SDKWORK_IAM_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
       "id": "sdkwork-database",
       "repository": "Sdkwork-Cloud/sdkwork-database",
       "refInput": "SDKWORK_DATABASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-sdk-commons",
+      "repository": "Sdkwork-Cloud/sdkwork-sdk-commons",
+      "refInput": "SDKWORK_SDK_COMMONS_REF",
       "tokenSecret": "SDKWORK_RELEASE_TOKEN"
     },
     {
@@ -54,6 +78,13 @@
     "rust": "stable"
   },
   "lifecycle": {
+    "install": [
+      {
+        "name": "Install locked pnpm workspace",
+        "shell": "pwsh",
+        "run": "pnpm install --frozen-lockfile"
+      }
+    ],
     "build": [
       {
         "name": "Build web API server",
@@ -61,11 +92,60 @@
         "run": "cargo build --workspace --release"
       }
     ],
+    "package": [
+      {
+        "name": "Package immutable web server archive",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-release.mjs package"
+      }
+    ],
+    "sbom": [
+      {
+        "name": "Generate deterministic CycloneDX release SBOM",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-sbom.mjs generate"
+      }
+    ],
     "validate": [
+      {
+        "name": "Validate immutable web server archive",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-release.mjs validate"
+      },
+      {
+        "name": "Smoke-test packaged Linux web server",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-release-smoke.mjs"
+      },
+      {
+        "name": "Validate release SBOM against artifact and Cargo lock",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-sbom.mjs validate"
+      },
       {
         "name": "Validate web standards",
         "shell": "pwsh",
         "run": "pnpm verify"
+      },
+      {
+        "name": "Validate disposable PostgreSQL",
+        "shell": "pwsh",
+        "run": "pnpm test:postgres:required"
+      },
+      {
+        "name": "Validate database recovery",
+        "shell": "pwsh",
+        "run": "pnpm test:database:recovery"
+      },
+      {
+        "name": "Validate PostgreSQL streaming failover",
+        "shell": "pwsh",
+        "run": "pnpm test:postgres:ha"
+      },
+      {
+        "name": "Reject generated contract drift",
+        "shell": "pwsh",
+        "run": "git diff --exit-code -- ."
       }
     ]
   },
@@ -77,14 +157,67 @@
       "architecture": "x64",
       "formats": ["tar.gz"],
       "runner": "ubuntu-24.04",
-      "outputGlobs": ["target/release/sdkwork-web-standalone-gateway*"],
+      "outputGlobs": [
+        "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz",
+        "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.cdx.json",
+        "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.cdx.json.sha256"
+      ],
       "deploymentProfile": "cloud",
+      "runtimeTarget": "server"
+    },
+    {
+      "id": "linux-x64-standalone-server-tar-gz",
+      "profile": "server",
+      "platform": "linux",
+      "architecture": "x64",
+      "formats": ["tar.gz"],
+      "runner": "ubuntu-24.04",
+      "outputGlobs": [
+        "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz",
+        "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.cdx.json",
+        "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.cdx.json.sha256"
+      ],
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "server"
+    },
+    {
+      "id": "linux-arm64-cloud-server-tar-gz",
+      "profile": "server",
+      "platform": "linux",
+      "architecture": "arm64",
+      "formats": ["tar.gz"],
+      "runner": "ubuntu-24.04-arm",
+      "outputGlobs": [
+        "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz",
+        "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.cdx.json",
+        "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.cdx.json.sha256"
+      ],
+      "deploymentProfile": "cloud",
+      "runtimeTarget": "server"
+    },
+    {
+      "id": "linux-arm64-standalone-server-tar-gz",
+      "profile": "server",
+      "platform": "linux",
+      "architecture": "arm64",
+      "formats": ["tar.gz"],
+      "runner": "ubuntu-24.04-arm",
+      "outputGlobs": [
+        "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz",
+        "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.cdx.json",
+        "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.cdx.json.sha256"
+      ],
+      "deploymentProfile": "standalone",
       "runtimeTarget": "server"
     }
   ],
   "security": {
     "artifactAttestations": true,
-    "sbomRequired": false,
+    "sbomRequired": true,
     "signingRequired": false
   },
   "publish": {

@@ -204,6 +204,10 @@ fn default_proxy_protocol_max_header_bytes() -> usize {
     536
 }
 
+fn default_proxy_protocol_crc32c_policy() -> ProxyProtocolCrc32cPolicy {
+    ProxyProtocolCrc32cPolicy::Ignore
+}
+
 fn default_index_files() -> Vec<String> {
     vec!["index.html".to_owned()]
 }
@@ -639,6 +643,8 @@ pub struct ProxyProtocolConfig {
     pub timeout_ms: u64,
     #[serde(default = "default_proxy_protocol_max_header_bytes")]
     pub max_header_bytes: usize,
+    #[serde(default = "default_proxy_protocol_crc32c_policy")]
+    pub crc32c_policy: ProxyProtocolCrc32cPolicy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -646,6 +652,14 @@ pub struct ProxyProtocolConfig {
 pub enum ProxyProtocolVersion {
     V1,
     V2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProxyProtocolCrc32cPolicy {
+    Ignore,
+    ValidateIfPresent,
+    Required,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

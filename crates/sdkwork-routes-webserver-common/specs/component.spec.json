@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-routes-webserver-common",
+    "displayName": "SDKWork Web Server Route Common",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-routes-webserver-common",
+    "domain": "platform",
+    "capability": "webserver-http-adapters",
+    "surface": "backend-service",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored HTTP adapter boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "HTTP adapter naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure."},
+    {"file": "API_SPEC.md", "path": "../../../sdkwork-specs/API_SPEC.md", "purpose": "Problem and response envelopes."},
+    {"file": "WEB_FRAMEWORK_SPEC.md", "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md", "purpose": "IAM and framework integration."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Fail-closed authentication."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Shared adapter verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-route",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "webApiResponses", "export": "crate-root"},
+      {"name": "webApiAuthResolver", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "iamWebRequestContextResolver", "export": "crate-root", "provider": "sdkwork-iam-web-adapter"},
+      {"name": "webServerContracts", "export": "crate-root", "provider": "sdkwork-webserver-contract"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": ["SDKWORK_IAM_DATABASE_URL", "SDKWORK_IAM_DATABASE_ENGINE"]
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-routes-webserver-common"]
+  }
+}

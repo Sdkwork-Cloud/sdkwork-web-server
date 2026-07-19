@@ -2,7 +2,7 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-15
+Updated: 2026-07-19
 Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, WEB_FRAMEWORK_SPEC.md, WEB_BACKEND_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, CONFIG_SPEC.md, SECURITY_SPEC.md, DEPLOYMENT_SPEC.md, NGINX_SPEC.md
 
 ## Document Map
@@ -19,11 +19,18 @@ SDKWork Web Server is evolving from an HTTP management control plane into a Rust
 Current implemented baseline:
 
 - app-api and backend-api management surfaces;
-- site, domain, deployment, certificate, Nginx, health-check, audit, environment, and agent business workflows;
+- site, domain, deployment, certificate, Nginx, health-check, audit, environment, and Web Node workflows;
 - SQLx persistence through the SDKWork database framework;
 - ACME/self-signed certificate services;
-- external Nginx artifact materialization and edge-agent synchronization;
+- external Nginx artifact materialization and Web Node Daemon synchronization;
+- durable bounded Web Node Daemon desired/observed apply checkpoints with crash replay;
 - one standalone Axum management listener.
+
+The host synchronization process is named **Web Node Daemon** in all new
+runtime and operational surfaces. The canonical packaged/development entry
+point is `sdkwork-web-node-daemon`; `sdkwork-web-agent` is retained only as a
+v3 compatibility binary. The v3 Agent API and generated DTO names remain wire
+compatibility identifiers and are not new product terminology.
 
 Target work in progress under `REQ-2026-0003`:
 
@@ -47,7 +54,7 @@ The target rows are not implementation-complete until the linked requirement evi
 | Static content | `tower-http` file services behind compiled routing | In progress |
 | Reverse proxy transport | Reqwest/Hyper with Rustls and streamed bodies | In progress |
 | App Web Server config | JSON Schema authority + Serde + semantic compiler | In progress |
-| Database | `sdkwork-database` + SQLx; PostgreSQL default, explicit single-node SQLite profile | Implemented in control plane, parity evidence incomplete |
+| Database | `sdkwork-database` + SQLx; PostgreSQL default, explicit single-node SQLite profile | Implemented; parity, recovery, and bounded primary/standby promotion verified; managed HA, client failover, fencing, and PITR remain open |
 | IAM | `sdkwork-iam-web-adapter` for protected management surfaces | Implemented |
 | Certificates | `instant-acme`, `rcgen`, target Rustls activation | Issuance implemented; request-plane activation in progress |
 
@@ -107,7 +114,7 @@ The request path does not call management services or repositories. Management r
 | ADR-20260716-canonical-uri-dual-representation | Raw request URI preservation and bounded canonical routing Path | proposed; human review required |
 | ADR-20260715-rust-webserver-data-plane | Config authority, crate boundaries, HTTP/TLS/static/proxy stack | accepted / implementation in progress |
 | ADR-20260623-acme-certificate-authority | ACME client, CA selection, key storage | historical accepted; requires review against HTTPS PRD |
-| ADR-20260623-cert-distribution-topology | Agent sync and certificate distribution | historical accepted; requires review against node-scoped distribution PRD |
+| ADR-20260623-cert-distribution-topology | Node synchronization and certificate distribution (legacy Agent wire contract) | historical accepted; requires review against node-scoped distribution PRD |
 
 ## 9. Verification
 

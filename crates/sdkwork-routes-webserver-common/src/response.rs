@@ -22,10 +22,11 @@ fn resolved_trace_id() -> String {
 }
 
 fn attach_trace_header(response: &mut Response, trace_id: &str) {
-    if let Ok(value) = HeaderValue::from_str(trace_id) {
-        response
-            .headers_mut()
-            .insert(HeaderName::from_static(SDKWORK_TRACE_ID_HEADER), value);
+    if let (Ok(name), Ok(value)) = (
+        HeaderName::from_bytes(SDKWORK_TRACE_ID_HEADER.as_bytes()),
+        HeaderValue::from_str(trace_id),
+    ) {
+        response.headers_mut().insert(name, value);
     }
 }
 
@@ -197,5 +198,37 @@ pub fn no_content(result: WebServiceResult<()>) -> Result<Response, WebApiError>
     match result {
         Ok(()) => Ok(StatusCode::NO_CONTENT.into_response()),
         Err(error) => Err(error.into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+    use sdkwork_utils_rust::{SdkWorkApiResponse, SdkWorkResourceData, SDKWORK_SUCCESS_CODE};
+    use sdkwork_webserver_contract::AgentSyncResponse;
+
+    use super::ok_resource;
+
+    #[tokio::test]
+    async fn agent_sync_resource_uses_the_canonical_sdkwork_envelope() {
+        let manifest = AgentSyncResponse {
+            server_id: "server-1".to_string(),
+            sync_version: "sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                .to_string(),
+            unchanged: true,
+            nginx_configs: Vec::new(),
+            certificates: Vec::new(),
+        };
+        let response = ok_resource(Ok(manifest)).expect("resource response");
+        let body = to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .expect("bounded response body");
+        let decoded: SdkWorkApiResponse<SdkWorkResourceData<AgentSyncResponse>> =
+            serde_json::from_slice(&body).expect("canonical resource envelope");
+
+        assert_eq!(decoded.code, SDKWORK_SUCCESS_CODE);
+        assert!(!decoded.trace_id.is_empty());
+        assert_eq!(decoded.data.item.server_id, "server-1");
+        assert!(decoded.data.item.unchanged);
     }
 }

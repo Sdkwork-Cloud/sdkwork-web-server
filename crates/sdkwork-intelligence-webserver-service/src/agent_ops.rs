@@ -7,6 +7,8 @@ use sdkwork_webserver_contract::{
 
 use crate::WebService;
 
+const MAX_NODE_SYNC_RESPONSE_BYTES: usize = 15 * 1024 * 1024;
+
 impl WebService {
     /// Authenticates an agent bootstrap token and returns `(server_uuid, tenant_id)`.
     ///
@@ -46,6 +48,11 @@ impl WebService {
             .await?;
 
         if !manifest.unchanged {
+            if manifest.certificates.len() != encrypted_private_keys.len() {
+                return Err(WebServiceError::Internal(
+                    "node sync certificate credential count mismatch".to_string(),
+                ));
+            }
             for (certificate, encrypted_private_key) in manifest
                 .certificates
                 .iter_mut()
@@ -58,6 +65,46 @@ impl WebService {
             }
         }
 
+        validate_node_sync_response_size(&manifest, MAX_NODE_SYNC_RESPONSE_BYTES)?;
+
         Ok(manifest)
+    }
+}
+
+fn validate_node_sync_response_size(
+    manifest: &AgentSyncResponse,
+    maximum_bytes: usize,
+) -> WebServiceResult<()> {
+    let bytes = serde_json::to_vec(manifest)
+        .map_err(|error| WebServiceError::Internal(format!("encode node sync response: {error}")))?
+        .len();
+    if bytes > maximum_bytes {
+        return Err(WebServiceError::Internal(format!(
+            "node sync response exceeds {maximum_bytes} bytes"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use sdkwork_webserver_contract::AgentSyncResponse;
+
+    use super::validate_node_sync_response_size;
+
+    #[test]
+    fn node_sync_response_size_is_bounded_after_materialization() {
+        let manifest = AgentSyncResponse {
+            server_id: "node-1".to_string(),
+            sync_version: "sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                .to_string(),
+            unchanged: false,
+            nginx_configs: Vec::new(),
+            certificates: Vec::new(),
+        };
+        let encoded = serde_json::to_vec(&manifest).unwrap();
+
+        validate_node_sync_response_size(&manifest, encoded.len()).unwrap();
+        assert!(validate_node_sync_response_size(&manifest, encoded.len() - 1).is_err());
     }
 }

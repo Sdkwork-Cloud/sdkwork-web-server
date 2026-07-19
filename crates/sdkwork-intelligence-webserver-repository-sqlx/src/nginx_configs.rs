@@ -6,8 +6,8 @@ use sdkwork_webserver_contract::{
 use sqlx::{any::AnyRow, Row};
 
 use crate::support::{
-    bool_from_row, new_uuid, next_id, now_rfc3339, pagination, resolve_site_internal_id,
-    resolve_site_uuid, sha256_hex, store_error,
+    bool_from_row, instant_write_expression, new_uuid, next_id, now_rfc3339, pagination,
+    resolve_site_internal_id, resolve_site_uuid, sha256_hex, store_error,
 };
 use crate::WebRepository;
 
@@ -21,7 +21,7 @@ impl WebRepository {
         let mut count_sql =
             String::from("SELECT COUNT(*) AS total FROM web_nginx_config WHERE 1=1");
         let mut list_sql = String::from(
-            "SELECT uuid, site_id, config_name, config_type, is_active, status
+            "SELECT uuid, tenant_id, site_id, config_name, config_type, is_active, status
              FROM web_nginx_config WHERE 1=1",
         );
         let mut binds: Vec<BindValue> = Vec::new();
@@ -62,7 +62,7 @@ impl WebRepository {
         let limit_index = binds.len() + 1;
         let offset_index = binds.len() + 2;
         list_sql.push_str(&format!(
-            " ORDER BY updated_at DESC LIMIT ${limit_index} OFFSET ${offset_index}"
+            " ORDER BY updated_at DESC, id DESC LIMIT ${limit_index} OFFSET ${offset_index}"
         ));
 
         let count_row = apply_binds(sqlx::query(&count_sql), &binds)
@@ -81,7 +81,7 @@ impl WebRepository {
         let mut items = Vec::with_capacity(rows.len());
         for row in &rows {
             items.push(
-                map_nginx_config_row(&self.pool, tenant_id.unwrap_or(0), row)
+                map_nginx_config_row(&self.pool, row)
                     .await
                     .map_err(|error| {
                         WebServiceError::Internal(format!("map web_nginx_config row: {error}"))
@@ -108,27 +108,31 @@ impl WebRepository {
         let uuid = new_uuid();
         let now = now_rfc3339();
         let config_hash = sha256_hex(&request.config_content);
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$9");
+        let insert_sql = format!(
             "INSERT INTO web_nginx_config (
                 id, uuid, tenant_id, site_id, config_type, config_name, config_content, config_hash,
                 is_active, status, metadata, created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, 0, 0, '{}', $9, $9, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(site_internal_id)
-        .bind(request.config_type)
-        .bind(&request.config_name)
-        .bind(&request.config_content)
-        .bind(&config_hash)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_nginx_config", error))?;
+                $1, $2, $3, $4, $5, $6, $7, $8, FALSE, 0, '{{}}',
+                {now_expression}, {now_expression}, 0
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(tenant_id)
+            .bind(site_internal_id)
+            .bind(request.config_type)
+            .bind(&request.config_name)
+            .bind(&request.config_content)
+            .bind(&config_hash)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_nginx_config", error))?;
 
         self.retrieve_nginx_config_repo(Some(tenant_id), &uuid)
             .await
@@ -161,10 +165,7 @@ impl WebRepository {
         }
         .ok_or_else(|| WebServiceError::not_found("nginx config not found"))?;
 
-        let row_tenant_id: i64 = row
-            .try_get("tenant_id")
-            .map_err(|error| store_error("retrieve web_nginx_config tenant_id", error))?;
-        map_nginx_config_row(&self.pool, row_tenant_id, &row)
+        map_nginx_config_row(&self.pool, &row)
             .await
             .map_err(|error| WebServiceError::Internal(error.to_string()))
     }
@@ -211,36 +212,43 @@ impl WebRepository {
             .unwrap_or_default();
         let config_hash = sha256_hex(&config_content);
         let now = now_rfc3339();
+        let engine = self.database_engine().await?;
+        let tenant_time = instant_write_expression(engine, "$6");
+        let global_time = instant_write_expression(engine, "$5");
+        let tenant_update_sql = format!(
+            "UPDATE web_nginx_config
+             SET config_name = $3, config_content = $4, config_hash = $5,
+                 updated_at = {tenant_time}, version = version + 1
+             WHERE tenant_id = $1 AND uuid = $2"
+        );
+        let global_update_sql = format!(
+            "UPDATE web_nginx_config
+             SET config_name = $2, config_content = $3, config_hash = $4,
+                 updated_at = {global_time}, version = version + 1
+             WHERE uuid = $1"
+        );
 
         let result = if let Some(tenant_id) = tenant_id {
-            sqlx::query(
-                "UPDATE web_nginx_config
-                 SET config_name = $3, config_content = $4, config_hash = $5, updated_at = $6, version = version + 1
-                 WHERE tenant_id = $1 AND uuid = $2",
-            )
-            .bind(tenant_id)
-            .bind(config_id)
-            .bind(&config_name)
-            .bind(&config_content)
-            .bind(&config_hash)
-            .bind(&now)
-            .execute(&self.pool)
-            .await
-            .map_err(|error| store_error("update web_nginx_config", error))?
+            sqlx::query(&tenant_update_sql)
+                .bind(tenant_id)
+                .bind(config_id)
+                .bind(&config_name)
+                .bind(&config_content)
+                .bind(&config_hash)
+                .bind(&now)
+                .execute(&self.pool)
+                .await
+                .map_err(|error| store_error("update web_nginx_config", error))?
         } else {
-            sqlx::query(
-                "UPDATE web_nginx_config
-                 SET config_name = $2, config_content = $3, config_hash = $4, updated_at = $5, version = version + 1
-                 WHERE uuid = $1",
-            )
-            .bind(config_id)
-            .bind(&config_name)
-            .bind(&config_content)
-            .bind(&config_hash)
-            .bind(&now)
-            .execute(&self.pool)
-            .await
-            .map_err(|error| store_error("update web_nginx_config", error))?
+            sqlx::query(&global_update_sql)
+                .bind(config_id)
+                .bind(&config_name)
+                .bind(&config_content)
+                .bind(&config_hash)
+                .bind(&now)
+                .execute(&self.pool)
+                .await
+                .map_err(|error| store_error("update web_nginx_config", error))?
         };
 
         if result.rows_affected() == 0 {
@@ -300,17 +308,15 @@ impl WebRepository {
         }
         .ok_or_else(|| WebServiceError::not_found("nginx config not found"))?;
 
-        let content: String = row
+        let _content: String = row
             .try_get("config_content")
             .map_err(|error| store_error("validate web_nginx_config content", error))?;
-        let valid = !content.trim().is_empty();
         Ok(NginxValidateResponse {
-            valid,
-            message: if valid {
-                None
-            } else {
-                Some("config content is empty".to_string())
-            },
+            valid: false,
+            message: Some(
+                "Nginx syntax validation requires the edge runtime and is unavailable in the repository layer"
+                    .to_string(),
+            ),
         })
     }
 
@@ -319,12 +325,49 @@ impl WebRepository {
         tenant_id: Option<i64>,
         config_id: &str,
     ) -> WebServiceResult<NginxConfigResponse> {
-        let existing = self
-            .retrieve_nginx_config_repo(tenant_id, config_id)
-            .await?;
-        let site_internal_id =
-            resolve_site_internal_id(&self.pool, tenant_id.unwrap_or(0), &existing.site_id).await?;
+        let scope = if let Some(tenant_id) = tenant_id {
+            sqlx::query(
+                "SELECT tenant_id, site_id FROM web_nginx_config
+                 WHERE tenant_id = $1 AND uuid = $2",
+            )
+            .bind(tenant_id)
+            .bind(config_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|error| store_error("load web_nginx_config activation scope", error))?
+        } else {
+            sqlx::query("SELECT tenant_id, site_id FROM web_nginx_config WHERE uuid = $1")
+                .bind(config_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|error| store_error("load web_nginx_config activation scope", error))?
+        }
+        .ok_or_else(|| WebServiceError::not_found("nginx config not found"))?;
+        let site_internal_id: i64 = scope
+            .try_get("site_id")
+            .map_err(|error| store_error("map web_nginx_config activation site", error))?;
         let now = now_rfc3339();
+        let engine = self.database_engine().await?;
+        let deactivate_time = instant_write_expression(engine, "$2");
+        let tenant_activate_time = instant_write_expression(engine, "$3");
+        let global_activate_time = instant_write_expression(engine, "$2");
+        let deactivate_sql = format!(
+            "UPDATE web_nginx_config SET is_active = FALSE, updated_at = {deactivate_time},
+                    version = version + 1
+             WHERE site_id = $1 AND is_active = TRUE"
+        );
+        let tenant_activate_sql = format!(
+            "UPDATE web_nginx_config
+             SET is_active = TRUE, status = 1, deployed_at = {tenant_activate_time},
+                 updated_at = {tenant_activate_time}, version = version + 1
+             WHERE tenant_id = $1 AND uuid = $2"
+        );
+        let global_activate_sql = format!(
+            "UPDATE web_nginx_config
+             SET is_active = TRUE, status = 1, deployed_at = {global_activate_time},
+                 updated_at = {global_activate_time}, version = version + 1
+             WHERE uuid = $1"
+        );
 
         // 事务边界：停用旧 active config + 激活目标 config 必须原子完成，
         // 避免停用成功但激活失败导致站点丢失生效配置。
@@ -334,39 +377,28 @@ impl WebRepository {
             .await
             .map_err(|error| store_error("begin deploy web_nginx_config transaction", error))?;
 
-        sqlx::query(
-            "UPDATE web_nginx_config SET is_active = 0, updated_at = $2, version = version + 1
-             WHERE site_id = $1 AND is_active = 1",
-        )
-        .bind(site_internal_id)
-        .bind(&now)
-        .execute(&mut *tx)
-        .await
-        .map_err(|error| store_error("deactivate web_nginx_config", error))?;
+        sqlx::query(&deactivate_sql)
+            .bind(site_internal_id)
+            .bind(&now)
+            .execute(&mut *tx)
+            .await
+            .map_err(|error| store_error("deactivate web_nginx_config", error))?;
 
         let result = if let Some(tenant_id) = tenant_id {
-            sqlx::query(
-                "UPDATE web_nginx_config
-                 SET is_active = 1, status = 1, deployed_at = $3, updated_at = $3, version = version + 1
-                 WHERE tenant_id = $1 AND uuid = $2",
-            )
-            .bind(tenant_id)
-            .bind(config_id)
-            .bind(&now)
-            .execute(&mut *tx)
-            .await
-            .map_err(|error| store_error("Web web_nginx_config", error))?
+            sqlx::query(&tenant_activate_sql)
+                .bind(tenant_id)
+                .bind(config_id)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| store_error("Web web_nginx_config", error))?
         } else {
-            sqlx::query(
-                "UPDATE web_nginx_config
-                 SET is_active = 1, status = 1, deployed_at = $2, updated_at = $2, version = version + 1
-                 WHERE uuid = $1",
-            )
-            .bind(config_id)
-            .bind(&now)
-            .execute(&mut *tx)
-            .await
-            .map_err(|error| store_error("Web web_nginx_config", error))?
+            sqlx::query(&global_activate_sql)
+                .bind(config_id)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| store_error("Web web_nginx_config", error))?
         };
 
         tx.commit()
@@ -391,7 +423,7 @@ impl WebRepository {
         let active_configs = if let Some(tenant_id) = tenant_id {
             let row = sqlx::query(
                 "SELECT COUNT(*) AS total FROM web_nginx_config
-                 WHERE tenant_id = $1 AND is_active = 1 AND status = 1",
+                 WHERE tenant_id = $1 AND is_active = TRUE AND status = 1",
             )
             .bind(tenant_id)
             .fetch_one(&self.pool)
@@ -400,7 +432,7 @@ impl WebRepository {
             row.try_get::<i64, _>("total").unwrap_or(0)
         } else {
             let row = sqlx::query(
-                "SELECT COUNT(*) AS total FROM web_nginx_config WHERE is_active = 1 AND status = 1",
+                "SELECT COUNT(*) AS total FROM web_nginx_config WHERE is_active = TRUE AND status = 1",
             )
             .fetch_one(&self.pool)
             .await
@@ -459,9 +491,9 @@ fn apply_binds<'q>(
 
 async fn map_nginx_config_row(
     pool: &sqlx::AnyPool,
-    tenant_id: i64,
     row: &AnyRow,
 ) -> Result<NginxConfigResponse, sqlx::Error> {
+    let tenant_id: i64 = row.try_get("tenant_id")?;
     let site_internal_id: i64 = row.try_get("site_id")?;
     let site_uuid = resolve_site_uuid(pool, tenant_id, site_internal_id)
         .await

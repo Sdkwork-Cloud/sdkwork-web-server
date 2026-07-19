@@ -37,6 +37,7 @@
     }
   ],
   "contracts": {
+    "layerRole": "runtime-gateway",
     "publicExports": [
       "."
     ],

@@ -1,0 +1,112 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+test('node daemon sync state is durable, checksummed, bounded, and fail-closed', () => {
+  const state = readFileSync(
+    path.join(REPO_ROOT, 'crates/sdkwork-web-agent/src/state.rs'),
+    'utf8',
+  );
+  assert.match(state, /const MAX_STATE_BYTES: u64 = 8 \* 1024/u);
+  assert.match(state, /SYNC_VERSION_PREFIX: &str = "sv1:"/u);
+  assert.match(state, /struct StateChecksumPayload/u);
+  assert.match(state, /Sha256::digest/u);
+  assert.match(state, /NamedTempFile::new_in/u);
+  assert.match(state, /staged\.as_file\(\)\.sync_all\(\)/u);
+  assert.match(state, /reject_symlink_ancestors/u);
+  assert.match(state, /permissions\.set_mode\(0o600\)/u);
+  assert.match(state, /sdkwork-web-node-daemon\.lock/u);
+  assert.match(state, /file\.try_lock\(\)/u);
+  assert.match(state, /another Web Node Daemon already owns this state directory/u);
+  assert.match(state, /\/var\/lib\/sdkwork\/web\/edge/u);
+  assert.doesNotMatch(state, /std::env::temp_dir/u);
+  assert.doesNotMatch(state, /unwrap_or_default\(\)/u);
+});
+
+test('node daemon persists desired before apply and observed only after real reload', () => {
+  const source = readFileSync(
+    path.join(REPO_ROOT, 'crates/sdkwork-web-agent/src/main.rs'),
+    'utf8',
+  );
+  const desiredIndex = source.indexOf('local_state.with_desired');
+  const desiredSaveIndex = source.indexOf('desired_state.save');
+  const deployIndex = source.indexOf('edge.deploy_site_config');
+  const reloadIndex = source.indexOf('edge.reload()?');
+  const observedIndex = source.indexOf('local_state.with_observed');
+  const observedSaveIndex = source.indexOf('observed_state.save');
+  const processLockIndex = source.indexOf('NodeDaemonLock::acquire');
+  const stateLoadIndex = source.indexOf('NodeDaemonState::load');
+  assert.ok(processLockIndex >= 0 && processLockIndex < stateLoadIndex);
+  assert.ok(desiredIndex >= 0 && desiredIndex < desiredSaveIndex);
+  assert.ok(desiredSaveIndex < deployIndex);
+  assert.ok(deployIndex < reloadIndex);
+  assert.ok(reloadIndex < observedIndex && observedIndex < observedSaveIndex);
+  assert.match(
+    source,
+    /last_sync_version: local_state\.observed_sync_version\(\)/u,
+  );
+  assert.match(source, /MAX_SYNC_RESPONSE_BYTES: usize = 16 \* 1024 \* 1024/u);
+  assert.match(source, /MAX_NGINX_CONFIGS_PER_SYNC: usize = 2_048/u);
+  assert.match(source, /while let Some\(chunk\) = response\.chunk\(\)\.await/u);
+  assert.match(source, /Client::builder\(\)/u);
+  assert.match(
+    source,
+    /SdkWorkApiResponse<SdkWorkResourceData<T>>/u,
+  );
+  assert.match(source, /response\.code != SDKWORK_SUCCESS_CODE/u);
+  assert.doesNotMatch(source, /response\.json\(\)\.await/u);
+  assert.doesNotMatch(
+    source,
+    /let manifest: AgentSyncResponse\s*=\s*serde_json::from_slice/u,
+  );
+});
+
+test('node daemon state contract is present in root verification and component metadata', () => {
+  const packageJson = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+  assert.match(packageJson.scripts.test, /agent-sync-state\.contract\.test\.mjs/u);
+  assert.match(packageJson.scripts.verify, /agent-sync-state\.contract\.test\.mjs/u);
+
+  const component = JSON.parse(
+    readFileSync(
+      path.join(REPO_ROOT, 'crates/sdkwork-web-agent/specs/component.spec.json'),
+      'utf8',
+    ),
+  );
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_AGENT_STATE_PATH'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_AGENT_STATE_DIR'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_NODE_TOKEN'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_NODE_SYNC_INTERVAL_SECS'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_NODE_STATE_PATH'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_NODE_STATE_DIR'));
+  assert.ok(component.contracts.runtimeEntrypoints.includes('binary#sdkwork-web-node-daemon'));
+  assert.ok(component.contracts.runtimeEntrypoints.includes('binary#sdkwork-web-agent'));
+  assert.ok(component.contracts.configKeys.includes('SDKWORK_WEB_EDGE_ROOT'));
+});
+
+test('web node daemon terminology is preferred without breaking v3 aliases', () => {
+  const main = readFileSync(
+    path.join(REPO_ROOT, 'crates/sdkwork-web-agent/src/main.rs'),
+    'utf8',
+  );
+  const state = readFileSync(
+    path.join(REPO_ROOT, 'crates/sdkwork-web-agent/src/state.rs'),
+    'utf8',
+  );
+  const env = readFileSync(
+    path.join(REPO_ROOT, 'etc/node-daemon/development.env.example'),
+    'utf8',
+  );
+  assert.match(main, /SDKWORK_WEB_NODE_TOKEN/u);
+  assert.match(main, /SDKWORK_WEB_NODE_SYNC_INTERVAL_SECS/u);
+  assert.match(main, /conflicts with legacy alias/u);
+  assert.match(state, /SDKWORK_WEB_NODE_STATE_PATH/u);
+  assert.match(state, /SDKWORK_WEB_NODE_STATE_DIR/u);
+  assert.match(env, /^SDKWORK_WEB_NODE_TOKEN=/mu);
+  assert.match(env, /^SDKWORK_WEB_NODE_SYNC_INTERVAL_SECS=/mu);
+  assert.doesNotMatch(env, /^SDKWORK_WEB_AGENT_TOKEN=/mu);
+  assert.doesNotMatch(env, /^SDKWORK_WEB_AGENT_SYNC_INTERVAL_SECS=/mu);
+});

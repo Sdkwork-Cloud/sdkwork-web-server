@@ -5,7 +5,10 @@ use sdkwork_webserver_contract::{
 };
 use sqlx::{any::AnyRow, Row};
 
-use crate::support::{json_from_row, new_uuid, next_id, now_rfc3339, pagination, store_error};
+use crate::support::{
+    instant_write_expression, json_from_row, json_write_expression, new_uuid, next_id, now_rfc3339,
+    pagination, store_error,
+};
 use crate::WebRepository;
 
 impl WebRepository {
@@ -15,61 +18,40 @@ impl WebRepository {
         query: &ListSitesQuery,
     ) -> WebServiceResult<SitePage> {
         let (page, page_size, offset) = pagination(query.page, query.page_size);
-        let mut count_sql = String::from(
-            "SELECT COUNT(*) AS total FROM web_site
-             WHERE tenant_id = $1 AND deleted_at IS NULL",
-        );
-        let mut list_sql = String::from(
-            "SELECT uuid, name, slug, description, site_type, status, runtime_config, created_at, updated_at
-             FROM web_site
-             WHERE tenant_id = $1 AND deleted_at IS NULL",
-        );
-
-        let mut bind_index = 2u8;
-        let mut extra_binds: Vec<String> = Vec::new();
-
-        if let Some(status) = query.status {
-            let clause = format!(" AND status = ${bind_index}");
-            count_sql.push_str(&clause);
-            list_sql.push_str(&clause);
-            extra_binds.push(status.to_string());
-            bind_index += 1;
-        }
-        if let Some(site_type) = query.site_type {
-            let clause = format!(" AND site_type = ${bind_index}");
-            count_sql.push_str(&clause);
-            list_sql.push_str(&clause);
-            extra_binds.push(site_type.to_string());
-            bind_index += 1;
-        }
-        if let Some(keyword) = query
+        let keyword = query
             .keyword
             .as_deref()
-            .filter(|value| !value.trim().is_empty())
-        {
-            let clause = format!(
-                " AND (name LIKE ${bind_index} OR slug LIKE ${})",
-                bind_index + 1
-            );
-            count_sql.push_str(&clause);
-            list_sql.push_str(&clause);
-            let pattern = format!("%{}%", keyword.trim());
-            extra_binds.push(pattern.clone());
-            extra_binds.push(pattern);
-        }
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!("%{value}%"));
+        let count_sql = "SELECT COUNT(*) AS total FROM web_site
+             WHERE tenant_id = $1 AND deleted_at IS NULL
+               AND ($2 IS NULL OR status = $2)
+               AND ($3 IS NULL OR site_type = $3)
+               AND ($4 IS NULL OR name LIKE $4 OR slug LIKE $4)";
+        let list_sql = "SELECT uuid, name, slug, description, site_type, status,
+                    CAST(runtime_config AS TEXT) AS runtime_config,
+                    CAST(created_at AS TEXT) AS created_at,
+                    CAST(updated_at AS TEXT) AS updated_at
+             FROM web_site
+             WHERE tenant_id = $1 AND deleted_at IS NULL
+               AND ($2 IS NULL OR status = $2)
+               AND ($3 IS NULL OR site_type = $3)
+               AND ($4 IS NULL OR name LIKE $4 OR slug LIKE $4)
+             ORDER BY updated_at DESC, id DESC LIMIT $5 OFFSET $6";
 
-        list_sql.push_str(&format!(
-            " ORDER BY updated_at DESC LIMIT ${bind_index} OFFSET ${}",
-            bind_index + 1
-        ));
-
-        let mut count_query = sqlx::query(&count_sql).bind(tenant_id);
-        let mut list_query = sqlx::query(&list_sql).bind(tenant_id);
-        for value in &extra_binds {
-            count_query = count_query.bind(value);
-            list_query = list_query.bind(value);
-        }
-        list_query = list_query.bind(page_size).bind(offset);
+        let count_query = sqlx::query(count_sql)
+            .bind(tenant_id)
+            .bind(query.status)
+            .bind(query.site_type)
+            .bind(keyword.as_deref());
+        let list_query = sqlx::query(list_sql)
+            .bind(tenant_id)
+            .bind(query.status)
+            .bind(query.site_type)
+            .bind(keyword.as_deref())
+            .bind(page_size)
+            .bind(offset);
 
         let count_row = count_query
             .fetch_one(&self.pool)
@@ -121,31 +103,35 @@ impl WebRepository {
             .runtime_config
             .clone()
             .unwrap_or_else(|| serde_json::json!({}));
-        let runtime_config_text = runtime_config.to_string();
         let org_id = organization_id.unwrap_or(0);
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let runtime_config_expression = json_write_expression(engine, "$10");
+        let now_expression = instant_write_expression(engine, "$11");
+        let insert_sql = format!(
             "INSERT INTO web_site (
                 id, uuid, tenant_id, organization_id, user_id, name, slug, description,
                 site_type, status, runtime_config, metadata, created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, '{}', $11, $11, 0
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(tenant_id)
-        .bind(org_id)
-        .bind(actor_id)
-        .bind(&request.name)
-        .bind(&slug)
-        .bind(&request.description)
-        .bind(request.site_type)
-        .bind(&runtime_config_text)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_site", error))?;
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, 0,
+                {runtime_config_expression}, '{{}}', {now_expression}, {now_expression}, 0
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(tenant_id)
+            .bind(org_id)
+            .bind(actor_id)
+            .bind(&request.name)
+            .bind(&slug)
+            .bind(&request.description)
+            .bind(request.site_type)
+            .bind(runtime_config.to_string())
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_site", error))?;
 
         self.retrieve_site_repo(tenant_id, &uuid).await
     }
@@ -156,7 +142,10 @@ impl WebRepository {
         site_id: &str,
     ) -> WebServiceResult<SiteResponse> {
         let row = sqlx::query(
-            "SELECT uuid, name, slug, description, site_type, status, runtime_config, created_at, updated_at
+            "SELECT uuid, name, slug, description, site_type, status,
+                    CAST(runtime_config AS TEXT) AS runtime_config,
+                    CAST(created_at AS TEXT) AS created_at,
+                    CAST(updated_at AS TEXT) AS updated_at
              FROM web_site
              WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL",
         )
@@ -187,23 +176,27 @@ impl WebRepository {
             .clone()
             .or(existing.runtime_config)
             .unwrap_or_else(|| serde_json::json!({}));
-        let runtime_config_text = runtime_config.to_string();
         let now = now_rfc3339();
-
-        let updated = sqlx::query(
+        let engine = self.database_engine().await?;
+        let runtime_config_expression = json_write_expression(engine, "$5");
+        let now_expression = instant_write_expression(engine, "$6");
+        let update_sql = format!(
             "UPDATE web_site
-             SET name = $3, description = $4, runtime_config = $5, updated_at = $6, version = version + 1
-             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL",
-        )
-        .bind(tenant_id)
-        .bind(site_id)
-        .bind(name)
-        .bind(description)
-        .bind(&runtime_config_text)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("update web_site", error))?;
+             SET name = $3, description = $4, runtime_config = {runtime_config_expression},
+                 updated_at = {now_expression}, version = version + 1
+             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL"
+        );
+
+        let updated = sqlx::query(&update_sql)
+            .bind(tenant_id)
+            .bind(site_id)
+            .bind(name)
+            .bind(description)
+            .bind(runtime_config.to_string())
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("update web_site", error))?;
 
         if updated.rows_affected() == 0 {
             return Err(WebServiceError::not_found("site not found"));
@@ -219,18 +212,22 @@ impl WebRepository {
         actor_id: Option<i64>,
     ) -> WebServiceResult<()> {
         let now = now_rfc3339();
-        let result = sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$3");
+        let update_sql = format!(
             "UPDATE web_site
-             SET deleted_at = $3, deleted_by = $4, updated_at = $3, version = version + 1
-             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL",
-        )
-        .bind(tenant_id)
-        .bind(site_id)
-        .bind(&now)
-        .bind(actor_id)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("delete web_site", error))?;
+             SET deleted_at = {now_expression}, deleted_by = $4,
+                 updated_at = {now_expression}, version = version + 1
+             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL"
+        );
+        let result = sqlx::query(&update_sql)
+            .bind(tenant_id)
+            .bind(site_id)
+            .bind(&now)
+            .bind(actor_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("delete web_site", error))?;
 
         if result.rows_affected() == 0 {
             return Err(WebServiceError::not_found("site not found"));
@@ -245,18 +242,21 @@ impl WebRepository {
         status: i32,
     ) -> WebServiceResult<SiteResponse> {
         let now = now_rfc3339();
-        let result = sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$4");
+        let update_sql = format!(
             "UPDATE web_site
-             SET status = $3, updated_at = $4, version = version + 1
-             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL",
-        )
-        .bind(tenant_id)
-        .bind(site_id)
-        .bind(status)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("update web_site status", error))?;
+             SET status = $3, updated_at = {now_expression}, version = version + 1
+             WHERE tenant_id = $1 AND uuid = $2 AND deleted_at IS NULL"
+        );
+        let result = sqlx::query(&update_sql)
+            .bind(tenant_id)
+            .bind(site_id)
+            .bind(status)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("update web_site status", error))?;
 
         if result.rows_affected() == 0 {
             return Err(WebServiceError::not_found("site not found"));

@@ -108,7 +108,16 @@ impl WebService {
         material: sdkwork_webserver_acme_service::IssuedCertificateMaterial,
         audit_action: &str,
     ) -> WebServiceResult<CertificateResponse> {
-        if let Err(error) = self.edge_runtime.write_certificate_bundle(&material) {
+        let encrypted_private_key = self
+            .certificate_issuer
+            .encrypt_private_key(&material.private_key_pem)
+            .map_err(|error| WebServiceError::Internal(error.to_string()))?;
+
+        let write_result = self
+            .edge_runtime
+            .write_certificate_bundle_async(&material)
+            .await;
+        if let Err(error) = write_result {
             if audit_action == "certificates.issue" {
                 let _ = self
                     .repository
@@ -122,11 +131,6 @@ impl WebService {
             }
             return Err(WebServiceError::Internal(error.to_string()));
         }
-
-        let encrypted_private_key = self
-            .certificate_issuer
-            .encrypt_private_key(&material.private_key_pem)
-            .map_err(|error| WebServiceError::Internal(error.to_string()))?;
 
         let update = CertificateIssueUpdate {
             cert_name: material.cert_name,

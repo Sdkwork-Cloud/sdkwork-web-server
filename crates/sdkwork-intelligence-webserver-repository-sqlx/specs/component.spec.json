@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-intelligence-webserver-repository-sqlx",
+    "displayName": "SDKWork Web Server SQLx Repository",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-intelligence-webserver-repository-sqlx",
+    "domain": "platform",
+    "capability": "webserver-persistence",
+    "surface": "backend-service",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored repository boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Rust component naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust repository structure and async rules."},
+    {"file": "DATABASE_SPEC.md", "path": "../../../sdkwork-specs/DATABASE_SPEC.md", "purpose": "Tenant, transaction, index, and engine parity rules."},
+    {"file": "DATABASE_FRAMEWORK_SPEC.md", "path": "../../../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md", "purpose": "Database lifecycle ownership."},
+    {"file": "PAGINATION_SPEC.md", "path": "../../../sdkwork-specs/PAGINATION_SPEC.md", "purpose": "Store-level bounded pagination."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Secret and tenant isolation."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Repository parity evidence."}
+  ],
+  "contracts": {
+    "layerRole": "backend-repository",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "webRepositorySqlx", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "webRepositoryPort", "export": "crate-root", "provider": "sdkwork-intelligence-webserver-service"},
+      {"name": "databasePool", "export": "crate-root", "provider": "sdkwork-database-sqlx"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": [
+      "SDKWORK_WEB_DATABASE_URL",
+      "SDKWORK_WEB_SNOWFLAKE_NODE_ID",
+      "SDKWORK_WEB_SECRET_ENCRYPTION_KEY"
+    ]
+  },
+  "verification": {
+    "commands": [
+      "cargo test -p sdkwork-intelligence-webserver-repository-sqlx",
+      "cargo test -p sdkwork-intelligence-webserver-repository-sqlx --test repository_parity sqlite_repository",
+      "cargo test -p sdkwork-intelligence-webserver-repository-sqlx --test repository_parity postgres_repository -- --ignored",
+      "node ../sdkwork-specs/tools/check-pagination.mjs --workspace ."
+    ]
+  }
+}

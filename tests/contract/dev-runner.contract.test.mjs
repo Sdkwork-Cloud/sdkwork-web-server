@@ -11,7 +11,8 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 test('root dev command starts the device-aware IM development ingress', () => {
   const packageJson = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 
-  assert.equal(packageJson.scripts.dev, 'pnpm dev:browser');
+  assert.equal(packageJson.scripts.dev, 'pnpm dev:standalone');
+  assert.equal(packageJson.scripts['dev:standalone'], 'pnpm dev:browser:postgres:standalone');
   assert.equal(packageJson.scripts['dev:browser'], 'pnpm dev:browser:postgres:standalone');
   assert.match(packageJson.scripts['dev:browser:postgres:standalone'], /webserver-im-dev\.mjs/u);
   assert.match(

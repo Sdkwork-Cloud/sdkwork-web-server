@@ -237,6 +237,12 @@ Capacity claims identify hardware, OS/kernel, network, TLS algorithms, payload m
 - Restore exercises prove database integrity, tenant isolation, snapshot regeneration, certificate usability, node re-enrollment, served traffic, and audit continuity.
 - Disaster-recovery exercises measure the parent PRD RPO/RTO and record unmet dependencies rather than declaring success after database restore alone.
 
+Current verified boundary: REQ-2026-0050 adds a disposable, bounded recovery drill using SQLite `VACUUM INTO` and PostgreSQL custom-format `pg_dump`/`pg_restore`. It proves independent restored schema integrity and a tenant-scoped canary after the source diverges. Production scheduling, encryption/KMS, immutable off-host retention, PostgreSQL WAL/PITR, managed-provider recovery, node/certificate reconstruction, audit continuity, and measured RPO/RTO remain required by this PRD.
+
+REQ-2026-0051 adds a bounded two-node PostgreSQL physical-replication drill. It proves a tenant write whose primary flush LSN is explicitly replayed on the standby survives primary shutdown, standby promotion, and subsequent writes. It does not establish automatic failure detection, leader election, client endpoint failover, synchronous-replication RPO, split-brain fencing, failback/rejoin, managed-provider behavior, independent failure domains, three-node capacity, or the product availability and RPO/RTO targets.
+
+REQ-2026-0052 replaces the Web Node Daemon's legacy best-effort temporary `lastSyncVersion` file with a bounded, checksummed, atomically persisted desired/observed generation checkpoint. Desired is durable before artifact application; observed advances only after the supplied bundle and real Nginx reload succeed, so interrupted generations request a complete replay. This is a local apply checkpoint, not served-state, inventory equality, control-plane acknowledgement, readiness, quorum, or cluster convergence evidence. The v3 state field remains a compatibility identifier rather than canonical product terminology.
+
 ## 17. Release And Supply Chain
 
 Commercial releases include:
@@ -249,6 +255,23 @@ Commercial releases include:
 - Service packages with canonical directories, permissions, service manager units, config preflight, log policy, uninstall/data retention behavior, and no embedded production secret.
 
 A release is not commercial-ready when it relies on mutable tags, undocumented manual server edits, unverified generated configuration, unbounded defaults, privileged execution without justification, or tests that mock the external effect being claimed.
+
+Current verified boundary: REQ-2026-0056 provides paired `dev:standalone`/`dev:cloud` and
+`release:package:standalone`/`release:package:cloud` commands. Cloud development resolves a tracked,
+token-free remote-HTTPS profile and starts only the local Web Node Daemon. The workflow plans
+separate Linux x64 server archives, and the producer binds names to the workflow package version,
+uses deterministic tar metadata, records per-file hashes, writes an archive checksum atomically,
+and enforces a 512 MiB ceiling. REQ-2026-0057 additionally freezes the assembled pnpm workspace and
+requires an exact-inventory streaming archive validator before upload, with fixed archive, file,
+total-content, entry-count, manifest, checksum, and read-buffer limits. Current Windows evidence
+uses real bounded tar fixtures but remains contract evidence only. REQ-2026-0058 closes Linux x64
+archive extraction, packaged gateway validation, HTTP/HTTPS readiness and traffic, SIGTERM drain,
+and cleanup smoke for both standalone and cloud profiles. REQ-2026-0059 adds the same bounded
+archive and HTTP/HTTPS/SNI/stop evidence for arm64 using an AArch64 userspace and architecture-bound
+manifests. The smoke includes the canonical
+`sdkwork-web-node-daemon` and the explicitly labelled `sdkwork-web-agent` compatibility binary.
+Container/service packages, SBOM, signing, provenance, upgrade, rollback, uninstall, native-arm64
+capacity/soak, and production HA evidence remain required.
 
 ## 18. Runbooks And Supportability
 

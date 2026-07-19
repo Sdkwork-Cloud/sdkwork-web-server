@@ -7,9 +7,12 @@ use instant_acme::{
 };
 
 use crate::challenge_store::ChallengeStore;
+use crate::http_client::BoundedAcmeHttpClient;
 use crate::model::IssuedCertificateMaterial;
-use crate::self_signed::fingerprint_sha256_hex;
+use crate::self_signed::certificate_evidence_from_pem;
 use crate::{AcmeConfig, AcmeServiceError, AcmeServiceResult};
+
+const MAX_AUTHORIZATIONS_PER_ORDER: usize = 8;
 
 pub async fn issue_lets_encrypt(
     config: &AcmeConfig,
@@ -17,6 +20,36 @@ pub async fn issue_lets_encrypt(
     hostname: &str,
     cert_name: &str,
     cert_root: &str,
+    operation_timeout: Duration,
+) -> AcmeServiceResult<IssuedCertificateMaterial> {
+    match tokio::time::timeout(
+        operation_timeout,
+        issue_lets_encrypt_inner(
+            config,
+            challenge_store,
+            hostname,
+            cert_name,
+            cert_root,
+            operation_timeout,
+        ),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(AcmeServiceError::provider(format!(
+            "ACME issuance timed out after {} ms",
+            operation_timeout.as_millis()
+        ))),
+    }
+}
+
+async fn issue_lets_encrypt_inner(
+    config: &AcmeConfig,
+    challenge_store: &ChallengeStore,
+    hostname: &str,
+    cert_name: &str,
+    cert_root: &str,
+    operation_timeout: Duration,
 ) -> AcmeServiceResult<IssuedCertificateMaterial> {
     let webroot = config.webroot.as_deref().map(Path::new).ok_or_else(|| {
         AcmeServiceError::config(
@@ -24,19 +57,20 @@ pub async fn issue_lets_encrypt(
         )
     })?;
 
-    let (account, _credentials) = Account::builder()
-        .map_err(|error| AcmeServiceError::provider(error.to_string()))?
-        .create(
-            &NewAccount {
-                contact: &[&format!("mailto:{}", config.contact_email)],
-                terms_of_service_agreed: true,
-                only_return_existing: false,
-            },
-            config.directory_url.clone(),
-            None,
-        )
-        .await
-        .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
+    let contact = format!("mailto:{}", config.contact_email);
+    let (account, _credentials) =
+        Account::builder_with_http(Box::new(BoundedAcmeHttpClient::new()?))
+            .create(
+                &NewAccount {
+                    contact: &[&contact],
+                    terms_of_service_agreed: true,
+                    only_return_existing: false,
+                },
+                config.directory_url.clone(),
+                None,
+            )
+            .await
+            .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
 
     let identifiers = [Identifier::Dns(hostname.to_string())];
     let mut order = account
@@ -44,8 +78,16 @@ pub async fn issue_lets_encrypt(
         .await
         .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
 
+    let mut challenge_leases = Vec::with_capacity(1);
+    let mut authorization_count = 0_usize;
     let mut authorizations = order.authorizations();
     while let Some(result) = authorizations.next().await {
+        authorization_count += 1;
+        if authorization_count > MAX_AUTHORIZATIONS_PER_ORDER {
+            return Err(AcmeServiceError::provider(format!(
+                "ACME order exceeds {MAX_AUTHORIZATIONS_PER_ORDER} authorizations"
+            )));
+        }
         let mut authz = result.map_err(|error| AcmeServiceError::provider(error.to_string()))?;
         if authz.status == AuthorizationStatus::Valid {
             continue;
@@ -54,28 +96,32 @@ pub async fn issue_lets_encrypt(
         let mut challenge = authz
             .challenge(ChallengeType::Http01)
             .ok_or_else(|| AcmeServiceError::provider("HTTP-01 challenge unavailable"))?;
-
         let token = challenge.token.clone();
         let key_auth = challenge.key_authorization().as_str().to_string();
-        challenge_store.register(Some(webroot), &token, &key_auth)?;
+        let lease = challenge_store
+            .register_scoped(Some(webroot), &token, &key_auth)
+            .await?;
 
         challenge
             .set_ready()
             .await
             .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
+        challenge_leases.push(lease);
     }
 
-    let policy = RetryPolicy::default().timeout(Duration::from_secs(120));
+    let retry_timeout = operation_timeout.min(Duration::from_secs(120));
+    let policy = RetryPolicy::default().timeout(retry_timeout);
     let status = order
         .poll_ready(&policy)
         .await
         .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
     if status != OrderStatus::Ready {
         return Err(AcmeServiceError::provider(format!(
-            "acme order not ready: {status:?}"
+            "ACME order not ready: {status:?}"
         )));
     }
 
+    drop(challenge_leases);
     let private_key_pem = order
         .finalize()
         .await
@@ -85,8 +131,7 @@ pub async fn issue_lets_encrypt(
         .await
         .map_err(|error| AcmeServiceError::provider(error.to_string()))?;
 
-    let (not_before, not_after) = parse_certificate_validity(&cert_chain_pem)?;
-    let fingerprint = fingerprint_sha256_hex(cert_chain_pem.as_bytes());
+    let (not_before, not_after, fingerprint) = certificate_evidence_from_pem(&cert_chain_pem)?;
     let cert_dir = format!("{cert_root}/{cert_name}");
     let cert_path = format!("{cert_dir}/fullchain.pem");
     let key_path = format!("{cert_dir}/privkey.pem");
@@ -111,25 +156,4 @@ pub async fn issue_lets_encrypt(
         key_path,
         chain_path: None,
     })
-}
-
-fn parse_certificate_validity(pem_chain: &str) -> AcmeServiceResult<(String, String)> {
-    use x509_parser::pem::parse_x509_pem;
-
-    let (_, pem) = parse_x509_pem(pem_chain.as_bytes())
-        .map_err(|error| AcmeServiceError::Internal(error.to_string()))?;
-    let cert = pem
-        .parse_x509()
-        .map_err(|error| AcmeServiceError::Internal(error.to_string()))?;
-    let not_before = cert
-        .validity()
-        .not_before
-        .to_rfc2822()
-        .map_err(AcmeServiceError::Internal)?;
-    let not_after = cert
-        .validity()
-        .not_after
-        .to_rfc2822()
-        .map_err(AcmeServiceError::Internal)?;
-    Ok((not_before, not_after))
 }

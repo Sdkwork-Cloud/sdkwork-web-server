@@ -3,7 +3,7 @@ use std::{
     net::TcpListener,
     path::Path,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU16, AtomicUsize, Ordering},
         Arc,
     },
     time::Duration,
@@ -52,9 +52,25 @@ struct TestTlsIdentity {
     private_key: PrivateKeyDer<'static>,
 }
 
+static NEXT_TEST_PORT: AtomicU16 = AtomicU16::new(32_000);
+
 fn available_port() -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("reserve an available port");
-    listener.local_addr().expect("read local address").port()
+    for _ in 0..28_000 {
+        let candidate = NEXT_TEST_PORT
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                Some(if current >= 59_999 {
+                    32_000
+                } else {
+                    current + 1
+                })
+            })
+            .expect("test port allocator must update");
+        if let Ok(listener) = TcpListener::bind(("127.0.0.1", candidate)) {
+            drop(listener);
+            return candidate;
+        }
+    }
+    panic!("could not find a free test port in the reserved range");
 }
 
 async fn spawn_frame_echo_upstream() -> (std::net::SocketAddr, oneshot::Sender<()>, UpstreamTask) {

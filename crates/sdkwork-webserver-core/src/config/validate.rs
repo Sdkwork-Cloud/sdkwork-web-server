@@ -240,6 +240,14 @@ impl SemanticValidator {
                         "maxHeaderBytes must be between 107 and 4,096 bytes",
                     );
                 }
+                if policy.crc32c_policy != super::ProxyProtocolCrc32cPolicy::Ignore
+                    && !policy.versions.contains(&super::ProxyProtocolVersion::V2)
+                {
+                    self.push(
+                        format!("{path}/proxyProtocol/crc32cPolicy"),
+                        "crc32cPolicy requires v2 to be enabled",
+                    );
+                }
             }
             if let Some(default_ref) = &listener.default_virtual_host_ref {
                 match virtual_hosts.get(default_ref.as_str()) {

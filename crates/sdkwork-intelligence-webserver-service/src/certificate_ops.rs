@@ -28,12 +28,7 @@ impl WebService {
             )
             .await?;
 
-        let cert_name = hostname
-            .chars()
-            .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
-            .collect::<String>()
-            .trim_matches('-')
-            .to_string();
+        let cert_name = certificate_id.clone();
 
         let issue_result = self
             .certificate_issuer

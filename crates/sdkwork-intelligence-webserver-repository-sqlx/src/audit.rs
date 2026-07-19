@@ -4,7 +4,9 @@ use sdkwork_webserver_contract::{
 };
 use sqlx::{any::AnyRow, Row};
 
-use crate::support::{new_uuid, next_id, now_rfc3339, pagination, store_error};
+use crate::support::{
+    instant_write_expression, new_uuid, next_id, now_rfc3339, pagination, store_error,
+};
 use crate::WebRepository;
 
 impl WebRepository {
@@ -25,10 +27,10 @@ impl WebRepository {
                     .map_err(|error| store_error("count web_audit_log", error))?;
 
             let rows = sqlx::query(
-                "SELECT uuid, action, target_type, created_at
+                "SELECT uuid, action, target_type, CAST(created_at AS TEXT) AS created_at
                  FROM web_audit_log
                  WHERE tenant_id = $1
-                 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
             )
             .bind(tenant_id)
             .bind(page_size)
@@ -45,9 +47,9 @@ impl WebRepository {
                 .map_err(|error| store_error("count web_audit_log", error))?;
 
             let rows = sqlx::query(
-                "SELECT uuid, action, target_type, created_at
+                "SELECT uuid, action, target_type, CAST(created_at AS TEXT) AS created_at
                  FROM web_audit_log
-                 ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+                 ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2",
             )
             .bind(page_size)
             .bind(offset)
@@ -81,28 +83,31 @@ impl WebRepository {
         let id = next_id(self.id_generator())?;
         let uuid = new_uuid();
         let now = now_rfc3339();
-
-        sqlx::query(
+        let engine = self.database_engine().await?;
+        let now_expression = instant_write_expression(engine, "$10");
+        let insert_sql = format!(
             "INSERT INTO web_audit_log (
                 id, uuid, tenant_id, organization_id, operator_id, action, target_type,
                 target_id, target_uuid, metadata, created_at
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, '{}', $10
-             )",
-        )
-        .bind(id)
-        .bind(&uuid)
-        .bind(entry.tenant_id)
-        .bind(entry.organization_id)
-        .bind(entry.operator_id)
-        .bind(entry.action)
-        .bind(entry.target_type)
-        .bind(entry.target_id)
-        .bind(entry.target_uuid)
-        .bind(&now)
-        .execute(&self.pool)
-        .await
-        .map_err(|error| store_error("insert web_audit_log", error))?;
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, '{{}}', {now_expression}
+             )"
+        );
+
+        sqlx::query(&insert_sql)
+            .bind(id)
+            .bind(&uuid)
+            .bind(entry.tenant_id)
+            .bind(entry.organization_id)
+            .bind(entry.operator_id)
+            .bind(entry.action)
+            .bind(entry.target_type)
+            .bind(entry.target_id)
+            .bind(entry.target_uuid)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| store_error("insert web_audit_log", error))?;
 
         Ok(())
     }

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-certificate-worker",
+    "displayName": "SDKWork Web Server Certificate Worker",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-certificate-worker",
+    "domain": "platform",
+    "capability": "webserver-certificate-renewal",
+    "surface": "backend-service",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored worker boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Worker naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust binary structure."},
+    {"file": "CONFIG_SPEC.md", "path": "../../../sdkwork-specs/CONFIG_SPEC.md", "purpose": "Typed worker configuration."},
+    {"file": "DEPLOYMENT_SPEC.md", "path": "../../../sdkwork-specs/DEPLOYMENT_SPEC.md", "purpose": "Worker lifecycle and deployment."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Certificate and secret safety."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Renewal worker verification."}
+  ],
+  "contracts": {
+    "layerRole": "runtime-service-host",
+    "publicExports": ["binary"],
+    "providedPorts": [{"name": "certificateRenewalWorkerProcess", "export": "binary"}],
+    "requiredPorts": [
+      {"name": "webServerBusinessService", "export": "binary", "provider": "sdkwork-intelligence-webserver-service"},
+      {"name": "webServerRepository", "export": "binary", "provider": "sdkwork-intelligence-webserver-repository-sqlx"}
+    ],
+    "runtimeEntrypoints": ["binary#sdkwork-webserver-certificate-worker"],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": ["SDKWORK_WEB_CERT_RENEW_SCAN_INTERVAL_SECS"]
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-webserver-certificate-worker"]
+  }
+}

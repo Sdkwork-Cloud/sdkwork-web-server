@@ -18,5 +18,10 @@
   "dependencies": {
     "sdkFamilies": ["sdkwork-web-app-sdk", "sdkwork-web-backend-sdk"]
   },
+  "contracts": {
+    "layerRole": "frontend-core",
+    "providedPorts": [],
+    "requiredPorts": []
+  },
   "notes": "SDK bootstrap, TokenManager, and shared service facades. Blocked on sdkgen output."
 }

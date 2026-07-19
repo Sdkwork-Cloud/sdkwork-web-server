@@ -64,11 +64,28 @@ impl IntoResponse for WebApiError {
             Json(problem),
         )
             .into_response();
-        if let Ok(value) = HeaderValue::from_str(&trace_id) {
-            response
-                .headers_mut()
-                .insert(HeaderName::from_static(SDKWORK_TRACE_ID_HEADER), value);
+        if let (Ok(name), Ok(value)) = (
+            HeaderName::from_bytes(SDKWORK_TRACE_ID_HEADER.as_bytes()),
+            HeaderValue::from_str(&trace_id),
+        ) {
+            response.headers_mut().insert(name, value);
         }
         response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::response::IntoResponse;
+    use sdkwork_utils_rust::{SdkWorkResultCode, SDKWORK_TRACE_ID_HEADER};
+
+    use super::WebApiError;
+
+    #[test]
+    fn problem_response_adds_trace_header_without_panicking() {
+        let response =
+            WebApiError::new(SdkWorkResultCode::ValidationError, "invalid request").into_response();
+
+        assert!(response.headers().get(SDKWORK_TRACE_ID_HEADER).is_some());
     }
 }

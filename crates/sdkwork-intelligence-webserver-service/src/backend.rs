@@ -81,7 +81,7 @@ impl WebBackendApi for WebService {
             .repository
             .load_nginx_config_content(Some(tenant_id), config_id)
             .await?;
-        match self.validate_nginx_content(&content) {
+        match self.validate_nginx_content(&content).await {
             Ok(()) => Ok(sdkwork_webserver_contract::NginxValidateResponse {
                 valid: true,
                 message: None,
@@ -99,34 +99,26 @@ impl WebBackendApi for WebService {
         config_id: &str,
     ) -> WebServiceResult<sdkwork_webserver_contract::NginxConfigResponse> {
         let tenant_id = Self::require_backend_tenant(context)?;
+        let candidate = self
+            .repository
+            .retrieve_nginx_config(Some(tenant_id), config_id)
+            .await?;
+        let domain = self
+            .repository
+            .resolve_site_primary_hostname(tenant_id, &candidate.site_id)
+            .await?;
+        let content = self
+            .repository
+            .load_nginx_config_content(Some(tenant_id), config_id)
+            .await?;
+        self.validate_nginx_content(&content).await?;
+
         let response = self
             .repository
             .web_nginx_config(Some(tenant_id), config_id)
             .await?;
-
-        // 部署成功后执行 nginx 配置下发与 reload，失败仅记录不影响主流程返回
-        if let Ok(content) = self
-            .repository
-            .load_nginx_config_content(Some(tenant_id), config_id)
-            .await
-        {
-            if let Ok(domain) = self
-                .repository
-                .resolve_site_primary_hostname(tenant_id, &response.site_id)
-                .await
-            {
-                if let Err(error) = self.deploy_nginx_site(&domain, &content) {
-                    tracing::warn!(
-                        error = %error,
-                        domain = %domain,
-                        "nginx config deploy failed after web_nginx_config"
-                    );
-                }
-                if let Err(error) = self.reload_nginx_runtime() {
-                    tracing::warn!(error = %error, "nginx reload failed after web_nginx_config");
-                }
-            }
-        }
+        self.deploy_nginx_site(&domain, &content).await?;
+        self.reload_nginx_runtime().await?;
 
         Ok(response)
     }
@@ -135,7 +127,7 @@ impl WebBackendApi for WebService {
         &self,
         _context: &WebBackendRequestContext,
     ) -> WebServiceResult<sdkwork_webserver_contract::NginxReloadResponse> {
-        self.reload_nginx_runtime()?;
+        self.reload_nginx_runtime().await?;
         Ok(sdkwork_webserver_contract::NginxReloadResponse { reloaded: true })
     }
 
