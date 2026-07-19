@@ -161,9 +161,8 @@ async fn any_pool_from_env() -> Result<(AnyPool, DatabaseEngine), String> {
 
 /// Bootstrap database lifecycle, repository, and service from environment variables.
 pub async fn bootstrap_web_runtime_from_env() -> Result<WebRuntime, String> {
-    let lifecycle_host = bootstrap_web_database_from_env().await?;
-    // Lifecycle uses the framework's typed pool; close it before opening the AnyPool repository.
-    lifecycle_host.pool().close().await;
+    let _lifecycle_host = bootstrap_web_database_from_env().await?;
+    // In an integrated process this is the canonical shared pool; the framework owns its lifetime.
     let (pool, database_engine) = any_pool_from_env().await?;
     let id_generator = snowflake_from_env()?;
     let secret_key = secret_key_from_env()?;
