@@ -1,13 +1,13 @@
 use sdkwork_webserver_contract::{
     CreateDeploymentRequest, DeploymentPage, DeploymentResponse, WebServiceError, WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     instant_write_expression, is_unique_violation, new_uuid, next_id, now_rfc3339, pagination,
     resolve_site_internal_id, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_deployments_repo(
@@ -348,7 +348,7 @@ impl WebRepository {
     }
 }
 
-fn map_deployment_row(row: &AnyRow, site_id: &str) -> Result<DeploymentResponse, sqlx::Error> {
+fn map_deployment_row(row: &EngineRow, site_id: &str) -> Result<DeploymentResponse, sqlx::Error> {
     Ok(DeploymentResponse {
         id: row.try_get("uuid")?,
         site_id: site_id.to_owned(),

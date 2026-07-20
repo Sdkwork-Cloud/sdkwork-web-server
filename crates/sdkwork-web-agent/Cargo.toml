@@ -20,16 +20,15 @@ path = "src/bin/sdkwork-web-node-daemon.rs"
 [dependencies]
 anyhow.workspace = true
 dotenvy.workspace = true
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
-hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sha2.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+url.workspace = true
 
+sdkwork-web-backend-sdk.workspace = true
 sdkwork-webserver-edge-runtime.workspace = true
 sdkwork-webserver-contract.workspace = true
 sdkwork-webserver-acme-service.workspace = true

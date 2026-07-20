@@ -17,7 +17,7 @@ export class ServerApi {
   }
 
 
-/** 获取服务器列表 */
+/** List managed servers */
   async list(params?: ServerListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
@@ -26,7 +26,7 @@ export class ServerApi {
     return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/servers`), query));
   }
 
-/** 注册服务器 */
+/** Register a managed server */
   async create(body: CreateServerRequest): Promise<CreateServerResponse> {
     return this.client.post<CreateServerResponse>(backendApiPath(`/servers`), body, undefined, undefined, 'application/json');
   }

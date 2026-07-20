@@ -10,236 +10,37 @@
   },
   "status": "ok",
   "mode": "apply",
-  "hasChanges": true,
+  "hasChanges": false,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "f6a3a97398fa54eba81ed6b067d2c1535653b8e88407689ad26f28f230c41c2a",
+  "changeFingerprint": "a94fab03ed88eb5e67dcca4fbb54c9b21c9ca2f740ca9aea6faf6ffe130c9446",
   "changeImpact": {
     "schemaVersion": 1,
-    "areas": [
-      "api-surface",
-      "models",
-      "runtime",
-      "build-metadata",
-      "publish-workflow",
-      "documentation",
-      "custom-scaffold",
-      "unknown"
-    ],
-    "details": [
-      {
-        "area": "api-surface",
-        "paths": [
-          "src/api/agent.ts",
-          "src/api/audit.ts",
-          "src/api/base.ts",
-          "src/api/index.ts",
-          "src/api/nginx.ts",
-          "src/api/paths.ts",
-          "src/api/server.ts",
-          "src/http/client.ts",
-          "src/sdk.ts"
-        ]
-      },
-      {
-        "area": "models",
-        "paths": [
-          "src/types/agent-certificate-bundle.ts",
-          "src/types/agent-heartbeat-post-response.ts",
-          "src/types/agent-heartbeat-request.ts",
-          "src/types/agent-heartbeat-response.ts",
-          "src/types/agent-nginx-config-bundle.ts",
-          "src/types/agent-sync-get-response.ts",
-          "src/types/agent-sync-response.ts",
-          "src/types/audit-log-page.ts",
-          "src/types/audit-log-response.ts",
-          "src/types/audit-logs-list-response.ts",
-          "src/types/common.ts",
-          "src/types/create-nginx-config-request.ts",
-          "src/types/create-server-request.ts",
-          "src/types/create-server-response.ts",
-          "src/types/field-error.ts",
-          "src/types/index.ts",
-          "src/types/nginx-config-page.ts",
-          "src/types/nginx-config-response.ts",
-          "src/types/nginx-configs-create-response201.ts",
-          "src/types/nginx-configs-deploy-response.ts",
-          "src/types/nginx-configs-list-response.ts",
-          "src/types/nginx-configs-retrieve-response.ts",
-          "src/types/nginx-configs-update-response.ts",
-          "src/types/nginx-configs-validate-response.ts",
-          "src/types/nginx-deploy-response.ts",
-          "src/types/nginx-reload-post-response.ts",
-          "src/types/nginx-reload-response.ts",
-          "src/types/nginx-status-response.ts",
-          "src/types/nginx-status-retrieve-response.ts",
-          "src/types/nginx-validate-response.ts",
-          "src/types/page-info.ts",
-          "src/types/problem-detail.ts",
-          "src/types/sdk-work-api-response.ts",
-          "src/types/sdk-work-command-data.ts",
-          "src/types/sdk-work-command-response.ts",
-          "src/types/sdk-work-list-response.ts",
-          "src/types/sdk-work-page-data.ts",
-          "src/types/sdk-work-platform-error-code.ts",
-          "src/types/sdk-work-resource-data.ts",
-          "src/types/sdk-work-resource-response.ts",
-          "src/types/server-page.ts",
-          "src/types/server-response.ts",
-          "src/types/servers-create-response201.ts",
-          "src/types/servers-list-response.ts",
-          "src/types/update-nginx-config-request.ts"
-        ]
-      },
-      {
-        "area": "runtime",
-        "paths": [
-          "src/auth/index.ts",
-          "src/http/client.ts",
-          "src/http/index.ts"
-        ]
-      },
-      {
-        "area": "build-metadata",
-        "paths": [
-          "package.json",
-          "sdkwork-sdk.json",
-          "tsconfig.json"
-        ]
-      },
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs",
-          "bin/publish.ps1",
-          "bin/publish.sh",
-          "bin/sdk-gen.bat",
-          "bin/sdk-gen.sh"
-        ]
-      },
-      {
-        "area": "documentation",
-        "paths": [
-          "CHANGELOG.md",
-          "custom/README.md",
-          "README.md"
-        ]
-      },
-      {
-        "area": "custom-scaffold",
-        "paths": [
-          "custom/build-runtime.mjs",
-          "custom/README.md"
-        ]
-      },
-      {
-        "area": "unknown",
-        "paths": [
-          "LICENSE",
-          "src/index.ts"
-        ]
-      }
-    ],
-    "requiresVerification": true,
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "high",
-    "nextAction": "verify",
+    "riskLevel": "low",
+    "nextAction": "skip",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "Changes have been applied. Run the required verification plan now.",
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
     "reasons": [
-      "manual-review-required",
-      "preserved-legacy-files",
-      "unknown-impact",
-      "verification-required"
+      "no-actionable-changes"
     ]
   },
   "executionHandoff": {
     "schemaVersion": 1,
-    "summary": "Run the required verification commands now.",
-    "steps": [
-      {
-        "id": "verify-check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action check"
-      },
-      {
-        "id": "verify-build",
-        "title": "Unified package build",
-        "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "build"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action build"
-      }
-    ]
+    "summary": "No further commands are required.",
+    "steps": []
   },
   "verificationPlan": {
-    "shouldRun": true,
-    "runPhase": "now",
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
-    "steps": [
-      {
-        "id": "check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action check"
-      },
-      {
-        "id": "build",
-        "title": "Unified package build",
-        "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "build"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action build"
-      }
-    ]
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
   },
   "sdk": {
     "name": "sdkwork-web-backend-sdk",
@@ -264,14 +65,16 @@
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 70,
-    "skippedScaffoldFiles": 0,
-    "skippedUnchangedGeneratedFiles": 0,
+    "writtenFiles": 0,
+    "skippedScaffoldFiles": 2,
+    "skippedUnchangedGeneratedFiles": 68,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "f6a3a97398fa54eba81ed6b067d2c1535653b8e88407689ad26f28f230c41c2a",
+    "changeFingerprint": "a94fab03ed88eb5e67dcca4fbb54c9b21c9ca2f740ca9aea6faf6ffe130c9446",
     "changes": {
-      "createdGeneratedFiles": [
+      "createdGeneratedFiles": [],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [
         "bin/publish-core.mjs",
         "bin/publish.ps1",
         "bin/publish.sh",
@@ -299,7 +102,7 @@
         "src/types/agent-heartbeat-request.ts",
         "src/types/agent-heartbeat-response.ts",
         "src/types/agent-nginx-config-bundle.ts",
-        "src/types/agent-sync-get-response.ts",
+        "src/types/agent-retrieve-response.ts",
         "src/types/agent-sync-response.ts",
         "src/types/audit-log-page.ts",
         "src/types/audit-log-response.ts",
@@ -341,203 +144,39 @@
         "src/types/update-nginx-config-request.ts",
         "tsconfig.json"
       ],
-      "updatedGeneratedFiles": [],
-      "unchangedGeneratedFiles": [],
       "deletedGeneratedFiles": [],
-      "scaffoldedFiles": [
+      "scaffoldedFiles": [],
+      "preservedScaffoldFiles": [
         "custom/build-runtime.mjs",
         "custom/README.md"
       ],
-      "preservedScaffoldFiles": [],
       "backedUpFiles": []
     },
     "impact": {
       "schemaVersion": 1,
-      "areas": [
-        "api-surface",
-        "models",
-        "runtime",
-        "build-metadata",
-        "publish-workflow",
-        "documentation",
-        "custom-scaffold",
-        "unknown"
-      ],
-      "details": [
-        {
-          "area": "api-surface",
-          "paths": [
-            "src/api/agent.ts",
-            "src/api/audit.ts",
-            "src/api/base.ts",
-            "src/api/index.ts",
-            "src/api/nginx.ts",
-            "src/api/paths.ts",
-            "src/api/server.ts",
-            "src/http/client.ts",
-            "src/sdk.ts"
-          ]
-        },
-        {
-          "area": "models",
-          "paths": [
-            "src/types/agent-certificate-bundle.ts",
-            "src/types/agent-heartbeat-post-response.ts",
-            "src/types/agent-heartbeat-request.ts",
-            "src/types/agent-heartbeat-response.ts",
-            "src/types/agent-nginx-config-bundle.ts",
-            "src/types/agent-sync-get-response.ts",
-            "src/types/agent-sync-response.ts",
-            "src/types/audit-log-page.ts",
-            "src/types/audit-log-response.ts",
-            "src/types/audit-logs-list-response.ts",
-            "src/types/common.ts",
-            "src/types/create-nginx-config-request.ts",
-            "src/types/create-server-request.ts",
-            "src/types/create-server-response.ts",
-            "src/types/field-error.ts",
-            "src/types/index.ts",
-            "src/types/nginx-config-page.ts",
-            "src/types/nginx-config-response.ts",
-            "src/types/nginx-configs-create-response201.ts",
-            "src/types/nginx-configs-deploy-response.ts",
-            "src/types/nginx-configs-list-response.ts",
-            "src/types/nginx-configs-retrieve-response.ts",
-            "src/types/nginx-configs-update-response.ts",
-            "src/types/nginx-configs-validate-response.ts",
-            "src/types/nginx-deploy-response.ts",
-            "src/types/nginx-reload-post-response.ts",
-            "src/types/nginx-reload-response.ts",
-            "src/types/nginx-status-response.ts",
-            "src/types/nginx-status-retrieve-response.ts",
-            "src/types/nginx-validate-response.ts",
-            "src/types/page-info.ts",
-            "src/types/problem-detail.ts",
-            "src/types/sdk-work-api-response.ts",
-            "src/types/sdk-work-command-data.ts",
-            "src/types/sdk-work-command-response.ts",
-            "src/types/sdk-work-list-response.ts",
-            "src/types/sdk-work-page-data.ts",
-            "src/types/sdk-work-platform-error-code.ts",
-            "src/types/sdk-work-resource-data.ts",
-            "src/types/sdk-work-resource-response.ts",
-            "src/types/server-page.ts",
-            "src/types/server-response.ts",
-            "src/types/servers-create-response201.ts",
-            "src/types/servers-list-response.ts",
-            "src/types/update-nginx-config-request.ts"
-          ]
-        },
-        {
-          "area": "runtime",
-          "paths": [
-            "src/auth/index.ts",
-            "src/http/client.ts",
-            "src/http/index.ts"
-          ]
-        },
-        {
-          "area": "build-metadata",
-          "paths": [
-            "package.json",
-            "sdkwork-sdk.json",
-            "tsconfig.json"
-          ]
-        },
-        {
-          "area": "publish-workflow",
-          "paths": [
-            "bin/publish-core.mjs",
-            "bin/publish.ps1",
-            "bin/publish.sh",
-            "bin/sdk-gen.bat",
-            "bin/sdk-gen.sh"
-          ]
-        },
-        {
-          "area": "documentation",
-          "paths": [
-            "CHANGELOG.md",
-            "custom/README.md",
-            "README.md"
-          ]
-        },
-        {
-          "area": "custom-scaffold",
-          "paths": [
-            "custom/build-runtime.mjs",
-            "custom/README.md"
-          ]
-        },
-        {
-          "area": "unknown",
-          "paths": [
-            "LICENSE",
-            "src/index.ts"
-          ]
-        }
-      ],
-      "requiresVerification": true,
-      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+      "areas": [],
+      "details": [],
+      "requiresVerification": false,
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
     },
     "verificationPlan": {
-      "shouldRun": true,
-      "runPhase": "now",
-      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
-      "steps": [
-        {
-          "id": "check",
-          "title": "Unified package check",
-          "required": true,
-          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-          "command": "node",
-          "args": [
-            "./bin/publish-core.mjs",
-            "--language",
-            "typescript",
-            "--project-dir",
-            ".",
-            "--action",
-            "check"
-          ],
-          "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action check"
-        },
-        {
-          "id": "build",
-          "title": "Unified package build",
-          "required": true,
-          "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-          "command": "node",
-          "args": [
-            "./bin/publish-core.mjs",
-            "--language",
-            "typescript",
-            "--project-dir",
-            ".",
-            "--action",
-            "build"
-          ],
-          "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action build"
-        }
-      ]
+      "shouldRun": false,
+      "runPhase": "skip",
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+      "steps": []
     },
     "executionDecision": {
       "schemaVersion": 1,
-      "riskLevel": "high",
-      "nextAction": "verify",
+      "riskLevel": "low",
+      "nextAction": "skip",
       "requiresManualReview": false,
       "applyRequiresExpectedFingerprint": false,
-      "summary": "Changes have been applied. Run the required verification plan now.",
+      "summary": "No actionable changes were detected. No apply or verification step is required.",
       "reasons": [
-        "manual-review-required",
-        "preserved-legacy-files",
-        "unknown-impact",
-        "verification-required"
+        "no-actionable-changes"
       ]
     },
     "backedUpFiles": [],
-    "preservedLegacyFiles": true
+    "preservedLegacyFiles": false
   }
 }

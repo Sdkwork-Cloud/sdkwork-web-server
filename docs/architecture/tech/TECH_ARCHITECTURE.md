@@ -2,7 +2,7 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-19
+Updated: 2026-07-20
 Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, WEB_FRAMEWORK_SPEC.md, WEB_BACKEND_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, CONFIG_SPEC.md, SECURITY_SPEC.md, DEPLOYMENT_SPEC.md, NGINX_SPEC.md
 
 ## Document Map
@@ -14,7 +14,8 @@ Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, 
 
 ## 1. Architecture Overview
 
-SDKWork Web Server is evolving from an HTTP management control plane into a Rust-native HTTP/HTTPS Web Server with separate request, management, and host-operations planes.
+SDKWork Web Server is a Rust-native HTTP/HTTPS server with separate request, management, and
+host-operations planes.
 
 Current implemented baseline:
 
@@ -24,7 +25,12 @@ Current implemented baseline:
 - ACME/self-signed certificate services;
 - external Nginx artifact materialization and Web Node Daemon synchronization;
 - durable bounded Web Node Daemon desired/observed apply checkpoints with crash replay;
-- one standalone Axum management listener.
+- generated Rust backend SDK heartbeat/sync transport with AgentToken and bounded responses;
+- machine-validated Web Server configuration and deterministic virtual-host/route compilation;
+- bounded HTTP/1, HTTP/2, TLS, static, redirect, reverse-proxy, WebSocket, health, retry, admission,
+  pressure, DNS, and observability controls;
+- standalone and cloud development topology plans plus standalone/cloud production deployment
+  templates.
 
 The host synchronization process is named **Web Node Daemon** in all new
 runtime and operational surfaces. The canonical packaged/development entry
@@ -32,16 +38,9 @@ point is `sdkwork-web-node-daemon`; `sdkwork-web-agent` is retained only as a
 v3 compatibility binary. The v3 Agent API and generated DTO names remain wire
 compatibility identifiers and are not new product terminology.
 
-Target work in progress under `REQ-2026-0003`:
-
-- machine-validated application Web Server configuration;
-- independent Rust HTTP/HTTPS request listeners;
-- virtual hosts and deterministic route matching;
-- static resources, fixed responses, redirects, and streaming reverse proxy;
-- data-plane-only bootstrap without database initialization;
-- bounded resources and graceful process lifecycle.
-
-The target rows are not implementation-complete until the linked requirement evidence passes.
+Commercial release approval remains separate from implementation. The PRD owns outstanding native
+capacity, long-duration soak, managed PostgreSQL/PITR, external image publication, staged rollout,
+and production monitoring evidence.
 
 ## 2. Technology Choices
 
@@ -49,14 +48,14 @@ The target rows are not implementation-complete until the linked requirement evi
 | --- | --- | --- |
 | Language/runtime | Rust 2021 + Tokio | Implemented |
 | Management HTTP | Axum through `sdkwork-web-framework` | Implemented |
-| Request HTTP | Axum/Hyper | In progress |
-| Request TLS | `axum-server` + Rustls | In progress |
-| Static content | `tower-http` file services behind compiled routing | In progress |
-| Reverse proxy transport | Reqwest/Hyper with Rustls and streamed bodies | In progress |
-| App Web Server config | JSON Schema authority + Serde + semantic compiler | In progress |
+| Request HTTP | Axum/Hyper with explicit HTTP/1 and HTTP/2 guards | Implemented bounded baseline |
+| Request TLS | Rustls with bounded certificate material | Implemented bounded baseline |
+| Static content | Compiled route/static-file service | Implemented bounded baseline |
+| Reverse proxy transport | Hyper/Rustls with streamed bodies and bounded retries | Implemented bounded baseline |
+| App Web Server config | JSON Schema authority + Serde + semantic compiler | Implemented |
 | Database | `sdkwork-database` + SQLx; PostgreSQL default, explicit single-node SQLite profile | Implemented; parity, recovery, and bounded primary/standby promotion verified; managed HA, client failover, fencing, and PITR remain open |
 | IAM | `sdkwork-iam-web-adapter` for protected management surfaces | Implemented |
-| Certificates | `instant-acme`, `rcgen`, target Rustls activation | Issuance implemented; request-plane activation in progress |
+| Certificates | `instant-acme`, `rcgen`, encrypted persistence, Rustls activation | Implemented bounded baseline |
 
 ## 3. System Boundaries
 
@@ -78,9 +77,12 @@ The request path does not call management services or repositories. Management r
 ## 4. Configuration And Contract Ownership
 
 - `sdkwork.app.config.json` remains application identity and release authority.
-- `specs/sdkwork.webserver.config.schema.json` is the local machine contract for app Web Server configuration until coordinated App Manifest standard changes approve `runtime.webServer.configRef`.
+- `specs/sdkwork.webserver.config.schema.json` is the local machine contract for application Web
+  Server configuration; the app manifest remains identity/release metadata rather than runtime
+  configuration authority.
 - Host process configuration follows `CONFIG_SPEC.md` and `RUNTIME_DIRECTORY_SPEC.md`.
-- Published app/node snapshots are a later immutable distribution contract and are not represented by mutable database DTOs on the request path.
+- Node synchronization publishes bounded immutable `sv1:` snapshots through the Agent contract;
+  mutable management DTOs do not enter the request path.
 - OpenAPI remains authority for management app-api/backend-api only.
 
 ## 5. API, SDK, And Data Ownership
@@ -102,19 +104,24 @@ The request path does not call management services or repositories. Management r
 
 ## 7. Deployment And Runtime Topology
 
-- `standalone`: one packaged gateway can run management, data-plane-only, or future combined modes; server-grade deployments default to PostgreSQL, with an explicit SQLite single-node exception.
+- `standalone`: one packaged gateway runs the composed management and data plane; server-grade
+  deployments default to PostgreSQL, with an explicit SQLite single-node development exception.
 - `cloud`: request data-plane nodes consume node-scoped immutable configuration and secret assignments; PostgreSQL remains control-plane authority.
-- The current topology manifest describes only HTTP management ingress and must be versioned before it advertises HTTPS/data-plane surfaces.
-- Nginx can remain in front during migration but is not required by the target Rust request data plane.
+- `cloud.development` starts only the local Web Node Daemon client; application/API/database
+  surfaces are explicit remote development URLs.
+- `cloud.production` uses digest-bound Kubernetes templates; published image existence is not
+  claimed while release packages remain disabled.
+- External Nginx remains an edge activation option and is not required for Rust request handling.
 
 ## 8. Architecture Decision Index
 
 | ADR | Topic | Status |
 | --- | --- | --- |
 | ADR-20260716-canonical-uri-dual-representation | Raw request URI preservation and bounded canonical routing Path | proposed; human review required |
-| ADR-20260715-rust-webserver-data-plane | Config authority, crate boundaries, HTTP/TLS/static/proxy stack | accepted / implementation in progress |
-| ADR-20260623-acme-certificate-authority | ACME client, CA selection, key storage | historical accepted; requires review against HTTPS PRD |
-| ADR-20260623-cert-distribution-topology | Node synchronization and certificate distribution (legacy Agent wire contract) | historical accepted; requires review against node-scoped distribution PRD |
+| ADR-20260715-rust-webserver-data-plane | Config authority, crate boundaries, HTTP/TLS/static/proxy stack | accepted |
+| ADR-20260720-process-database-pool | One typed SDKWork lifecycle pool per process | accepted |
+| ADR-20260623-acme-certificate-authority | ACME client, CA selection, key storage | accepted |
+| ADR-20260623-cert-distribution-topology | Node synchronization and certificate distribution | accepted |
 
 ## 9. Verification
 

@@ -3,13 +3,15 @@ use sdkwork_webserver_contract::{
     NginxReloadResponse, NginxStatusResponse, NginxValidateResponse, UpdateNginxConfigRequest,
     WebServiceError, WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{
+    EngineArguments, EngineDatabase, EnginePool, EngineRow, WebRepository,
+};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     bool_from_row, instant_write_expression, new_uuid, next_id, now_rfc3339, pagination,
     resolve_site_internal_id, resolve_site_uuid, sha256_hex, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_nginx_configs_repo(
@@ -476,9 +478,9 @@ enum BindValue {
 }
 
 fn apply_binds<'q>(
-    mut query: sqlx::query::Query<'q, sqlx::Any, sqlx::any::AnyArguments<'q>>,
+    mut query: sqlx::query::Query<'q, EngineDatabase, EngineArguments<'q>>,
     binds: &[BindValue],
-) -> sqlx::query::Query<'q, sqlx::Any, sqlx::any::AnyArguments<'q>> {
+) -> sqlx::query::Query<'q, EngineDatabase, EngineArguments<'q>> {
     for value in binds {
         query = match value {
             BindValue::I64(value) => query.bind(*value),
@@ -490,8 +492,8 @@ fn apply_binds<'q>(
 }
 
 async fn map_nginx_config_row(
-    pool: &sqlx::AnyPool,
-    row: &AnyRow,
+    pool: &EnginePool,
+    row: &EngineRow,
 ) -> Result<NginxConfigResponse, sqlx::Error> {
     let tenant_id: i64 = row.try_get("tenant_id")?;
     let site_internal_id: i64 = row.try_get("site_id")?;

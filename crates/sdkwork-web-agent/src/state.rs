@@ -4,8 +4,8 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context};
+use sdkwork_utils_rust::crypto::sha256_hash;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tempfile::NamedTempFile;
 
 const STATE_SCHEMA_VERSION: u32 = 1;
@@ -378,7 +378,7 @@ fn checksum(
         observed_sync_version,
     };
     let bytes = serde_json::to_vec(&payload).context("serialize state checksum payload")?;
-    Ok(format!("sha256:{}", hex::encode(Sha256::digest(bytes))))
+    Ok(format!("sha256:{}", sha256_hash(&bytes)))
 }
 
 fn require_absolute_state_path(path: &Path) -> anyhow::Result<()> {

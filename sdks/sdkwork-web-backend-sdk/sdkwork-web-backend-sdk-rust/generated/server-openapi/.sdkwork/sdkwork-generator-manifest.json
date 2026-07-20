@@ -36,19 +36,19 @@
     },
     {
       "path": "README.md",
-      "sha256": "2e662f33698686080e4d4061a36289b113a4d93ea3d55efc56468982f223ed96"
+      "sha256": "97f6539d240fd0f98ecfc3ab8bd9ad46a1214ca1e79d4582b6370a7cf6989e27"
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "ce6792de19d7e662fa3d200891ec992724b321c21f2d49a633ee7d7a8db34e76"
+      "sha256": "fda3b978267285948f24c3ad4bd535e0e0712d216a8c4595fcd4b9cc24bc15d1"
     },
     {
       "path": "src/api/agent.rs",
-      "sha256": "eb056b084e9da8582ed19bedb4fb2bc2184e9ef71355ed55217dbb9e9379eadd"
+      "sha256": "2c7fe0bd9aa5805cf8049ab050b6b56176724148602fbbc4908056a5a3a13735"
     },
     {
       "path": "src/api/audit.rs",
-      "sha256": "e7d981632fb55ca95ff915adb601ccc084d920befd4b4f7d3f74dd3aeb535b8e"
+      "sha256": "f6230e04d4b4a590d8ccaf87a59f2433ba3196c6f1cd7023a0b2df89d0dce787"
     },
     {
       "path": "src/api/base.rs",
@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/nginx.rs",
-      "sha256": "d72fd13b2097a0137f4ba7546221709f299fe2886f1a1228a23a4d543c3d0ad7"
+      "sha256": "e9a455cfe8021099dda1607e73c1da2020ed2de9d2bb4b9bd385c907b6d21fde"
     },
     {
       "path": "src/api/paths.rs",
@@ -68,15 +68,15 @@
     },
     {
       "path": "src/api/server.rs",
-      "sha256": "dc7b5f464d1cb2aaea94227a2d45095c2e31eea44b7e75ee416d82e0108835e4"
+      "sha256": "2eadf4536dd69fe3256b115bf9f57b958ad28e2575ae5e7fbe1d15395f5ea152"
     },
     {
       "path": "src/client.rs",
-      "sha256": "8c36c6503eaced08f228d00a20ba6ddbdede74eb48431f7479dbb246a86c8ea8"
+      "sha256": "e76b7d1b1f5a79e01908f1816ba1ecbbd83f6d34e7aab588471b8e050319df0f"
     },
     {
       "path": "src/http/client.rs",
-      "sha256": "ffd88587750661cd174b1d0bae02a876d24f8537acdccaa67e297a549d0a927e"
+      "sha256": "4ca489ead7131be55653bbfd2f91577f8f4a8b95a752dc7e3fb8e04e3f25f326"
     },
     {
       "path": "src/http/mod.rs",
@@ -88,7 +88,11 @@
     },
     {
       "path": "src/models/agent_certificate_bundle.rs",
-      "sha256": "0529c55bacccca62f1062a21aba96f009001210b0b2f5a80c372ad3731eabd39"
+      "sha256": "26d9413be3318344c9b8ad295d6d180cb9daffce095f15963cba27d0ff9e0c81"
+    },
+    {
+      "path": "src/models/agent_heartbeat_post_response.rs",
+      "sha256": "3c9bac8ec4006ec8e101f25e729a704f705c673556fc45cc8e9b1330bc60469c"
     },
     {
       "path": "src/models/agent_heartbeat_request.rs",
@@ -96,15 +100,19 @@
     },
     {
       "path": "src/models/agent_heartbeat_response.rs",
-      "sha256": "0222703cd50f7ce384c9d94084852bfee138baa822feda9dff3960f5982f47c2"
+      "sha256": "1ac1422ba9d56c7fd1c38ff82596a1f36ffe58867d73bec8c1b641dcffb70d4c"
     },
     {
       "path": "src/models/agent_nginx_config_bundle.rs",
-      "sha256": "4552ee70d796984b142c3a0d73e415ef3a78ad063e257042cf35a683b33eb58f"
+      "sha256": "732935b69c971694ca19307bd3faf7160c9c2aac90dbc1a1f94aefef12416bf7"
+    },
+    {
+      "path": "src/models/agent_retrieve_response.rs",
+      "sha256": "2856cbce3f3f1603766a70c6fc1723b3491b3b152ae98f64375c1513d3460c78"
     },
     {
       "path": "src/models/agent_sync_response.rs",
-      "sha256": "0e4784e7696898193408e008940d1107de6941f52a610d49dddc5f1fe0b73589"
+      "sha256": "5db6b399171d780e223dabc09bc6809505560e18ef1ee12a2d692edfcced6031"
     },
     {
       "path": "src/models/audit_log_page.rs",
@@ -112,7 +120,11 @@
     },
     {
       "path": "src/models/audit_log_response.rs",
-      "sha256": "644ca8d37a2ad9952bf9e85263a48f8d64c639da18db8b4dc7d906959136be1a"
+      "sha256": "99bcf1fff34a8b7051bc6879c6e5bb47d39a2714b6570cadb4a4c79724dc740f"
+    },
+    {
+      "path": "src/models/audit_logs_list_response.rs",
+      "sha256": "a84318c0e2dfe85165cfc4660148d2d716f2c07fc8fc37c8e3ce0f96e0249daf"
     },
     {
       "path": "src/models/common.rs",
@@ -131,8 +143,12 @@
       "sha256": "323e0b1034056637b7fccbbe4b06adfae6ed2f66ffcc3a25338b63e4b14dd216"
     },
     {
+      "path": "src/models/field_error.rs",
+      "sha256": "c8b58fd0553f605102e3af28a94ab4618ff32cb9622ef8d427288aa766fa61d5"
+    },
+    {
       "path": "src/models/mod.rs",
-      "sha256": "6667422227129312b610c961dfb3de1dec144cc1440e31896bcc260853326fed"
+      "sha256": "6293211fbff2569e6832e8b44a913f37209e904384cdb69032e1b7099fe08392"
     },
     {
       "path": "src/models/nginx_config_page.rs",
@@ -143,8 +159,36 @@
       "sha256": "ace9bc9dd45f867978baf78953f979e81cdcc66004f513370a9cec8ea91d6bac"
     },
     {
+      "path": "src/models/nginx_configs_create_response201.rs",
+      "sha256": "5c36de352c7b5d50f49ff9901d43d66e7d654f79d87359ba961155074203a548"
+    },
+    {
+      "path": "src/models/nginx_configs_deploy_response.rs",
+      "sha256": "5a3d4785bdd88b961a31a6cde073360b1b29d915890276d411ab10d2ad231648"
+    },
+    {
+      "path": "src/models/nginx_configs_list_response.rs",
+      "sha256": "93f5437a6829c5e021be5a552b0bb00ddc19be73e92521ea875e8c1a85f8ac72"
+    },
+    {
+      "path": "src/models/nginx_configs_retrieve_response.rs",
+      "sha256": "5ed3777ab9cb61d63984468465315089b46d90fad9989e263013224d93b222ed"
+    },
+    {
+      "path": "src/models/nginx_configs_update_response.rs",
+      "sha256": "8aeaa3de5227b2dd06544088424d80b75a6b244989e735f813ecb9ed7344f64c"
+    },
+    {
+      "path": "src/models/nginx_configs_validate_response.rs",
+      "sha256": "834cc21e658d9ed8357c52d9426222699c6d8edbb175bfda201412af38359a80"
+    },
+    {
       "path": "src/models/nginx_deploy_response.rs",
       "sha256": "0cf1054248d8db9760edc2dfd0d2c270d4d27794e4395636f9d7d9966bcac0bc"
+    },
+    {
+      "path": "src/models/nginx_reload_post_response.rs",
+      "sha256": "9da4e1840f91f5be42452d1bdeece348742e1ae03bff5e980341fef6f6ce6042"
     },
     {
       "path": "src/models/nginx_reload_response.rs",
@@ -155,12 +199,48 @@
       "sha256": "b4ec205b649dd287cfa4d0cea8a9bbc6c2efe40852dc29117266c302d693494f"
     },
     {
+      "path": "src/models/nginx_status_retrieve_response.rs",
+      "sha256": "72ed1a490133b3fb0c88495acbb87628134dc1449f361722d15a58fe89205206"
+    },
+    {
       "path": "src/models/nginx_validate_response.rs",
       "sha256": "7ac30b897def6258805bdcdc96aa3833002f040beef85e13328c3adbd427b4d2"
     },
     {
+      "path": "src/models/page_info.rs",
+      "sha256": "9736eb8cc4f3bc814e92f373c25e3de4f4bfa1007f8f2c4f988e03c8986afb95"
+    },
+    {
       "path": "src/models/problem_detail.rs",
-      "sha256": "984a12df01705b7927f78c70d1a97e91cd6b21994bcb1881447bfab3a82caef9"
+      "sha256": "83b4d4a33cfe9e01ada63c04a70dda5f22491e321dc3b9c889bae643692062de"
+    },
+    {
+      "path": "src/models/sdk_work_api_response.rs",
+      "sha256": "e5fd3b922322a1cd1b1b6a82810b0fc8222ca9bf54dd9438152e2db940d591ef"
+    },
+    {
+      "path": "src/models/sdk_work_command_data.rs",
+      "sha256": "76685631578c6bce4144c045a43d5f2746a85600f6a26e775f07874c75504b7a"
+    },
+    {
+      "path": "src/models/sdk_work_command_response.rs",
+      "sha256": "efbedd3b191e36c50add6e707435d85f98e7ed8c75f2ef0b87a1a24e784fdfa5"
+    },
+    {
+      "path": "src/models/sdk_work_list_response.rs",
+      "sha256": "46c87f337eb0f8ad7d72dd2bcb0092305f044eeb56cd7b23605ac206edf94acf"
+    },
+    {
+      "path": "src/models/sdk_work_page_data.rs",
+      "sha256": "9c53ab781272ad35a7b232ce231fc603989c774613fb09719538b0c6309c99f9"
+    },
+    {
+      "path": "src/models/sdk_work_resource_data.rs",
+      "sha256": "ec82fbd431813024f47031c6ab0d5d355ff2d8075dd2d0a71602a8ee6f6ee7fd"
+    },
+    {
+      "path": "src/models/sdk_work_resource_response.rs",
+      "sha256": "a16ff12f0418a861ef9a744a53676071b75f036536d35a0f310c9f875025a203"
     },
     {
       "path": "src/models/server_page.rs",
@@ -169,6 +249,14 @@
     {
       "path": "src/models/server_response.rs",
       "sha256": "13116c8dd982d5f2cc60ced28d9b649d2a2f9b9bb0d774b572b89df08e7ae4fc"
+    },
+    {
+      "path": "src/models/servers_create_response201.rs",
+      "sha256": "73cfe5c1c828afee64e4f104c2862b4eaadd041a71afb822f8735e2345d38349"
+    },
+    {
+      "path": "src/models/servers_list_response.rs",
+      "sha256": "d6be4330e5863bb8892c4c3d21b2739a1c71f1b6a02f21131c92964be5ee3f05"
     },
     {
       "path": "src/models/update_nginx_config_request.rs",

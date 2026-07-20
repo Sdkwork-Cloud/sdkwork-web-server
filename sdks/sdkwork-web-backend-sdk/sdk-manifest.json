@@ -182,5 +182,10 @@
       "generatedPath": "sdkwork-web-backend-sdk-ruby/generated/server-openapi"
     }
   ],
-  "sdkDependencies": []
+  "sdkDependencies": [
+    {
+      "family": "sdkwork-iam-backend-sdk",
+      "reason": "Platform operator IAM for protected backend-api routes."
+    }
+  ]
 }

@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/web-app-sdk"
   },
-  "changeFingerprint": "e60321a0c9abc8a04874171c06e82b491ed1425a0769fb39cda97e7b379f7402",
+  "changeFingerprint": "01db7e5339bf4173bd2989f3f5130ad88838bfa33dae4b0f92a078440c46028d",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",

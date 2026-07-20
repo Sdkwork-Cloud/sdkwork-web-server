@@ -20,15 +20,6 @@ import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUTPUT_ROOT = path.join(REPO_ROOT, 'dist', 'release');
-const ARCHIVE_DIRECTORIES = [
-  'sdkwork-web',
-  'sdkwork-web/bin',
-  'sdkwork-web/etc',
-  'sdkwork-web/etc/examples',
-  'sdkwork-web/etc/examples/public',
-  'sdkwork-web/etc/node-daemon',
-  'sdkwork-web/specs',
-];
 const PACKAGE_FILES = new Map([
   ['bin/sdkwork-api-web-server-standalone-gateway', 'gateway fixture\n'],
   ['bin/sdkwork-web-node-daemon', 'canonical node daemon fixture\n'],
@@ -39,7 +30,28 @@ const PACKAGE_FILES = new Map([
   ['etc/examples/sdkwork.webserver.config.json', '{}\n'],
   ['etc/examples/public/index.html', '<h1>release fixture</h1>\n'],
   ['etc/node-daemon/development.env.example', 'SDKWORK_WEB_NODE_TOKEN=\n'],
+  ['database/README.md', '# Database\n'],
+  ['database/database.manifest.json', '{}\n'],
+  ['database/contract/prefix-registry.json', '{}\n'],
+  ['database/contract/schema.yaml', 'schemaVersion: 1\n'],
+  ['database/contract/table-registry.json', '{}\n'],
+  ['database/ddl/baseline/postgres/0001_web_baseline.sql', '-- postgres baseline\n'],
+  ['database/ddl/baseline/sqlite/0001_web_baseline.sql', '-- sqlite baseline\n'],
+  ['database/drift/policy.yaml', 'schemaVersion: 1\n'],
+  ['database/seeds/seed.manifest.json', '{}\n'],
+  ['database/seeds/common/001_bootstrap.sql', '-- common seed\n'],
 ]);
+const ARCHIVE_DIRECTORIES = Array.from(
+  new Set(
+    [...PACKAGE_FILES.keys()].flatMap((contentPath) => {
+      const segments = contentPath.split('/');
+      return segments.slice(0, -1).map((_, index) =>
+        ['sdkwork-web', ...segments.slice(0, index + 1)].join('/'),
+      );
+    }).concat('sdkwork-web'),
+  ),
+).sort();
+const EXPECTED_ARCHIVE_ENTRIES = ARCHIVE_DIRECTORIES.length + PACKAGE_FILES.size + 1;
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -196,10 +208,14 @@ test('workspace and workflow close the frozen release dependency graph', () => {
   const thinWorkflow = readFileSync(path.join(REPO_ROOT, '.github/workflows/package.yml'), 'utf8');
 
   assert.equal(packageJson.dependencies.tar, '7.5.20');
-  assert.equal(packageJson.dependencies['@sdkwork/app-topology'], undefined);
+  assert.equal(packageJson.dependencies['@sdkwork/app-topology'], 'workspace:*');
+  assert.ok(workspace.packages.includes('../sdkwork-app-topology'));
   assert.ok(workspace.packages.includes('../sdkwork-sdk-commons/sdkwork-sdk-common-typescript'));
   assert.equal(lockfile.importers['.'].dependencies.tar.specifier, '7.5.20');
-  assert.equal(lockfile.importers['.'].dependencies['@sdkwork/app-topology'], undefined);
+  assert.equal(
+    lockfile.importers['.'].dependencies['@sdkwork/app-topology'].version,
+    'link:../sdkwork-app-topology',
+  );
   const dependencyIds = new Set(workflow.dependencies.map((dependency) => dependency.id));
   for (const dependencyId of ['sdkwork-core', 'sdkwork-ui', 'sdkwork-sdk-commons']) {
     assert.ok(dependencyIds.has(dependencyId));
@@ -220,6 +236,15 @@ test('workspace and workflow close the frozen release dependency graph', () => {
   );
   assert.ok(archiveValidationIndex >= 0 && runtimeSmokeIndex > archiveValidationIndex);
   assert.equal(workflow.security.sbomRequired, true);
+  assert.equal(workflow.security.signingRequired, true);
+  assert.ok(
+    workflow.lifecycle.sign.some((step) => step.run === 'node scripts/webserver-sign.mjs sign'),
+  );
+  assert.ok(
+    workflow.lifecycle.validate.some(
+      (step) => step.run === 'node scripts/webserver-sign.mjs verify',
+    ),
+  );
   assert.ok(
     workflow.lifecycle.sbom.some((step) => step.run === 'node scripts/webserver-sbom.mjs generate'),
   );
@@ -262,7 +287,10 @@ test('bounded release validator accepts an exact immutable archive', async () =>
   try {
     const result = runValidator('standalone', version);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /validated artifact=.* bytes=[0-9]+ entries=17/u);
+    assert.match(
+      result.stdout,
+      new RegExp(`validated artifact=.* bytes=[0-9]+ entries=${EXPECTED_ARCHIVE_ENTRIES}`, 'u'),
+    );
   } finally {
     fixture.cleanup();
   }

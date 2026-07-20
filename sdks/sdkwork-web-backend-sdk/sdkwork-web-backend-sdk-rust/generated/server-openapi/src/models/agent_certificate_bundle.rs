@@ -3,21 +3,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct AgentCertificateBundle {
     #[serde(rename = "certificateId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub certificate_id: Option<String>,
+    pub certificate_id: String,
 
     #[serde(rename = "certName")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cert_name: Option<String>,
+    pub cert_name: String,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fingerprint: Option<String>,
+    pub fingerprint: String,
 
     #[serde(rename = "fullchainPem")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fullchain_pem: Option<String>,
+    pub fullchain_pem: String,
 
     #[serde(rename = "privkeyPem")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub privkey_pem: Option<String>,
+    pub privkey_pem: String,
 }

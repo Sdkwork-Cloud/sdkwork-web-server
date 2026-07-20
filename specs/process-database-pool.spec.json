@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.process-database-pool",
+  "profile": {
+    "exampleFile": ".env.postgres.example",
+    "database": "sdkwork_ai_dev",
+    "schema": "sdkwork_ai_dev"
+  },
+  "processes": [
+    {
+      "id": "sdkwork-api-web-server-standalone-gateway",
+      "entrypoint": "crates/sdkwork-api-web-server-standalone-gateway/src/main.rs",
+      "poolOwner": "crates/sdkwork-webserver-database-host/src/lib.rs",
+      "driver": "sdkwork_database_sqlx::DatabasePool",
+      "poolCount": 1,
+      "databaseUrlEnv": "SDKWORK_WEB_DATABASE_URL or SDKWORK_CLAW_DATABASE_*",
+      "schemaEnv": "SDKWORK_WEB_DATABASE_SCHEMA or SDKWORK_CLAW_DATABASE_SCHEMA",
+      "maxConnectionsEnv": "SDKWORK_WEB_DATABASE_MAX_CONNECTIONS or SDKWORK_CLAW_DATABASE_MAX_CONNECTIONS",
+      "productionSourceRoots": [
+        "crates/sdkwork-api-web-server-standalone-gateway/src",
+        "crates/sdkwork-api-web-server-assembly/src",
+        "crates/sdkwork-intelligence-webserver-repository-sqlx/src",
+        "crates/sdkwork-webserver-database-host/src"
+      ],
+      "consumers": [
+        {
+          "module": "Web database lifecycle",
+          "poolMode": "installed-process-pool",
+          "evidence": ["crates/sdkwork-webserver-database-host/src/lib.rs"]
+        },
+        {
+          "module": "Web SQLx repository",
+          "poolMode": "installed-process-pool",
+          "evidence": ["crates/sdkwork-intelligence-webserver-repository-sqlx/src/runtime.rs"]
+        }
+      ],
+      "temporaryDriverExceptions": []
+    },
+    {
+      "id": "sdkwork-webserver-certificate-worker",
+      "entrypoint": "crates/sdkwork-webserver-certificate-worker/src/main.rs",
+      "poolOwner": "crates/sdkwork-webserver-database-host/src/lib.rs",
+      "driver": "sdkwork_database_sqlx::DatabasePool",
+      "poolCount": 1,
+      "databaseUrlEnv": "SDKWORK_WEB_DATABASE_URL or SDKWORK_CLAW_DATABASE_*",
+      "schemaEnv": "SDKWORK_WEB_DATABASE_SCHEMA or SDKWORK_CLAW_DATABASE_SCHEMA",
+      "maxConnectionsEnv": "SDKWORK_WEB_DATABASE_MAX_CONNECTIONS or SDKWORK_CLAW_DATABASE_MAX_CONNECTIONS",
+      "productionSourceRoots": [
+        "crates/sdkwork-webserver-certificate-worker/src",
+        "crates/sdkwork-intelligence-webserver-repository-sqlx/src",
+        "crates/sdkwork-webserver-database-host/src"
+      ],
+      "consumers": [
+        {
+          "module": "Certificate renewal lifecycle",
+          "poolMode": "installed-process-pool",
+          "evidence": ["crates/sdkwork-webserver-certificate-worker/src/main.rs"]
+        },
+        {
+          "module": "Web SQLx repository",
+          "poolMode": "installed-process-pool",
+          "evidence": ["crates/sdkwork-intelligence-webserver-repository-sqlx/src/runtime.rs"]
+        }
+      ],
+      "temporaryDriverExceptions": []
+    }
+  ],
+  "verification": [
+    "node ../sdkwork-specs/tools/check-process-shared-database-pool.mjs --root .",
+    "cargo test -p sdkwork-webserver-database-host",
+    "cargo test -p sdkwork-intelligence-webserver-repository-sqlx"
+  ]
+}

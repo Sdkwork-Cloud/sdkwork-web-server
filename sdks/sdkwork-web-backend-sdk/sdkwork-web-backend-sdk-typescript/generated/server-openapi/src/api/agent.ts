@@ -4,7 +4,7 @@ import type { HttpClient } from '../http/client';
 import type { AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse } from '../types';
 
 
-export interface AgentSyncParams {
+export interface AgentRetrieveParams {
   ifSyncVersion?: string;
 }
 
@@ -16,13 +16,13 @@ export class AgentApi {
   }
 
 
-/** 边缘节点心跳 */
+/** Report an edge-agent heartbeat */
   async heartbeat(body: AgentHeartbeatRequest): Promise<AgentHeartbeatResponse> {
     return this.client.post<AgentHeartbeatResponse>(backendApiPath(`/agent/heartbeat`), body, undefined, undefined, 'application/json');
   }
 
-/** 拉取 nginx 配置与证书 bundle */
-  async sync(params?: AgentSyncParams): Promise<AgentSyncResponse> {
+/** Retrieve the Nginx configuration and certificate bundle */
+  async retrieve(params?: AgentRetrieveParams): Promise<AgentSyncResponse> {
     const query = buildQueryString([
       { name: 'ifSyncVersion', value: params?.ifSyncVersion, style: 'form', explode: true, allowReserved: false },
     ]);

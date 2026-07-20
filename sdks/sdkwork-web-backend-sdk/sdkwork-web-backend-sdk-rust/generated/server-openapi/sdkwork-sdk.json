@@ -5,6 +5,8 @@
   "language": "rust",
   "sdkType": "backend",
   "packageName": "sdkwork-web-backend-sdk",
+  "transportPackageName": "sdkwork-web-backend-sdk",
+  "consumerPackageName": "sdkwork-web-backend-sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

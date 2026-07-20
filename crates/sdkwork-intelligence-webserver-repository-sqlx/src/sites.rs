@@ -3,13 +3,13 @@ use sdkwork_webserver_contract::{
     CreateSiteRequest, ListSitesQuery, SitePage, SiteResponse, UpdateSiteRequest, WebServiceError,
     WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     instant_write_expression, json_from_row, json_write_expression, new_uuid, next_id, now_rfc3339,
     pagination, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_sites_repo(
@@ -266,7 +266,7 @@ impl WebRepository {
     }
 }
 
-fn map_site_row(row: &AnyRow) -> Result<SiteResponse, sqlx::Error> {
+fn map_site_row(row: &EngineRow) -> Result<SiteResponse, sqlx::Error> {
     Ok(SiteResponse {
         id: row.try_get("uuid")?,
         name: row.try_get("name")?,

@@ -46,6 +46,7 @@ $GeneratorPath = Join-Path $WorkspaceRoot "sdkwork-sdk-generator\bin\sdkgen.js"
 $InputPath = Join-Path $FamilyRoot "openapi\sdkwork-web-backend-api.sdkgen.yaml"
 $SdkName = "sdkwork-web-backend-sdk"
 $ApiPrefix = "/backend/v3/api"
+$SupportedLanguages = @("typescript", "dart", "python", "go", "java", "kotlin", "swift", "csharp", "flutter", "rust", "php", "ruby")
 
 if (-not (Test-Path $GeneratorPath)) {
     throw "Canonical SDK generator not found: $GeneratorPath"
@@ -63,6 +64,9 @@ foreach ($LanguageValue in $Languages) {
         if ([string]::IsNullOrWhiteSpace($Language)) {
             continue
         }
+        if ($Language -notin $SupportedLanguages) {
+            throw "Unsupported SDK language: $Language"
+        }
 
         $LanguageWorkspace = Join-Path $FamilyRoot "$SdkName-$Language"
         $OutputPath = Join-Path $LanguageWorkspace "generated\server-openapi"
@@ -73,12 +77,9 @@ foreach ($LanguageValue in $Languages) {
         $LanguageWorkspacePrefix = $ResolvedLanguageWorkspace.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 
         if (-not $ResolvedOutputPath.StartsWith($LanguageWorkspacePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to clean SDK output outside language workspace: $ResolvedOutputPath"
+            throw "Refusing SDK output outside language workspace: $ResolvedOutputPath"
         }
 
-        if (Test-Path $OutputPath) {
-            Remove-Item -LiteralPath $OutputPath -Recurse -Force
-        }
         Write-Host "Generating $Language SDK at $OutputPath" -ForegroundColor Cyan
         & node $GeneratorPath generate `
             -i $InputPath `

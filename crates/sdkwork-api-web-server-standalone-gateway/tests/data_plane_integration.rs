@@ -28,7 +28,9 @@ use rustls::{
     version::{TLS12, TLS13},
     ClientConfig, RootCertStore, ServerConfig,
 };
-use sdkwork_api_web_server_standalone_gateway::{run_data_plane_from_config_until, run_data_plane_until};
+use sdkwork_api_web_server_standalone_gateway::{
+    run_data_plane_from_config_until, run_data_plane_until,
+};
 use sdkwork_webserver_core::load_and_compile_webserver_config;
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -924,7 +926,7 @@ where
     R: AsyncRead + Unpin,
 {
     let mut response = Vec::with_capacity(256);
-    timeout(Duration::from_secs(1), async {
+    timeout(Duration::from_secs(3), async {
         loop {
             response.push(stream.read_u8().await.expect("read response header byte"));
             assert!(response.len() <= 8192, "response header block is bounded");

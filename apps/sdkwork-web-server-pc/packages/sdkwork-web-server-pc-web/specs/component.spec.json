@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/web-server-pc-web",
+    "displayName": "SDKWork Web PC Browser Host",
+    "version": "0.0.0",
+    "type": "react-vite-host",
+    "root": "sdkwork-web-server/apps/sdkwork-web-server-pc/packages/sdkwork-web-server-pc-web",
+    "domain": "platform",
+    "capability": "host",
+    "status": "planned",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true
+  },
+  "dependencies": {
+    "packages": [
+      "@sdkwork/web-server-pc-shell",
+      "@sdkwork/web-server-pc-sites",
+      "@sdkwork/web-server-pc-domains",
+      "@sdkwork/web-server-pc-certificates",
+      "@sdkwork/web-server-pc-deployments",
+      "@sdkwork/web-server-pc-console-nginx",
+      "@sdkwork/web-server-pc-console-servers"
+    ]
+  },
+  "contracts": {
+    "layerRole": "frontend-host",
+    "providedPorts": [],
+    "requiredPorts": []
+  }
+}

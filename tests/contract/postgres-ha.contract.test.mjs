@@ -58,8 +58,10 @@ test('PostgreSQL HA drill is mandatory in root and release verification', () => 
     packageJson.scripts['test:postgres:ha'],
     'node scripts/postgres-ha-verify.mjs',
   );
-  assert.match(packageJson.scripts.test, /postgres-ha\.contract\.test\.mjs/u);
-  assert.match(packageJson.scripts.verify, /postgres-ha\.contract\.test\.mjs/u);
+  assert.equal(packageJson.scripts.test, 'pnpm exec sdkwork-app test');
+  assert.equal(packageJson.scripts.verify, 'pnpm exec sdkwork-app verify');
+  assert.match(packageJson.scripts['_sdkwork:test'], /postgres-ha\.contract\.test\.mjs/u);
+  assert.match(packageJson.scripts['_sdkwork:verify'], /postgres-ha\.contract\.test\.mjs/u);
 
   const workflow = JSON.parse(
     readFileSync(path.join(REPO_ROOT, 'sdkwork.workflow.json'), 'utf8'),

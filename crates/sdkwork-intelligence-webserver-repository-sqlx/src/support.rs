@@ -2,8 +2,8 @@ use sdkwork_database_config::DatabaseEngine;
 use sdkwork_database_id::{uuid_v4, uuid_v4_with_prefix, SnowflakeIdGenerator};
 use sdkwork_utils_rust::{crypto::sha256_hash, number::clamp};
 use sdkwork_webserver_contract::WebServiceError;
-use sqlx::any::AnyRow;
-use sqlx::{AnyPool, Error as SqlxError, Row};
+use super::{EnginePool, EngineRow};
+use sqlx::{Error as SqlxError, Row};
 
 pub(crate) fn now_rfc3339() -> String {
     sdkwork_utils_rust::datetime::format_datetime(sdkwork_utils_rust::datetime::now(), None)
@@ -49,7 +49,7 @@ pub(crate) fn sha256_hex(content: &str) -> String {
     sha256_hash(content.as_bytes())
 }
 
-pub(crate) fn bool_from_row(row: &AnyRow, column: &str) -> Result<bool, SqlxError> {
+pub(crate) fn bool_from_row(row: &EngineRow, column: &str) -> Result<bool, SqlxError> {
     if let Ok(value) = row.try_get::<bool, _>(column) {
         return Ok(value);
     }
@@ -58,7 +58,7 @@ pub(crate) fn bool_from_row(row: &AnyRow, column: &str) -> Result<bool, SqlxErro
 }
 
 pub(crate) fn json_from_row(
-    row: &AnyRow,
+    row: &EngineRow,
     column: &str,
 ) -> Result<Option<serde_json::Value>, SqlxError> {
     let raw: Option<String> = row.try_get(column)?;
@@ -80,7 +80,7 @@ pub(crate) fn instant_write_expression(engine: DatabaseEngine, placeholder: &str
 }
 
 pub(crate) async fn resolve_site_internal_id(
-    pool: &AnyPool,
+    pool: &EnginePool,
     tenant_id: i64,
     site_uuid: &str,
 ) -> Result<i64, WebServiceError> {
@@ -99,7 +99,7 @@ pub(crate) async fn resolve_site_internal_id(
 }
 
 pub(crate) async fn resolve_site_uuid(
-    pool: &AnyPool,
+    pool: &EnginePool,
     tenant_id: i64,
     site_internal_id: i64,
 ) -> Result<String, WebServiceError> {

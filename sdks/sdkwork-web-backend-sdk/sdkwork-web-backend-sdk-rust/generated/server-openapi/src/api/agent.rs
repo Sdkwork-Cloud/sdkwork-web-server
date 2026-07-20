@@ -15,14 +15,14 @@ impl AgentApi {
         Self { client }
     }
 
-    /// 边缘节点心跳
+    /// Report an edge-agent heartbeat
     pub async fn heartbeat(&self, body: &AgentHeartbeatRequest) -> Result<AgentHeartbeatResponse, SdkworkError> {
         let path = backend_path(&"/agent/heartbeat".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
-    /// 拉取 nginx 配置与证书 bundle
-    pub async fn sync(&self, if_sync_version: Option<&str>) -> Result<AgentSyncResponse, SdkworkError> {
+    /// Retrieve the Nginx configuration and certificate bundle
+    pub async fn retrieve(&self, if_sync_version: Option<&str>) -> Result<AgentSyncResponse, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("ifSyncVersion", if_sync_version, "form", true, false, None),
         ]);

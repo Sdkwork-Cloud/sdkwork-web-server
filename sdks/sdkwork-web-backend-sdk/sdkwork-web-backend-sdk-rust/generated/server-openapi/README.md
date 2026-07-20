@@ -53,7 +53,7 @@ client.set_header("X-Custom-Header", "value");
 ### nginx
 
 ```rust
-// 获取 Nginx 状态
+// Retrieve Nginx status
 let result = client.nginx().status_retrieve().await?;
 println!("{result:?}");
 ```
@@ -62,10 +62,10 @@ println!("{result:?}");
 
 ```rust
 use std::collections::HashMap;
-// 获取服务器列表
+// List managed servers
 let mut query = HashMap::new();
 query.insert("page".to_string(), serde_json::json!(1));
-query.insert("pageSize".to_string(), serde_json::json!(2));
+query.insert("page_size".to_string(), serde_json::json!(2));
 let result = client.server().servers_list(Some(&query)).await?;
 println!("{result:?}");
 ```
@@ -74,10 +74,10 @@ println!("{result:?}");
 
 ```rust
 use std::collections::HashMap;
-// 拉取 nginx 配置与证书 bundle
+// Retrieve the Nginx configuration and certificate bundle
 let mut query = HashMap::new();
 query.insert("ifSyncVersion".to_string(), serde_json::json!("ifsyncversion"));
-let result = client.agent().sync(Some(&query)).await?;
+let result = client.agent().retrieve(Some(&query)).await?;
 println!("{result:?}");
 ```
 
@@ -85,10 +85,10 @@ println!("{result:?}");
 
 ```rust
 use std::collections::HashMap;
-// 获取审计日志列表
+// List audit logs
 let mut query = HashMap::new();
 query.insert("page".to_string(), serde_json::json!(1));
-query.insert("pageSize".to_string(), serde_json::json!(2));
+query.insert("page_size".to_string(), serde_json::json!(2));
 query.insert("targetType".to_string(), serde_json::json!("targettype"));
 query.insert("action".to_string(), serde_json::json!("action"));
 query.insert("operatorId".to_string(), serde_json::json!("1"));

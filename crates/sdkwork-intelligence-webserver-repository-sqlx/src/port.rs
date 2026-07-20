@@ -1,4 +1,4 @@
-//! `WebRepositoryPort` trait implementation delegating to SQLx repository modules.
+// `WebRepositoryPort` implementation delegated to the engine-specific repository modules.
 
 use async_trait::async_trait;
 use sdkwork_intelligence_webserver_service::{AuditLogWrite, WebRepositoryPort};
@@ -15,8 +15,8 @@ use sdkwork_webserver_contract::{
 };
 use sdkwork_webserver_contract::{WebServiceError, WebServiceResult};
 
-use crate::agents::AuthenticatedAgent;
-use crate::WebRepository;
+use super::agents::AuthenticatedAgent;
+use super::WebRepository;
 
 #[async_trait]
 impl WebRepositoryPort for WebRepository {

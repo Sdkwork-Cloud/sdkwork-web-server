@@ -2,12 +2,12 @@ use sdkwork_intelligence_webserver_service::AuditLogWrite;
 use sdkwork_webserver_contract::{
     AuditLogPage, AuditLogResponse, WebServiceError, WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     instant_write_expression, new_uuid, next_id, now_rfc3339, pagination, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_audit_logs_repo(
@@ -113,7 +113,7 @@ impl WebRepository {
     }
 }
 
-fn map_audit_log_row(row: &AnyRow) -> Result<AuditLogResponse, sqlx::Error> {
+fn map_audit_log_row(row: &EngineRow) -> Result<AuditLogResponse, sqlx::Error> {
     Ok(AuditLogResponse {
         id: row.try_get("uuid")?,
         action: row.try_get("action")?,

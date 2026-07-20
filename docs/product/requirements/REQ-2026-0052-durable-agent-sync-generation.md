@@ -29,7 +29,7 @@ acceptance_criteria:
   - The Agent process loads state once at startup and fails closed on corruption rather than looping with an empty version.
   - A changed manifest is validated and desired is durably saved before the first artifact write; observed is durably saved only after edge.reload succeeds.
   - Heartbeat and ifSyncVersion use observed only. A pending desired generation therefore cannot suppress full replay after restart.
-  - One reqwest client is reused across cycles; timeout is 60 seconds, heartbeat response is at most 64 KiB, sync response at most 16 MiB, and each manifest contains at most 2048 Nginx plus 2048 certificate entries.
+  - Generated backend SDK clients are reused across cycles; timeout is 60 seconds, heartbeat response is at most 64 KiB, sync response at most 16 MiB, and each manifest contains at most 2048 Nginx plus 2048 certificate entries.
   - Heartbeat and sync reject a missing or malformed SDKWork resource envelope, a non-zero business code, and an empty traceId before using the response item.
   - Control-plane URL is an HTTP(S) origin without credentials/path/query/fragment, AgentToken is 16..4096 non-control bytes, and sync interval is 1..3600 seconds.
 non_functional_requirements:
@@ -78,7 +78,9 @@ The generated family metadata also remains inconsistent: `sdks/sdkwork-web-backe
 
 - `state.rs` replaces best-effort temporary JSON with a strict fixed schema, canonical sync-version validation, SHA-256 corruption detection, bounded reads, atomic same-directory persistence, fsync, Unix mode 0600, symlink rejection, and exact legacy migration.
 - `main.rs` loads state before entering the loop, sends observed only, persists desired before any deployment, and advances observed only after the real reload succeeds.
-- The Agent reuses one bounded reqwest client and incrementally reads response chunks under application-owned byte ceilings before JSON parsing. Collection counts, URL/token input, and loop frequency are also finite.
+- The Node Daemon reuses generated backend SDK clients whose transport incrementally reads response
+  chunks under application-owned byte ceilings before SDKWork envelope decoding. Collection counts,
+  URL/token input, and loop frequency are also finite.
 - The Agent decodes the real route shape with the shared `SdkWorkApiResponse<SdkWorkResourceData<T>>` contract, validates the success code and trace ID, and only then exposes `data.item` to heartbeat/sync logic. This fixes runtime envelope interoperability without claiming that the unresolved generated AgentToken client contract is compliant.
 - Executable shared-route tests prove that `ok_resource` emits the same canonical Agent sync envelope consumed by the Agent. They also caught and now prevent a production panic caused by passing the mixed-case SDKWork trace-header constant to `HeaderName::from_static`; success and Problem Details responses use fallible header-name parsing.
 - Unit and repository contract tests lock the crash-replay ordering and reject regression to temporary, unbounded, silent-default, or response.json behavior.

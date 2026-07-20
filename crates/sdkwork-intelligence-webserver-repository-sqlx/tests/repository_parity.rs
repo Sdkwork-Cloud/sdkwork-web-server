@@ -1,9 +1,10 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use sdkwork_database_config::{DatabaseConfig, DatabaseEngine};
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_database_sqlx::{create_any_pool_from_config, create_pool_from_config};
-use sdkwork_intelligence_webserver_repository_sqlx::WebRepository;
+use sdkwork_intelligence_webserver_repository_sqlx::{PostgresWebRepository, SqliteWebRepository};
 use sdkwork_intelligence_webserver_service::AuditLogWrite;
 use sdkwork_intelligence_webserver_service::WebRepositoryPort;
 use sdkwork_webserver_contract::{
@@ -30,7 +31,7 @@ enum TestEngine {
 struct TestContext {
     _directory: Option<TempDir>,
     pool: AnyPool,
-    repository: WebRepository,
+    repository: Arc<dyn WebRepositoryPort>,
     engine: TestEngine,
 }
 
@@ -108,18 +109,30 @@ async fn prepare_database(
     let lifecycle_host = bootstrap_web_database(lifecycle_pool)
         .await
         .expect("initialize Web database lifecycle");
-    lifecycle_host.pool().close().await;
 
     let database_engine = config.engine;
     let pool = create_any_pool_from_config(config)
         .await
         .expect("create repository AnyPool");
-    let repository = WebRepository::new_with_engine(
-        pool.clone(),
-        database_engine,
-        SnowflakeIdGenerator::new(731).expect("create test Snowflake generator"),
-        [0x5a; 32],
-    );
+    let id_generator = SnowflakeIdGenerator::new(731).expect("create test Snowflake generator");
+    let repository = match lifecycle_host.pool() {
+        sdkwork_database_sqlx::DatabasePool::Postgres(typed_pool, _) => {
+            Arc::new(PostgresWebRepository::new(
+                typed_pool.clone(),
+                database_engine,
+                id_generator,
+                [0x5a; 32],
+            )) as Arc<dyn WebRepositoryPort>
+        }
+        sdkwork_database_sqlx::DatabasePool::Sqlite(typed_pool, _) => {
+            Arc::new(SqliteWebRepository::new(
+                typed_pool.clone(),
+                database_engine,
+                id_generator,
+                [0x5a; 32],
+            )) as Arc<dyn WebRepositoryPort>
+        }
+    };
     TestContext {
         _directory: directory,
         pool,
@@ -271,7 +284,7 @@ async fn verify_repository_contract(context: &TestContext) {
     assert!(deep_page.items.is_empty());
     assert_eq!(deep_page.page_size, 100);
 
-    verify_deployment_idempotency(repository, &sites[0].id, &sites[1].id).await;
+    verify_deployment_idempotency(repository.as_ref(), &sites[0].id, &sites[1].id).await;
     verify_rollback_atomicity(context, &sites[0].id).await;
     verify_public_repository_surface(context, &sites[0].id).await;
 }
@@ -714,7 +727,7 @@ async fn verify_node_sync_database_bounds(
 }
 
 async fn verify_deployment_idempotency(
-    repository: &WebRepository,
+    repository: &dyn WebRepositoryPort,
     first_site_id: &str,
     second_site_id: &str,
 ) {

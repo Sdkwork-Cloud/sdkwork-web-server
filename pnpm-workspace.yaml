@@ -1,6 +1,6 @@
 packages:
   - "."
-  - "apps/sdkwork-web-pc"
+  - "apps/sdkwork-web-server-pc"
   - "sdks/*/*-typescript"
   - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-contracts"
   - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-runtime"

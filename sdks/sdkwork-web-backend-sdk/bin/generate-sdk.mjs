@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const languages = process.env.LANGUAGES || process.argv[2] || 'typescript';
+const languages = process.env.LANGUAGES || process.argv[2] || 'typescript,rust';
 
 const result = process.platform === 'win32'
   ? spawnSync(

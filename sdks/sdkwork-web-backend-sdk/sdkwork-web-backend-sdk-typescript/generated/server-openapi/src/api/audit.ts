@@ -22,7 +22,7 @@ export class AuditAuditLogsApi {
   }
 
 
-/** 获取审计日志列表 */
+/** List audit logs */
   async list(params?: AuditAuditLogsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },

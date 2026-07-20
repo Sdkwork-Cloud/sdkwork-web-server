@@ -3,14 +3,14 @@ use sdkwork_webserver_contract::{
     WebServiceResult,
 };
 use serde_json::json;
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::agents::{generate_agent_token, hash_agent_token, parse_last_heartbeat_at};
-use crate::support::{
+use super::agents::{generate_agent_token, hash_agent_token, parse_last_heartbeat_at};
+use super::support::{
     instant_write_expression, json_from_row, json_write_expression, new_uuid, next_id, now_rfc3339,
     pagination, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_servers_repo(
@@ -107,7 +107,7 @@ impl WebRepository {
     }
 }
 
-fn map_server_row(row: &AnyRow) -> Result<ServerResponse, sqlx::Error> {
+fn map_server_row(row: &EngineRow) -> Result<ServerResponse, sqlx::Error> {
     let metadata_raw = json_from_row(row, "metadata")?
         .unwrap_or_else(|| json!({}))
         .to_string();

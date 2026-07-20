@@ -1,7 +1,7 @@
 {
   "schemaVersion": 5,
   "kind": "sdkwork.app.topology",
-  "appId": "sdkwork-web",
+  "appId": "sdkwork-web-server",
   "archetype": "application-http-gateway",
   "profileRoot": "etc/topology",
   "profilePattern": "{deploymentProfile}.{environment}.env",
@@ -112,7 +112,15 @@
         ]
       },
       "cloud.development": {
-        "processes": [],
+        "processes": [
+          {
+            "id": "application.node-daemon",
+            "crate": "sdkwork-web-agent",
+            "binary": "sdkwork-web-node-daemon",
+            "required": true,
+            "role": "client"
+          }
+        ],
         "healthSurfaces": [
           "application.public-ingress",
           "platform.api-gateway"

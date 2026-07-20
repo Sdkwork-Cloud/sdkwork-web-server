@@ -30,55 +30,51 @@ function runNode(args, env = {}) {
 test('root development commands select explicit standalone and cloud development profiles', () => {
   const packageJson = readJson('package.json');
   assert.equal(packageJson.scripts.dev, 'pnpm dev:standalone');
-  assert.equal(packageJson.scripts['dev:standalone'], 'pnpm dev:browser:postgres:standalone');
-  assert.match(packageJson.scripts['dev:browser:postgres:standalone'], /--deployment-profile standalone/u);
-  assert.match(packageJson.scripts['dev:browser:postgres:standalone'], /--environment development/u);
+  assert.equal(
+    packageJson.scripts['dev:standalone'],
+    'pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone',
+  );
   assert.equal(
     packageJson.scripts['dev:cloud'],
-    'node scripts/webserver-cloud-dev.mjs --deployment-profile cloud --environment development',
+    'pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud',
+  );
+  assert.match(
+    packageJson.scripts['_sdkwork:verify'],
+    /pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud --dry-run/u,
   );
 
   const index = readJson('etc/sdkwork.deployment.config.json');
   assert.equal(index.defaultProfile, 'standalone.development');
-  assert.equal(index.profiles['cloud.development'].config, 'node-daemon/cloud.development.json');
+  assert.equal(index.profiles['cloud.development'].config, 'topology/cloud.development.env');
 });
 
 test('cloud development uses one remote HTTPS control plane and starts only the Node Daemon', () => {
-  const profile = readJson('etc/node-daemon/cloud.development.json');
-  assert.deepEqual(Object.keys(profile).sort(), [
-    'apiSurfaces',
-    'deploymentProfile',
-    'environment',
-    'kind',
-    'runtimeTarget',
-    'schemaVersion',
-  ]);
-  assert.equal(profile.deploymentProfile, 'cloud');
-  assert.equal(profile.environment, 'development');
-  assert.equal(profile.runtimeTarget, 'server');
-  const controlPlane = new URL(profile.apiSurfaces.backendApiBaseUrl);
+  const source = readFileSync(
+    path.join(REPO_ROOT, 'etc/topology/cloud.development.env'),
+    'utf8',
+  );
+  const values = Object.fromEntries(
+    source.split(/\r?\n/u)
+      .filter((line) => line && !line.startsWith('#'))
+      .map((line) => line.split(/=(.*)/su).slice(0, 2)),
+  );
+  assert.equal(values.SDKWORK_WEB_DEPLOYMENT_PROFILE, 'cloud');
+  assert.equal(values.SDKWORK_WEB_ENVIRONMENT, 'development');
+  const controlPlane = new URL(values.SDKWORK_WEB_APPLICATION_BACKEND_HTTP_URL);
   assert.equal(controlPlane.protocol, 'https:');
   assert.notEqual(controlPlane.hostname, 'localhost');
-  assert.doesNotMatch(JSON.stringify(profile), /token|credential|secret/iu);
+  assert.doesNotMatch(source, /token|credential|secret/iu);
 
-  const result = runNode([
-    'scripts/webserver-cloud-dev.mjs',
-    '--deployment-profile',
-    'cloud',
-    '--environment',
-    'development',
-    '--dry-run',
+  const topology = readJson('specs/topology.spec.json');
+  assert.deepEqual(topology.orchestration.profiles['cloud.development'].processes, [
+    {
+      id: 'application.node-daemon',
+      crate: 'sdkwork-web-agent',
+      binary: 'sdkwork-web-node-daemon',
+      required: true,
+      role: 'client',
+    },
   ]);
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /profile=cloud\.development runtimeTarget=server localProcess=web-node-daemon/u);
-  assert.match(result.stdout, /backendApiBaseUrl=https:\/\/api-dev\.sdkwork\.com/u);
-  assert.match(result.stdout, /nodeTokenConfigured=false/u);
-  assert.match(result.stdout, /run -p sdkwork-web-agent --bin sdkwork-web-node-daemon/u);
-  assert.doesNotMatch(result.stdout, /webserver-dev|standalone-gateway|database|api-server/iu);
-
-  const source = readFileSync(path.join(REPO_ROOT, 'scripts/webserver-cloud-dev.mjs'), 'utf8');
-  assert.equal(source.match(/\bspawn\(/gu)?.length, 1);
-  assert.doesNotMatch(source, /webserver-dev\.mjs|sdkwork-api-web-server-standalone-gateway|database host/iu);
   const envExample = readFileSync(path.join(REPO_ROOT, 'etc/agent/development.env.example'), 'utf8');
   assert.match(envExample, /^SDKWORK_WEB_NODE_TOKEN=$/mu);
 });
@@ -87,11 +83,11 @@ test('release dry-runs produce distinct profile and workflow-version-bound artif
   const packageJson = readJson('package.json');
   assert.equal(
     packageJson.scripts['release:package:standalone'],
-    'node scripts/webserver-release.mjs package --deployment-profile standalone',
+    'pnpm exec sdkwork-app release:package --deployment-profile standalone',
   );
   assert.equal(
     packageJson.scripts['release:package:cloud'],
-    'node scripts/webserver-release.mjs package --deployment-profile cloud',
+    'pnpm exec sdkwork-app release:package --deployment-profile cloud',
   );
 
   for (const architecture of ['x64', 'arm64']) {
@@ -178,6 +174,7 @@ test('release workflow and archive implementation preserve immutable bounded pac
     assert.deepEqual(target.outputGlobs, [
       `dist/release/sdkwork-web-linux-${target.architecture}-${target.deploymentProfile}-server-*.tar.gz`,
       `dist/release/sdkwork-web-linux-${target.architecture}-${target.deploymentProfile}-server-*.tar.gz.sha256`,
+      `dist/release/sdkwork-web-linux-${target.architecture}-${target.deploymentProfile}-server-*.tar.gz.sigstore.json`,
       `dist/release/sdkwork-web-linux-${target.architecture}-${target.deploymentProfile}-server-*.tar.gz.cdx.json`,
       `dist/release/sdkwork-web-linux-${target.architecture}-${target.deploymentProfile}-server-*.tar.gz.cdx.json.sha256`,
     ]);

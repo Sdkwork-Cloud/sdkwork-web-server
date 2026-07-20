@@ -2,13 +2,13 @@ use sdkwork_webserver_contract::{
     CreateDomainRequest, DomainPage, DomainResponse, DomainVerifyResponse, WebServiceError,
     WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     bool_from_row, instant_write_expression, new_uuid, next_id, now_rfc3339, pagination,
     resolve_site_internal_id, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_domains_repo(
@@ -234,7 +234,7 @@ impl WebRepository {
     }
 }
 
-fn map_domain_row(row: &AnyRow) -> Result<DomainResponse, sqlx::Error> {
+fn map_domain_row(row: &EngineRow) -> Result<DomainResponse, sqlx::Error> {
     Ok(DomainResponse {
         id: row.try_get("uuid")?,
         hostname: row.try_get("hostname")?,

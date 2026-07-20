@@ -8,6 +8,7 @@ use std::{
 };
 
 use arc_swap::ArcSwap;
+use sdkwork_utils_rust::crypto::sha256_hash;
 use sdkwork_webserver_core::{
     CertificateConfig, CompiledWebServerApp, CompiledWebServerRevision, ListenerProtocol,
     ReloadConfig, TlsPolicyConfig,
@@ -591,5 +592,5 @@ fn bounded_file_sha256(path: &Path) -> Result<[u8; 32], DataPlaneError> {
 
 fn revision_for_compiled_app(app: &CompiledWebServerApp) -> String {
     let bytes = serde_json::to_vec(app.config()).expect("Web Server config always serializes");
-    format!("runtime:{}", hex::encode(Sha256::digest(bytes)))
+    format!("runtime:{}", sha256_hash(&bytes))
 }

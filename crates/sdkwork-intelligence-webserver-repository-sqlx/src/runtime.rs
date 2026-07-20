@@ -2,9 +2,8 @@
 
 use std::sync::Arc;
 
-use sdkwork_database_config::{DatabaseConfig, DatabaseEngine};
 use sdkwork_database_id::SnowflakeIdGenerator;
-use sdkwork_database_sqlx::create_any_pool_from_config;
+use sdkwork_database_sqlx::{enable_process_shared_database_pool, DatabasePool};
 use sdkwork_intelligence_webserver_service::{WebRepositoryPort, WebService};
 use sdkwork_utils_rust::derive_aes_256_key;
 use sdkwork_webserver_acme_service::{
@@ -13,9 +12,8 @@ use sdkwork_webserver_acme_service::{
 use sdkwork_webserver_contract::{web_environment_name, web_is_production_like_environment};
 use sdkwork_webserver_database_host::bootstrap_web_database_from_env;
 use sdkwork_webserver_edge_runtime::EdgeRuntime;
-use sqlx::AnyPool;
 
-use crate::{SecretEncryptionKey, WebRepository};
+use crate::{PostgresWebRepository, SecretEncryptionKey, SqliteWebRepository};
 
 const ENV_SECRET_KEY_INFO: &[u8] = b"sdkwork-web-env-variable-encryption";
 
@@ -148,30 +146,26 @@ where
         .unwrap_or(Ok(default))
 }
 
-async fn any_pool_from_env() -> Result<(AnyPool, DatabaseEngine), String> {
-    let _ = dotenvy::dotenv();
-    let config = DatabaseConfig::from_env("WEB")
-        .map_err(|error| format!("read Web database config failed: {error}"))?;
-    let engine = config.engine;
-    create_any_pool_from_config(config)
-        .await
-        .map(|pool| (pool, engine))
-        .map_err(|error| format!("create Web any pool failed: {error}"))
-}
-
 /// Bootstrap database lifecycle, repository, and service from environment variables.
 pub async fn bootstrap_web_runtime_from_env() -> Result<WebRuntime, String> {
-    let _lifecycle_host = bootstrap_web_database_from_env().await?;
-    // In an integrated process this is the canonical shared pool; the framework owns its lifetime.
-    let (pool, database_engine) = any_pool_from_env().await?;
+    enable_process_shared_database_pool();
+    let lifecycle_host = bootstrap_web_database_from_env().await?;
     let id_generator = snowflake_from_env()?;
     let secret_key = secret_key_from_env()?;
-    let repository = Arc::new(WebRepository::new_with_engine(
-        pool,
-        database_engine,
-        id_generator,
-        secret_key,
-    )) as Arc<dyn WebRepositoryPort>;
+    let repository = match lifecycle_host.pool() {
+        DatabasePool::Postgres(pool, _) => Arc::new(PostgresWebRepository::new(
+            pool.clone(),
+            sdkwork_database_config::DatabaseEngine::Postgres,
+            id_generator,
+            secret_key,
+        )) as Arc<dyn WebRepositoryPort>,
+        DatabasePool::Sqlite(pool, _) => Arc::new(SqliteWebRepository::new(
+            pool.clone(),
+            sdkwork_database_config::DatabaseEngine::Sqlite,
+            id_generator,
+            secret_key,
+        )) as Arc<dyn WebRepositoryPort>,
+    };
 
     let certificate_issuer = Arc::new(certificate_issuer_from_env()?);
     let edge_runtime = Arc::new(

@@ -6,13 +6,13 @@ use sdkwork_webserver_contract::{
     AgentSyncResponse, WebServiceError, WebServiceResult,
 };
 use serde_json::{json, Value};
-use sqlx::{any::AnyRow, Row};
+use super::{EnginePool, EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     instant_write_expression, json_from_row, json_write_expression, new_agent_token, now_rfc3339,
     sha256_hex, store_error,
 };
-use crate::WebRepository;
 
 const MAX_NODE_SYNC_ITEMS: usize = 2_048;
 const MAX_NODE_SYNC_BUNDLE_BYTES: usize = 12 * 1024 * 1024;
@@ -384,7 +384,7 @@ impl WebRepository {
 }
 
 async fn merge_server_metadata(
-    pool: &sqlx::AnyPool,
+    pool: &EnginePool,
     server_uuid: &str,
     patch: &Value,
 ) -> Result<Value, WebServiceError> {
@@ -409,7 +409,7 @@ async fn merge_server_metadata(
     Ok(existing)
 }
 
-fn map_authenticated_agent(row: &AnyRow) -> Result<AuthenticatedAgent, sqlx::Error> {
+fn map_authenticated_agent(row: &EngineRow) -> Result<AuthenticatedAgent, sqlx::Error> {
     Ok(AuthenticatedAgent {
         server_uuid: row.try_get("uuid")?,
         tenant_id: row.try_get("tenant_id")?,

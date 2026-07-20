@@ -13,8 +13,7 @@ name = "sdkwork-api-web-server-standalone-gateway"
 path = "src/main.rs"
 
 [dependencies]
-sdkwork-web-bootstrap = { workspace = true }
-sdkwork_api_web_server_assembly = { package = "sdkwork-api-web-server-assembly", path = "../sdkwork-api-web-server-assembly" }
+sdkwork-api-web-server-assembly.workspace = true
 atomic-waker.workspace = true
 arc-swap.workspace = true
 axum.workspace = true
@@ -22,7 +21,6 @@ axum-server.workspace = true
 bytes.workspace = true
 crc.workspace = true
 futures-util.workspace = true
-hex.workspace = true
 http.workspace = true
 http-body.workspace = true
 http-body-util.workspace = true
@@ -49,9 +47,11 @@ webpki-roots.workspace = true
 x509-parser.workspace = true
 windows-sys.workspace = true
 sdkwork-intelligence-webserver-service.workspace = true
+sdkwork-database-sqlx.workspace = true
 sdkwork-webserver-database-host.workspace = true
 sdkwork-webserver-core.workspace = true
 sdkwork-web-bootstrap.workspace = true
+sdkwork-utils-rust.workspace = true
 sdkwork-web-core.workspace = true
 
 [dev-dependencies]

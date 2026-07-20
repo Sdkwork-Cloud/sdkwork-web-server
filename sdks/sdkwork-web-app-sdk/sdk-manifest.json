@@ -182,5 +182,10 @@
       "generatedPath": "sdkwork-web-app-sdk-ruby/generated/server-openapi"
     }
   ],
-  "sdkDependencies": []
+  "sdkDependencies": [
+    {
+      "family": "sdkwork-iam-app-sdk",
+      "reason": "IAM login/session and tenant request context for protected app-api routes."
+    }
+  ]
 }

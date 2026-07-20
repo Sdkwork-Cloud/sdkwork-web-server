@@ -57,7 +57,7 @@ trace:
     - crates/sdkwork-intelligence-webserver-service
     - crates/sdkwork-intelligence-webserver-repository-sqlx
     - crates/sdkwork-web-agent
-    - apps/sdkwork-web-pc
+    - apps/sdkwork-web-server-pc
 verification:
   - node ../sdkwork-specs/tools/check-pagination.mjs --workspace .
   - node ../sdkwork-specs/tools/check-api-operation-patterns.mjs --workspace .

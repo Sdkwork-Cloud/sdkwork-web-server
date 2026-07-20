@@ -1,63 +1,77 @@
-# Standards Alignment
+# SDKWork Standards Alignment
 
-SDKWork Web Server (`sdkwork-web-server`) alignment status against `sdkwork-specs`.
+Application: `sdkwork-web-server`
 
-Updated: 2026-06-29
+Updated: 2026-07-20
 
-## Framework Integration
+This document records current implementation and evidence. It does not declare production release
+approval. Normative requirements are owned by `../sdkwork-specs`.
 
-| Framework | Status | Evidence |
+## Framework And Capability Matrix
+
+| Capability | Current state | Evidence |
 | --- | --- | --- |
-| `sdkwork-web-framework` | Integrated | `sdkwork-routes-webserver-*` dual-token/agent-token manifests, IAM resolver, `service_router` bootstrap |
-| `sdkwork-database` | Integrated | `database/` contract assets, `sdkwork-webserver-database-host`, full `pnpm db:*` lifecycle |
-| `sdkwork-utils-rust` | Integrated | API envelope, ProblemDetail, AES-GCM, SHA-256, env parsing, slugify, serde_int64 |
-| `sdkwork-id-core` (via `sdkwork-database-id`) | Integrated | Snowflake PKs, UUID v4 resource IDs, prefixed agent tokens (`wagent_`) |
-| `sdkwork-discovery` | Not required | HTTP application ingress only; adopt when RPC services and dynamic resolution are introduced |
-| `sdkwork-drive` | Not required | No file-upload operations in current API surface; adopt when upload features are added |
+| `sdkwork-web-framework` | Integrated | App/backend route manifests, `WebRequestContext`, IAM resolver, framework `service_router`, health/readiness/metrics |
+| `sdkwork-database` | Integrated | Database manifest and baselines, lifecycle host, one process-shared typed PostgreSQL/SQLite pool, repository parity tests |
+| `sdkwork-utils-rust` | Integrated | API envelopes, pagination, crypto, SHA-256, validation, serde helpers, platform helpers |
+| `sdkwork-id-core` | Integrated through database ID support | Snowflake internal IDs and UUID resource identities |
+| Backend SDK | Integrated | Generated TypeScript/Rust family, AgentToken auth, bounded response reads, Node Daemon consumption without handwritten HTTP |
+| `sdkwork-drive` | Gated, no current upload capability | No business upload/presign/provider ownership; contract test rejects future bypasses |
+| `sdkwork-discovery` | Gated, no current RPC transport | No tonic/prost service; contract test requires RPC framework and discovery together if RPC is introduced |
 
-## Production Readiness
+## Architecture State
 
-| Layer | Status | Notes |
-| --- | --- | --- |
-| OpenAPI authorities | Complete | App + backend YAML, materialized JSON, route manifests, SDK assembly |
-| API envelope | Complete | `SdkWorkApiResponse` success + `ProblemDetail` errors on all L2+ routes |
-| Service layer | Complete | `WebAppApi` + `WebBackendApi` on `WebService` |
-| Repository SQLx | Complete | All `web_*` tables via `WebRepositoryPort` |
-| HTTP routes | Complete | 22 app + 13 backend operations aligned with OpenAPI paths |
-| Runtime bootstrap | Complete | DB lifecycle, ACME issuer, edge runtime, readiness probe |
-| ACME / certificates | Complete | Let's Encrypt + self-signed, AES-GCM key storage, renewal worker |
-| Edge runtime | Complete | nginx deploy/validate/reload, cert bundle materialization |
-| Edge agent | Complete | heartbeat + conditional sync (`ifSyncVersion`) |
-| IAM security | Complete | Production fail-closed; dual-token + agent-token auth modes |
-| Deployments | Complete | Docker + Kubernetes under `deployments/` |
-| Packaging / CI | Complete | `sdkwork.workflow.json`, `.github/workflows/package.yml` |
+- OpenAPI YAML is authored under `apis/`; materialized JSON, route manifests, and generated SDK
+  inputs are deterministic derivatives.
+- App and backend operations use the SDKWork v3 success envelopes and Problem Details error shape.
+- The standalone gateway composes framework management routes with the bounded HTTP/HTTPS data
+  plane. Management routes call services through ports; SQLx stays in repository modules.
+- Database bootstrap returns one SDKWork lifecycle-owned typed pool. PostgreSQL and SQLite compile
+  the same repository implementation; production source contains no `AnyPool` bridge or second
+  pool.
+- The Web Node Daemon uses the application-root generated Rust backend SDK for heartbeat and sync,
+  with typed AgentToken configuration, canonical envelope decoding, and finite response limits.
+- Proxy orchestration, upstream selection/health, request-body controls, metrics, TLS, DNS, admission,
+  and protocol guards are separated into focused private modules.
 
-## Certificate Stack
+## API And SDK Guarantees
 
-| Component | Choice |
-| --- | --- |
-| ACME client | `instant-acme` |
-| Production CA | Let's Encrypt (HTTP-01) |
-| Development CA | `rcgen` self-signed (`certType=3`) |
-| Private key storage | AES-256-GCM (`SDKWORK_WEB_SECRET_ENCRYPTION_KEY`) |
-| Auto renewal | `sdkwork-webserver-certificate-worker` + `renewal_status` state machine |
-| Cert distribution | Agent sync + stable `sv1:` fingerprint + `ifSyncVersion` conditional pull |
+- Authored Agent routes explicitly declare `x-sdkwork-route-auth: agent-token` and require the
+  `AgentToken` security scheme.
+- Generated SDK methods return domain payloads after SDKWork v3 envelope unwrapping and reject
+  nonzero business codes.
+- Backend SDK generation defaults to TypeScript and Rust, retains generator control-plane manifests,
+  removes stale owned files, and is idempotent on an unchanged contract.
+- `sdk-manifest.json` and `specs/component.spec.json` agree on IAM SDK dependencies.
+- Generated files under `generated/server-openapi` are generator-owned and are never hand-edited.
+
+## Deployment And Release State
+
+`standalone.production` is a host-package profile. `cloud.production` is a Kubernetes/container-image
+profile with digest-bound templates, a bounded migration Job, StatefulSet identity, probes,
+PodDisruptionBudget, non-root execution, read-only root filesystem, dropped capabilities, and
+secret-manager references.
+
+The four Linux server package declarations in `sdkwork.app.config.json` are disabled and carry
+`releaseBuildDeferred: true`. Archive packaging, checksum, Sigstore, CycloneDX, x64/arm64 smoke,
+database recovery, and HA workflow steps are implemented, but no container registry publication
+authority or production release approval is declared. Docker/Kubernetes files are deployment
+templates, not evidence that an image has been published or deployed.
 
 ## Verification
 
+Primary local gates:
+
 ```powershell
+pnpm check
 pnpm verify
+pnpm db:validate
+pnpm topology:validate
+node ..\sdkwork-specs\tools\deployctl.mjs validate --root . --profile cloud.production
+node ..\sdkwork-specs\tools\deployctl.mjs validate --root . --profile standalone.production
+node ..\sdkwork-github-workflow\scripts\sdkwork-workflow.mjs validate --config sdkwork.workflow.json
 ```
 
-`pnpm verify` runs formatting, tests, API materialization, app composition, API envelope, repository docs, topology, database framework, and cloud gateway validation.
-
-## Optional Enhancements (post-launch)
-
-These are not blockers for backend production deployment:
-
-- PC management UI under `apps/sdkwork-web-pc/` (requires published TypeScript SDK packages)
-- Per-node certificate delta queue and push notification
-- External KMS for certificate encryption keys
-- Per-tenant Let's Encrypt account persistence
-- `sdkwork-discovery` when RPC split-services topology is adopted
-- `sdkwork-drive` when file-upload API operations are introduced
+PostgreSQL lifecycle, recovery, and failover tests require Docker or an explicitly disposable
+PostgreSQL endpoint. A local run that lacks that external authority must report the missing evidence;
+it must not convert an ignored or unavailable PostgreSQL test into a production-readiness claim.

@@ -2,6 +2,7 @@
 
 use axum::{Extension, Router};
 use sdkwork_intelligence_webserver_repository_sqlx::bootstrap_web_runtime_from_env;
+use sdkwork_intelligence_webserver_service::WebService;
 use sdkwork_routes_webserver_app_api::{
     gateway_mount as mount_app, wrap_router_with_web_framework_from_env as wrap_app,
 };
@@ -12,6 +13,7 @@ use std::sync::Arc;
 
 pub struct ApiAssembly {
     pub router: Router,
+    pub service: Arc<WebService>,
 }
 
 pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
@@ -23,7 +25,8 @@ pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
         router: Router::new()
             .merge(app)
             .merge(backend)
-            .layer(Extension(service)),
+            .layer(Extension(service.clone())),
+        service,
     })
 }
 

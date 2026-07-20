@@ -11,108 +11,182 @@
     "supportUrl": "https://sdkwork.com/support",
     "privacyPolicyUrl": "https://sdkwork.com/privacy",
     "termsOfServiceUrl": "https://sdkwork.com/terms",
-    "iconUrl": "https://cdn.sdkwork.com/apps/sdkwork-web/assets/icon-1024.png",
     "appType": "SDK",
-    "versionSource": "manifest",
     "identifiers": {
-      "packageName": null,
-      "bundleId": null,
-      "desktopAppId": null,
       "containerImage": "registry.sdkwork.com/apps/sdkwork-web"
     }
   },
   "backend": {
+    "primaryLanguage": "rust",
+    "framework": "axum",
+    "appId": "sdkwork-web",
+    "serviceId": "sdkwork-api-web-server-standalone-gateway",
     "profileKey": "backend-root-admin",
     "ownerMode": "tenant",
     "grantMode": "current",
-    "platform": "API",
-    "appId": null,
-    "tenantId": "100001",
-    "organizationId": "0"
+    "accessTokenPermissionScope": [
+      "web.sites.read",
+      "web.sites.write",
+      "web.certificates.read",
+      "web.certificates.write",
+      "web.nginx.write",
+      "web.servers.read",
+      "web.servers.write",
+      "web.auditLogs.read"
+    ]
   },
   "runtime": {
     "family": "server",
     "framework": "rust-service",
-    "runtimes": [
-      "API"
-    ],
-    "deliveryModes": [
-      "CONTAINER_IMAGE"
-    ],
     "defaultPlatform": "API",
     "defaultArchitecture": "x64",
-    "deploymentProfile": "cloud",
-    "runtimeTarget": "server",
     "supportedDeploymentProfiles": [
       "standalone",
       "cloud"
-    ]
+    ],
+    "defaultDeploymentProfile": "standalone"
+  },
+  "media": {
+    "icons": {
+      "primary": {
+        "id": "sdkwork-web-primary-icon",
+        "type": "ICON",
+        "purpose": "PRIMARY",
+        "platform": "API",
+        "format": "PNG",
+        "width": 1024,
+        "height": 1024,
+        "enabled": true,
+        "resource": {
+          "id": "sdkwork-web-primary-icon",
+          "kind": "image",
+          "source": "external_url",
+          "url": "https://cdn.sdkwork.com/apps/sdkwork-web/assets/icon-1024.png",
+          "mimeType": "image/png",
+          "width": 1024,
+          "height": 1024,
+          "altText": "SDKWork Web Server"
+        }
+      },
+      "platform": []
+    },
+    "screenshots": [],
+    "previews": []
   },
   "publish": {
-    "status": "ACTIVE",
+    "status": "BETA",
     "platforms": [
       "API"
     ],
     "installPlatforms": [
       "API"
     ],
-    "defaultPackageId": "linux-x64-cloud-server-tar-gz",
-    "storeUrl": "https://sdkwork.com/apps/sdkwork-web",
-    "config": {
-      "workspaceRoot": "sdkwork-web-server",
-      "framework": "rust-service"
+    "installSkill": false,
+    "storeUrl": "https://sdkwork.com/apps/sdkwork-web"
+  },
+  "artifacts": {
+    "installConfig": {
+      "defaultPackageId": "linux-x64-standalone-server-tar-gz",
+      "packages": [
+        {
+          "id": "linux-x64-standalone-server-tar-gz",
+          "name": "SDKWork Web Server Linux x64 Standalone",
+          "sourceType": "SCRIPT",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "architecture": "x64",
+          "profileBinding": "fixed",
+          "deploymentProfile": "standalone",
+          "runtimeTarget": "server",
+          "targetPlatform": "linux",
+          "enabled": false,
+          "metadata": {
+            "releaseBuildDeferred": true
+          }
+        },
+        {
+          "id": "linux-x64-cloud-server-tar-gz",
+          "name": "SDKWork Web Server Linux x64 Cloud",
+          "sourceType": "SCRIPT",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "architecture": "x64",
+          "profileBinding": "fixed",
+          "deploymentProfile": "cloud",
+          "runtimeTarget": "server",
+          "targetPlatform": "linux",
+          "enabled": false,
+          "metadata": {
+            "releaseBuildDeferred": true
+          }
+        },
+        {
+          "id": "linux-arm64-standalone-server-tar-gz",
+          "name": "SDKWork Web Server Linux arm64 Standalone",
+          "sourceType": "SCRIPT",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "architecture": "arm64",
+          "profileBinding": "fixed",
+          "deploymentProfile": "standalone",
+          "runtimeTarget": "server",
+          "targetPlatform": "linux",
+          "enabled": false,
+          "metadata": {
+            "releaseBuildDeferred": true
+          }
+        },
+        {
+          "id": "linux-arm64-cloud-server-tar-gz",
+          "name": "SDKWork Web Server Linux arm64 Cloud",
+          "sourceType": "SCRIPT",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "architecture": "arm64",
+          "profileBinding": "fixed",
+          "deploymentProfile": "cloud",
+          "runtimeTarget": "server",
+          "targetPlatform": "linux",
+          "enabled": false,
+          "metadata": {
+            "releaseBuildDeferred": true
+          }
+        }
+      ]
     }
   },
   "release": {
-    "defaultVersion": "0.1.0",
+    "currentVersion": "0.1.0",
+    "defaultChannel": "BETA",
+    "latest": {
+      "BETA": "0.1.0"
+    },
     "notes": [
       {
         "version": "0.1.0",
-        "title": "Initial standards-aligned bootstrap",
-        "body": "Bootstrap SDKWork Web Server with web-framework, database framework, and utils integration."
+        "channel": "BETA",
+        "current": true,
+        "summary": "Pre-release SDKWork standards alignment baseline; package builds remain deferred.",
+        "packageIds": [
+          "linux-x64-standalone-server-tar-gz",
+          "linux-x64-cloud-server-tar-gz",
+          "linux-arm64-standalone-server-tar-gz",
+          "linux-arm64-cloud-server-tar-gz"
+        ],
+        "forceUpdate": false,
+        "minSupportedVersion": "0.1.0"
       }
     ]
   },
-  "apiSurfaces": [
-    {
-      "id": "sdkwork-web-app-api",
-      "kind": "app-api",
-      "apiPrefix": "/app/v3/api",
-      "authority": "apis/app-api/web/openapi.yaml"
-    },
-    {
-      "id": "sdkwork-web-backend-api",
-      "kind": "backend-api",
-      "apiPrefix": "/backend/v3/api",
-      "authority": "apis/backend-api/web/openapi.yaml"
-    }
-  ],
-  "sdkFamilies": [
-    {
-      "family": "sdkwork-web-app-sdk",
-      "surface": "app-api",
-      "apiAuthority": "sdkwork-web.app",
-      "manifestPath": "sdks/sdkwork-web-app-sdk/sdk-manifest.json",
-      "componentSpecPath": "sdks/sdkwork-web-app-sdk/specs/component.spec.json"
-    },
-    {
-      "family": "sdkwork-web-backend-sdk",
-      "surface": "backend-api",
-      "apiAuthority": "sdkwork-web.backend",
-      "manifestPath": "sdks/sdkwork-web-backend-sdk/sdk-manifest.json",
-      "componentSpecPath": "sdks/sdkwork-web-backend-sdk/specs/component.spec.json"
-    }
-  ],
-  "sdkDependencies": [
-    {
-      "family": "sdkwork-iam-app-sdk",
-      "reason": "IAM login/session and tenant request context for protected app-api routes."
-    },
-    {
-      "family": "sdkwork-iam-backend-sdk",
-      "reason": "Platform operator IAM for protected backend-api routes."
-    }
-  ],
-  "dependencyApiExports": [],
-  "dependencyApiSurfaces": []
+  "security": {
+    "checksumRequired": true,
+    "signatureRequired": true,
+    "sbomRequired": true
+  },
+  "metadata": {
+    "deploymentConfig": "etc/sdkwork.deployment.config.json",
+    "topologySpec": "specs/topology.spec.json",
+    "componentSpec": "specs/component.spec.json",
+    "workflowManifest": "sdkwork.workflow.json"
+  }
 }

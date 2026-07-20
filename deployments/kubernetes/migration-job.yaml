@@ -1,32 +1,65 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sdkwork-web-db-migrate
+  name: sdkwork-web-server-db-migrate
   labels:
-    app.kubernetes.io/name: sdkwork-web
+    app.kubernetes.io/name: sdkwork-web-server
     app.kubernetes.io/component: db-migrate
 spec:
   backoffLimit: 3
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: sdkwork-web
+        app.kubernetes.io/name: sdkwork-web-server
         app.kubernetes.io/component: db-migrate
     spec:
       restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: migrate
-          image: sdkwork-api-web-server-standalone-gateway:latest
-          command: ["sdkwork-api-web-server-standalone-gateway", "db-migrate"]
+          image: registry.sdkwork.com/apps/sdkwork-web@sha256:__SDKWORK_IMAGE_DIGEST__
+          imagePullPolicy: IfNotPresent
+          args: ["db-migrate"]
           env:
             - name: SDKWORK_WEB_APP_ROOT
               value: /app
             - name: SDKWORK_WEB_ENVIRONMENT
               value: production
-            - name: SDKWORK_WEB_DATABASE_AUTO_MIGRATE
-              value: "true"
+            - name: SDKWORK_WEB_DEPLOYMENT_PROFILE
+              value: cloud
+            - name: SDKWORK_WEB_PROFILE_ID
+              value: cloud.production
             - name: SDKWORK_WEB_DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: sdkwork-web-database
+                  name: sdkwork-web-server-runtime
                   key: database-url
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+      volumes:
+        - name: temporary
+          emptyDir:
+            sizeLimit: 32Mi

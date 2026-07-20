@@ -64,17 +64,17 @@ const client = new SdkworkBackendClient({
 ### nginx
 
 ```typescript
-// 获取 Nginx 状态
+// Retrieve Nginx status
 const result = await client.nginx.status.retrieve();
 ```
 
 ### server
 
 ```typescript
-// 获取服务器列表
+// List managed servers
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
 };
 const result = await client.server.list(params);
 ```
@@ -82,20 +82,20 @@ const result = await client.server.list(params);
 ### agent
 
 ```typescript
-// 拉取 nginx 配置与证书 bundle
+// Retrieve the Nginx configuration and certificate bundle
 const params = {
   ifSyncVersion: 'ifSyncVersion',
 };
-const result = await client.agent.sync(params);
+const result = await client.agent.retrieve(params);
 ```
 
 ### audit
 
 ```typescript
-// 获取审计日志列表
+// List audit logs
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
   targetType: 'targetType',
   action: 'action',
   operatorId: 'operatorId',

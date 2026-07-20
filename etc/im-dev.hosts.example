@@ -1,7 +1,0 @@
-# Same-machine browser development:
-127.0.0.1 im-dev.sdkwork.com
-
-# For phones and other LAN clients, configure this record in the LAN DNS
-# server/router instead, replacing the example address with the development
-# machine's private LAN address:
-# 192.168.1.100 im-dev.sdkwork.com

@@ -52,6 +52,8 @@ test('node sync service and daemon retain independent final response bounds', ()
 
 test('node sync manifest contract is mandatory in root test and verify', () => {
   const packageJson = JSON.parse(source('package.json'));
-  assert.match(packageJson.scripts.test, /node-sync-manifest\.contract\.test\.mjs/u);
-  assert.match(packageJson.scripts.verify, /node-sync-manifest\.contract\.test\.mjs/u);
+  assert.equal(packageJson.scripts.test, 'pnpm exec sdkwork-app test');
+  assert.equal(packageJson.scripts.verify, 'pnpm exec sdkwork-app verify');
+  assert.match(packageJson.scripts['_sdkwork:test'], /node-sync-manifest\.contract\.test\.mjs/u);
+  assert.match(packageJson.scripts['_sdkwork:verify'], /node-sync-manifest\.contract\.test\.mjs/u);
 });

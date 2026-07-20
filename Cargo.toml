@@ -1,8 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/sdkwork-api-web-server-assembly",
-    "crates/sdkwork-api-web-server-assembly",
+  "crates/sdkwork-api-web-server-assembly",
   "crates/sdkwork-webserver-database-host",
   "crates/sdkwork-routes-webserver-common",
   "crates/sdkwork-webserver-contract",
@@ -16,6 +15,9 @@ members = [
   "crates/sdkwork-routes-webserver-app-api",
   "crates/sdkwork-routes-webserver-backend-api",
   "crates/sdkwork-api-web-server-standalone-gateway",
+]
+exclude = [
+  "sdks/sdkwork-web-backend-sdk/sdkwork-web-backend-sdk-rust/generated/server-openapi",
 ]
 
 [workspace.package]
@@ -85,7 +87,9 @@ sdkwork-intelligence-webserver-repository-sqlx = { path = "crates/sdkwork-intell
 sdkwork-routes-webserver-app-api = { path = "crates/sdkwork-routes-webserver-app-api" }
 sdkwork-routes-webserver-backend-api = { path = "crates/sdkwork-routes-webserver-backend-api" }
 sdkwork-routes-webserver-common = { path = "crates/sdkwork-routes-webserver-common" }
+sdkwork-api-web-server-assembly = { path = "crates/sdkwork-api-web-server-assembly" }
 sdkwork-api-web-server-standalone-gateway = { path = "crates/sdkwork-api-web-server-standalone-gateway" }
+sdkwork-web-backend-sdk = { path = "sdks/sdkwork-web-backend-sdk/sdkwork-web-backend-sdk-rust/generated/server-openapi" }
 
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }

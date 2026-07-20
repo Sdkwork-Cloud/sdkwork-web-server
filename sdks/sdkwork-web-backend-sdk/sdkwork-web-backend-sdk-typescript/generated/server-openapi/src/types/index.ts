@@ -40,5 +40,5 @@ export type { NginxStatusRetrieveResponse } from './nginx-status-retrieve-respon
 export type { ServersListResponse } from './servers-list-response';
 export type { ServersCreateResponse201 } from './servers-create-response201';
 export type { AgentHeartbeatPostResponse } from './agent-heartbeat-post-response';
-export type { AgentSyncGetResponse } from './agent-sync-get-response';
+export type { AgentRetrieveResponse } from './agent-retrieve-response';
 export type { AuditLogsListResponse } from './audit-logs-list-response';

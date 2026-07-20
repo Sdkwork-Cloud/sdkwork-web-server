@@ -6,13 +6,16 @@ mod state;
 use std::collections::HashSet;
 use std::time::Duration;
 
-use sdkwork_utils_rust::{SdkWorkApiResponse, SdkWorkResourceData, SDKWORK_SUCCESS_CODE};
+use sdkwork_utils_rust::crypto::sha256_hash;
+use sdkwork_web_backend_sdk::{
+    AgentHeartbeatRequest as SdkAgentHeartbeatRequest,
+    AgentHeartbeatResponse as SdkAgentHeartbeatResponse, AgentSyncResponse as SdkAgentSyncResponse,
+    SdkworkBackendClient, SdkworkConfig,
+};
 use sdkwork_webserver_contract::{
-    AgentCertificateBundle, AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse,
+    AgentCertificateBundle, AgentHeartbeatResponse, AgentNginxConfigBundle, AgentSyncResponse,
 };
 use sdkwork_webserver_edge_runtime::EdgeRuntime;
-use serde::de::DeserializeOwned;
-use sha2::{Digest, Sha256};
 use state::{resolve_state_path, NodeDaemonLock, NodeDaemonState};
 use tracing::{info, warn};
 
@@ -27,9 +30,35 @@ const MAX_NGINX_CONFIGS_PER_SYNC: usize = 2_048;
 const MAX_CERTIFICATES_PER_SYNC: usize = 2_048;
 
 struct NodeDaemonRuntimeConfig {
-    control_plane: reqwest::Url,
+    control_plane: String,
     node_token: String,
     interval_secs: u64,
+}
+
+struct NodeDaemonSdkClients {
+    heartbeat: SdkworkBackendClient,
+    sync: SdkworkBackendClient,
+}
+
+impl NodeDaemonSdkClients {
+    fn new(runtime: &NodeDaemonRuntimeConfig) -> anyhow::Result<Self> {
+        Ok(Self {
+            heartbeat: build_backend_sdk_client(runtime, MAX_HEARTBEAT_RESPONSE_BYTES)?,
+            sync: build_backend_sdk_client(runtime, MAX_SYNC_RESPONSE_BYTES)?,
+        })
+    }
+}
+
+fn build_backend_sdk_client(
+    runtime: &NodeDaemonRuntimeConfig,
+    maximum_response_bytes: usize,
+) -> anyhow::Result<SdkworkBackendClient> {
+    let mut config = SdkworkConfig::new(runtime.control_plane.clone());
+    config.timeout_ms = HTTP_TIMEOUT_SECS * 1_000;
+    config.max_response_body_bytes = maximum_response_bytes;
+    let client = SdkworkBackendClient::new(config)?;
+    client.set_agent_token(runtime.node_token.clone());
+    Ok(client)
 }
 
 impl NodeDaemonRuntimeConfig {
@@ -66,9 +95,7 @@ pub async fn run() -> anyhow::Result<()> {
     let state_path = resolve_state_path()?;
     let _node_daemon_lock = NodeDaemonLock::acquire(&state_path)?;
     let mut local_state = NodeDaemonState::load(&state_path)?;
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(HTTP_TIMEOUT_SECS))
-        .build()?;
+    let clients = NodeDaemonSdkClients::new(&runtime)?;
 
     info!(
         interval_secs = runtime.interval_secs,
@@ -81,8 +108,7 @@ pub async fn run() -> anyhow::Result<()> {
     );
 
     loop {
-        if let Err(error) = sync_once(&edge, &runtime, &client, &state_path, &mut local_state).await
-        {
+        if let Err(error) = sync_once(&edge, &clients, &state_path, &mut local_state).await {
             warn!(error = %error, "node sync cycle failed");
         }
         tokio::time::sleep(Duration::from_secs(runtime.interval_secs)).await;
@@ -91,30 +117,18 @@ pub async fn run() -> anyhow::Result<()> {
 
 async fn sync_once(
     edge: &EdgeRuntime,
-    runtime: &NodeDaemonRuntimeConfig,
-    client: &reqwest::Client,
+    clients: &NodeDaemonSdkClients,
     state_path: &std::path::Path,
     local_state: &mut NodeDaemonState,
 ) -> anyhow::Result<()> {
-    let heartbeat_url = runtime
-        .control_plane
-        .join("/backend/v3/api/agent/heartbeat")?;
-    let heartbeat = AgentHeartbeatRequest {
+    let heartbeat = SdkAgentHeartbeatRequest {
         agent_version: Some(NODE_DAEMON_VERSION.to_string()),
         nginx_enabled: Some(edge.config().nginx_enabled),
         active_configs: None,
         last_sync_version: local_state.observed_sync_version().map(str::to_string),
     };
-    let heartbeat_response = client
-        .post(heartbeat_url)
-        .header("X-SDKWork-Agent-Token", &runtime.node_token)
-        .json(&heartbeat)
-        .send()
-        .await?
-        .error_for_status()?;
-    let heartbeat_ack: AgentHeartbeatResponse = decode_resource_response(
-        &read_body_bounded(heartbeat_response, MAX_HEARTBEAT_RESPONSE_BYTES).await?,
-    )?;
+    let heartbeat_ack =
+        map_heartbeat_response(clients.heartbeat.agent().heartbeat(&heartbeat).await?)?;
     if heartbeat_ack.server_id.trim().is_empty() {
         anyhow::bail!("control-plane heartbeat acknowledgement has an empty serverId");
     }
@@ -122,21 +136,13 @@ async fn sync_once(
         anyhow::bail!("control-plane heartbeat acknowledgement did not mark the node active");
     }
 
-    let mut sync_url = runtime.control_plane.join("/backend/v3/api/agent/sync")?;
-    if let Some(last_sync_version) = local_state.observed_sync_version() {
-        sync_url
-            .query_pairs_mut()
-            .append_pair("ifSyncVersion", last_sync_version);
-    }
-
-    let response = client
-        .get(sync_url)
-        .header("X-SDKWork-Agent-Token", &runtime.node_token)
-        .send()
-        .await?
-        .error_for_status()?;
-    let manifest: AgentSyncResponse =
-        decode_resource_response(&read_body_bounded(response, MAX_SYNC_RESPONSE_BYTES).await?)?;
+    let manifest = map_sync_response(
+        clients
+            .sync
+            .agent()
+            .retrieve(local_state.observed_sync_version())
+            .await?,
+    )?;
     validate_manifest_bounds(&manifest)?;
     if manifest.server_id != heartbeat_ack.server_id {
         anyhow::bail!("node identity mismatch between heartbeat acknowledgement and sync manifest");
@@ -186,52 +192,52 @@ async fn sync_once(
     Ok(())
 }
 
-async fn read_body_bounded(
-    mut response: reqwest::Response,
-    maximum_bytes: usize,
-) -> anyhow::Result<Vec<u8>> {
-    if response
-        .content_length()
-        .is_some_and(|length| length > maximum_bytes as u64)
-    {
-        anyhow::bail!("control-plane response exceeds {maximum_bytes} bytes");
-    }
-    let capacity = response
-        .content_length()
-        .and_then(|length| usize::try_from(length).ok())
-        .unwrap_or(0)
-        .min(maximum_bytes);
-    let mut body = Vec::with_capacity(capacity);
-    while let Some(chunk) = response.chunk().await? {
-        let next_length = body
-            .len()
-            .checked_add(chunk.len())
-            .ok_or_else(|| anyhow::anyhow!("control-plane response length overflow"))?;
-        if next_length > maximum_bytes {
-            anyhow::bail!("control-plane response exceeds {maximum_bytes} bytes");
-        }
-        body.extend_from_slice(&chunk);
-    }
-    Ok(body)
+fn map_heartbeat_response(
+    response: SdkAgentHeartbeatResponse,
+) -> anyhow::Result<AgentHeartbeatResponse> {
+    Ok(AgentHeartbeatResponse {
+        server_id: response.server_id,
+        status: i32::try_from(response.status)
+            .map_err(|_| anyhow::anyhow!("heartbeat status is outside the i32 range"))?,
+        acknowledged_at: response.acknowledged_at,
+    })
 }
 
-fn decode_resource_response<T>(body: &[u8]) -> anyhow::Result<T>
-where
-    T: DeserializeOwned,
-{
-    let response: SdkWorkApiResponse<SdkWorkResourceData<T>> = serde_json::from_slice(body)
-        .map_err(|error| anyhow::anyhow!("invalid SDKWork resource response: {error}"))?;
-    if response.code != SDKWORK_SUCCESS_CODE {
-        anyhow::bail!(
-            "control-plane resource response returned business code {} (traceId={})",
-            response.code,
-            response.trace_id
-        );
-    }
-    if response.trace_id.trim().is_empty() {
-        anyhow::bail!("control-plane resource response has an empty traceId");
-    }
-    Ok(response.data.item)
+fn map_sync_response(response: SdkAgentSyncResponse) -> anyhow::Result<AgentSyncResponse> {
+    let nginx_configs = response
+        .nginx_configs
+        .into_iter()
+        .map(|config| {
+            Ok(AgentNginxConfigBundle {
+                config_id: config.config_id,
+                domain: config.domain,
+                config_content: config.config_content,
+                fingerprint: config.fingerprint,
+                version: config
+                    .version
+                    .parse::<i64>()
+                    .map_err(|error| anyhow::anyhow!("invalid node sync Nginx version: {error}"))?,
+            })
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let certificates = response
+        .certificates
+        .into_iter()
+        .map(|certificate| AgentCertificateBundle {
+            certificate_id: certificate.certificate_id,
+            cert_name: certificate.cert_name,
+            fingerprint: certificate.fingerprint,
+            fullchain_pem: certificate.fullchain_pem,
+            privkey_pem: certificate.privkey_pem,
+        })
+        .collect();
+    Ok(AgentSyncResponse {
+        server_id: response.server_id,
+        sync_version: response.sync_version,
+        unchanged: response.unchanged,
+        nginx_configs,
+        certificates,
+    })
 }
 
 fn validate_manifest_bounds(manifest: &AgentSyncResponse) -> anyhow::Result<()> {
@@ -260,7 +266,7 @@ fn validate_manifest_bounds(manifest: &AgentSyncResponse) -> anyhow::Result<()> 
         if !config_domains.insert(config.domain.to_ascii_lowercase()) {
             anyhow::bail!("node sync contains a duplicate Nginx activation domain");
         }
-        let fingerprint = hex::encode(Sha256::digest(config.config_content.as_bytes()));
+        let fingerprint = sha256_hash(config.config_content.as_bytes());
         if config.fingerprint != fingerprint {
             anyhow::bail!("node sync Nginx configuration fingerprint mismatch");
         }
@@ -278,8 +284,8 @@ fn validate_manifest_bounds(manifest: &AgentSyncResponse) -> anyhow::Result<()> 
     Ok(())
 }
 
-fn parse_control_plane_url(value: &str) -> anyhow::Result<reqwest::Url> {
-    let url = reqwest::Url::parse(value.trim())?;
+fn parse_control_plane_url(value: &str) -> anyhow::Result<String> {
+    let url = url::Url::parse(value.trim())?;
     if !matches!(url.scheme(), "http" | "https")
         || url.host_str().is_none()
         || !url.username().is_empty()
@@ -292,7 +298,7 @@ fn parse_control_plane_url(value: &str) -> anyhow::Result<reqwest::Url> {
             "SDKWORK_WEB_CONTROL_PLANE_URL must be an HTTP(S) origin without credentials, path, query, or fragment"
         );
     }
-    Ok(url)
+    Ok(url.to_string())
 }
 
 fn validate_node_token(value: &str) -> anyhow::Result<()> {
@@ -378,37 +384,108 @@ fn apply_certificate_bundle(
 
 #[cfg(test)]
 mod tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use tokio::sync::oneshot;
+
     use super::*;
 
+    async fn serve_once(
+        status: &str,
+        content_length: usize,
+        body: &'static [u8],
+    ) -> (String, oneshot::Receiver<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind SDK mock server");
+        let address = listener.local_addr().expect("SDK mock address");
+        let (request_sender, request_receiver) = oneshot::channel();
+        let status = status.to_string();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept SDK request");
+            let mut request = vec![0_u8; 16 * 1024];
+            let bytes_read = stream.read(&mut request).await.expect("read SDK request");
+            request.truncate(bytes_read);
+            let _ = request_sender.send(String::from_utf8_lossy(&request).to_string());
+            let headers = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {content_length}\r\nConnection: close\r\n\r\n"
+            );
+            stream
+                .write_all(headers.as_bytes())
+                .await
+                .expect("write SDK response headers");
+            stream
+                .write_all(body)
+                .await
+                .expect("write SDK response body");
+            stream.shutdown().await.expect("close SDK response");
+        });
+        (format!("http://{address}/"), request_receiver)
+    }
+
+    fn heartbeat_request() -> SdkAgentHeartbeatRequest {
+        SdkAgentHeartbeatRequest {
+            agent_version: Some("0.1.0".to_string()),
+            nginx_enabled: Some(true),
+            active_configs: None,
+            last_sync_version: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn generated_sdk_applies_agent_token_unwraps_envelope_and_enforces_body_limit() {
+        let body = br#"{"code":0,"data":{"item":{"serverId":"server-1","status":1,"acknowledgedAt":"2026-07-20T00:00:00Z"}},"traceId":"trace-1"}"#;
+        let (control_plane, request_receiver) = serve_once("200 OK", body.len(), body).await;
+        let runtime = NodeDaemonRuntimeConfig {
+            control_plane,
+            node_token: "0123456789abcdef".to_string(),
+            interval_secs: 30,
+        };
+        let client = build_backend_sdk_client(&runtime, MAX_HEARTBEAT_RESPONSE_BYTES)
+            .expect("build generated backend SDK client");
+        let response = client
+            .agent()
+            .heartbeat(&heartbeat_request())
+            .await
+            .expect("decode bounded SDKWork resource envelope");
+        assert_eq!(response.server_id, "server-1");
+        let request = request_receiver.await.expect("captured SDK request");
+        assert!(request.starts_with("POST /backend/v3/api/agent/heartbeat HTTP/1.1"));
+        assert!(request
+            .to_ascii_lowercase()
+            .contains("x-sdkwork-agent-token: 0123456789abcdef"));
+
+        let (control_plane, _) = serve_once("200 OK", MAX_HEARTBEAT_RESPONSE_BYTES + 1, b"").await;
+        let runtime = NodeDaemonRuntimeConfig {
+            control_plane,
+            node_token: "0123456789abcdef".to_string(),
+            interval_secs: 30,
+        };
+        let client = build_backend_sdk_client(&runtime, MAX_HEARTBEAT_RESPONSE_BYTES)
+            .expect("build bounded generated backend SDK client");
+        let error = client
+            .agent()
+            .heartbeat(&heartbeat_request())
+            .await
+            .expect_err("oversized SDK response must fail closed");
+        assert!(error
+            .to_string()
+            .contains("response body exceeds 65536 bytes"));
+    }
+
     #[test]
-    fn resource_response_decoder_requires_the_canonical_envelope() {
-        let decoded: AgentSyncResponse = decode_resource_response(
-            br#"{
-                "code": 0,
-                "data": {
-                    "item": {
-                        "serverId": "server-1",
-                        "syncVersion": "sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                        "unchanged": true,
-                        "nginxConfigs": [],
-                        "certificates": []
-                    }
-                },
-                "traceId": "trace-1"
-            }"#,
-        )
-        .expect("canonical SDKWork resource response");
+    fn generated_sdk_models_map_to_the_domain_contract() {
+        let decoded = map_sync_response(SdkAgentSyncResponse {
+            server_id: "server-1".to_string(),
+            sync_version: "sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                .to_string(),
+            unchanged: true,
+            nginx_configs: Vec::new(),
+            certificates: Vec::new(),
+        })
+        .expect("generated SDK response mapping");
         assert_eq!(decoded.server_id, "server-1");
         assert!(decoded.unchanged);
-
-        assert!(decode_resource_response::<AgentSyncResponse>(
-            br#"{"serverId":"server-1","syncVersion":"sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","unchanged":true,"nginxConfigs":[],"certificates":[]}"#,
-        )
-        .is_err());
-        assert!(decode_resource_response::<AgentSyncResponse>(
-            br#"{"code":40101,"data":{"item":{"serverId":"server-1","syncVersion":"sv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","unchanged":true,"nginxConfigs":[],"certificates":[]}},"traceId":"trace-2"}"#,
-        )
-        .is_err());
     }
 
     #[test]
@@ -472,7 +549,7 @@ mod tests {
                 config_id: "config-1".to_string(),
                 domain: "Example.com".to_string(),
                 config_content: "server {}".to_string(),
-                fingerprint: hex::encode(Sha256::digest(b"server {}")),
+                fingerprint: sha256_hash(b"server {}"),
                 version: 1,
             }],
             certificates: Vec::new(),
@@ -481,7 +558,7 @@ mod tests {
 
         manifest.nginx_configs[0].fingerprint = "bad".to_string();
         assert!(validate_manifest_bounds(&manifest).is_err());
-        manifest.nginx_configs[0].fingerprint = hex::encode(Sha256::digest(b"server {}"));
+        manifest.nginx_configs[0].fingerprint = sha256_hash(b"server {}");
         let mut duplicate = manifest.nginx_configs[0].clone();
         duplicate.config_id = "config-2".to_string();
         duplicate.domain = "example.COM".to_string();

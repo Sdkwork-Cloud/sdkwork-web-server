@@ -753,7 +753,11 @@
         "tags": [
           "agent"
         ],
-        "security": [],
+        "security": [
+          {
+            "AgentToken": []
+          }
+        ],
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-api-authority": "sdkwork-web.backend",
         "x-sdkwork-request-context": "WebRequestContext",
@@ -826,7 +830,11 @@
         "tags": [
           "agent"
         ],
-        "security": [],
+        "security": [
+          {
+            "AgentToken": []
+          }
+        ],
         "x-sdkwork-api-surface": "backend-api",
         "x-sdkwork-api-authority": "sdkwork-web.backend",
         "x-sdkwork-request-context": "WebRequestContext",
@@ -1380,7 +1388,8 @@
         "type": "object",
         "properties": {
           "agentVersion": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "nginxEnabled": {
             "type": "boolean"
@@ -1395,12 +1404,18 @@
           },
           "lastSyncVersion": {
             "type": "string",
+            "pattern": "^sv1:[a-f0-9]{64}$",
             "description": "Last successfully applied syncVersion reported by the edge agent."
           }
         }
       },
       "AgentHeartbeatResponse": {
         "type": "object",
+        "required": [
+          "serverId",
+          "status",
+          "acknowledgedAt"
+        ],
         "properties": {
           "serverId": {
             "type": "string",
@@ -1417,6 +1432,13 @@
       },
       "AgentSyncResponse": {
         "type": "object",
+        "required": [
+          "serverId",
+          "syncVersion",
+          "unchanged",
+          "nginxConfigs",
+          "certificates"
+        ],
         "properties": {
           "serverId": {
             "type": "string",
@@ -1424,6 +1446,7 @@
           },
           "syncVersion": {
             "type": "string",
+            "pattern": "^sv1:[a-f0-9]{64}$",
             "description": "Stable SHA-256 fingerprint of active nginx configs and certificates for the tenant."
           },
           "unchanged": {
@@ -1446,19 +1469,30 @@
       },
       "AgentNginxConfigBundle": {
         "type": "object",
+        "required": [
+          "configId",
+          "domain",
+          "configContent",
+          "fingerprint",
+          "version"
+        ],
         "properties": {
           "configId": {
             "type": "string",
             "format": "uuid"
           },
           "domain": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
           },
           "configContent": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 1048576
           },
           "fingerprint": {
             "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
             "description": "SHA-256 hex digest of configContent."
           },
           "version": {
@@ -1473,22 +1507,34 @@
       },
       "AgentCertificateBundle": {
         "type": "object",
+        "required": [
+          "certificateId",
+          "certName",
+          "fingerprint",
+          "fullchainPem",
+          "privkeyPem"
+        ],
         "properties": {
           "certificateId": {
             "type": "string",
             "format": "uuid"
           },
           "certName": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
           },
           "fingerprint": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           },
           "fullchainPem": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 2097152
           },
           "privkeyPem": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 2097152
           }
         }
       },

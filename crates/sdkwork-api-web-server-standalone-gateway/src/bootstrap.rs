@@ -1,9 +1,18 @@
 use axum::Router;
 use sdkwork_api_web_server_assembly::assemble_api_router;
+use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
+use std::sync::Arc;
 use tracing::info;
 
+use crate::readiness::WebServiceReadinessCheck;
+
 pub async fn build_router() -> Result<Router, String> {
-    Ok(assemble_api_router().await?.router)
+    let assembly = assemble_api_router().await?;
+    let readiness = Arc::new(WebServiceReadinessCheck::new(assembly.service));
+    Ok(service_router(
+        assembly.router,
+        ServiceRouterConfig::default().with_readiness_check(readiness),
+    ))
 }
 
 pub async fn run_database_migrate_only() -> Result<(), String> {

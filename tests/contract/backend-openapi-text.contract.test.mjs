@@ -55,6 +55,22 @@ for (const contract of contracts) {
     [],
     `${contract.label} contains non-portable summary/description text at: ${failures.join(', ')}`,
   );
+
+  for (const routePath of [
+    '/backend/v3/api/agent/heartbeat',
+    '/backend/v3/api/agent/sync',
+  ]) {
+    const pathItem = document.paths?.[routePath];
+    const operation = pathItem?.post ?? pathItem?.get;
+    assert.ok(operation, `${contract.label} is missing ${routePath}`);
+    assert.deepEqual(
+      operation.security,
+      [{ AgentToken: [] }],
+      `${contract.label} must expose ${routePath} as AgentToken-protected`,
+    );
+    assert.equal(operation['x-sdkwork-auth-mode'], 'api-key');
+    assert.equal(operation['x-sdkwork-route-auth'], 'agent-token');
+  }
 }
 
 process.stdout.write('backend-openapi-text.contract.test.mjs passed\n');

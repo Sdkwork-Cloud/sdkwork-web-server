@@ -29,7 +29,7 @@ client.setAccessToken('your-access-token');
 // Use the SDK
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
 };
 const result = await client.certificate.list(params);
 ```
@@ -73,7 +73,7 @@ const client = new SdkworkAppClient({
 // 获取站点列表
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
   status: 0,
   siteType: 1,
   keyword: 'keyword',
@@ -88,7 +88,7 @@ const result = await client.site.list(params);
 const siteId = '1';
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
 };
 const result = await client.domain.sites.domains.list(siteId, params);
 ```
@@ -100,7 +100,7 @@ const result = await client.domain.sites.domains.list(siteId, params);
 const siteId = '1';
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
   status: 0,
 };
 const result = await client.deployment.sites.deployments.list(siteId, params);
@@ -123,7 +123,7 @@ const result = await client.envVariable.sites.envVariables.list(siteId, params);
 // 获取证书列表
 const params = {
   page: 1,
-  pageSize: 2,
+  page_size: 2,
 };
 const result = await client.certificate.list(params);
 ```
@@ -144,7 +144,7 @@ import { SdkworkAppClient, NetworkError, TimeoutError, AuthenticationError } fro
 try {
   const params = {
     page: 1,
-    pageSize: 2,
+    page_size: 2,
   };
   const result = await client.certificate.list(params);
 } catch (error) {

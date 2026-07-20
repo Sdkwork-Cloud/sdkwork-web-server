@@ -855,6 +855,7 @@ components:
       properties:
         agentVersion:
           type: string
+          maxLength: 100
         nginxEnabled:
           type: boolean
         activeConfigs:
@@ -866,10 +867,12 @@ components:
           description: Number of active nginx configs reported by the agent as a string.
         lastSyncVersion:
           type: string
+          pattern: ^sv1:[a-f0-9]{64}$
           description: Last successfully applied syncVersion reported by the edge
             agent.
     AgentHeartbeatResponse:
       type: object
+      required: [serverId, status, acknowledgedAt]
       properties:
         serverId:
           type: string
@@ -881,12 +884,14 @@ components:
           format: date-time
     AgentSyncResponse:
       type: object
+      required: [serverId, syncVersion, unchanged, nginxConfigs, certificates]
       properties:
         serverId:
           type: string
           format: uuid
         syncVersion:
           type: string
+          pattern: ^sv1:[a-f0-9]{64}$
           description: Stable SHA-256 fingerprint of active nginx configs and certificates
             for the tenant.
         unchanged:
@@ -903,16 +908,21 @@ components:
             $ref: '#/components/schemas/AgentCertificateBundle'
     AgentNginxConfigBundle:
       type: object
+      required: [configId, domain, configContent, fingerprint, version]
       properties:
         configId:
           type: string
           format: uuid
         domain:
           type: string
+          minLength: 1
+          maxLength: 253
         configContent:
           type: string
+          maxLength: 1048576
         fingerprint:
           type: string
+          pattern: ^[a-f0-9]{64}$
           description: SHA-256 hex digest of configContent.
         version:
           type: string
@@ -924,18 +934,24 @@ components:
             loss.
     AgentCertificateBundle:
       type: object
+      required: [certificateId, certName, fingerprint, fullchainPem, privkeyPem]
       properties:
         certificateId:
           type: string
           format: uuid
         certName:
           type: string
+          minLength: 1
+          maxLength: 253
         fingerprint:
           type: string
+          pattern: ^[a-f0-9]{64}$
         fullchainPem:
           type: string
+          maxLength: 2097152
         privkeyPem:
           type: string
+          maxLength: 2097152
     ServerPage:
       type: object
       properties:

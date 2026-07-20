@@ -30,10 +30,6 @@ pub struct AuditLogResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_uuid: Option<String>,
 
-    #[serde(rename = "requestId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-
     #[serde(rename = "ipAddress")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,

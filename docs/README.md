@@ -1,43 +1,16 @@
-# README
+# SDKWork Web Server Documentation
 
-Reserved per SDKWORK_WORKSPACE_SPEC.md.
+This directory contains the current product, architecture, operations, and decision authority for
+`sdkwork-web-server`. Global standards remain in `../sdkwork-specs`; repository documents link to
+those standards instead of copying normative text.
 
-## Canon Documents
-
-| Document | Path |
+| Document | Purpose |
 | --- | --- |
-| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
-| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
+| [product/prd/PRD.md](product/prd/PRD.md) | Product scope, behavior, and commercial release gates |
+| [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) | Current runtime and module architecture |
+| [standards-alignment.md](standards-alignment.md) | Current SDKWork integration and verification evidence |
+| [architecture/decisions/](architecture/decisions/) | Accepted and proposed architecture decisions |
+| [product/requirements/](product/requirements/) | Requirement contracts and their verification evidence |
 
-- [docs/product/prd/PRD.md](product/prd/PRD.md)
-- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
-
-## Canon Documents
-
-| Document | Path |
-| --- | --- |
-| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
-| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
-
-- [docs/product/prd/PRD.md](product/prd/PRD.md)
-- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
-
-## Canon Documents
-
-| Document | Path |
-| --- | --- |
-| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
-| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
-
-- [docs/product/prd/PRD.md](product/prd/PRD.md)
-- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
-
-## Canon Documents
-
-| Document | Path |
-| --- | --- |
-| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
-| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
-
-- [docs/product/prd/PRD.md](product/prd/PRD.md)
-- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
+Operational deployment instructions live under `../deployments/`; source runtime configuration is
+documented by `../etc/README.md`.

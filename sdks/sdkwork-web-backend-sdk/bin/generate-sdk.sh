@@ -41,7 +41,7 @@ package_name() {
     rust) echo "sdkwork-web-backend-sdk" ;;
     php) echo "sdkwork/web-backend-sdk" ;;
     ruby) echo "sdkwork-web-backend-sdk" ;;
-    *) echo "sdkwork-web-backend-sdk-$1" ;;
+    *) echo "Unsupported SDK language: $1" >&2; return 1 ;;
   esac
 }
 
@@ -58,7 +58,7 @@ IFS=',' read -r -a language_array <<< "${LANGUAGES}"
 for language in "${language_array[@]}"; do
   language="$(echo "${language}" | xargs)"
   [[ -z "${language}" ]] && continue
-  output_path="${FAMILY_ROOT}/${SDK_NAME}-${language}"
+  output_path="${FAMILY_ROOT}/${SDK_NAME}-${language}/generated/server-openapi"
   mapfile -t ns_args < <(namespace_args "${language}")
   node "${GENERATOR_PATH}" generate \
     -i "${INPUT_PATH}" \

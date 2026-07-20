@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::api::paths::backend_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{CreateNginxConfigRequest, NginxConfigPage, NginxConfigResponse, NginxDeployResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse, UpdateNginxConfigRequest};
+use crate::models::{CreateNginxConfigRequest, NginxConfigResponse, NginxDeployResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse, UpdateNginxConfigRequest};
 
 #[derive(Clone)]
 pub struct NginxApi {
@@ -15,8 +15,8 @@ impl NginxApi {
         Self { client }
     }
 
-    /// 获取 Nginx 配置列表
-    pub async fn configs_list(&self, page: Option<i64>, page_size: Option<i64>, site_id: Option<&str>, config_type: Option<i64>, is_active: Option<bool>) -> Result<NginxConfigPage, SdkworkError> {
+    /// List Nginx configurations
+    pub async fn configs_list(&self, page: Option<i64>, page_size: Option<i64>, site_id: Option<&str>, config_type: Option<i64>, is_active: Option<bool>) -> Result<serde_json::Value, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -28,43 +28,43 @@ impl NginxApi {
         self.client.get(&path, None, None).await
     }
 
-    /// 创建 Nginx 配置
+    /// Create an Nginx configuration
     pub async fn configs_create(&self, body: &CreateNginxConfigRequest) -> Result<NginxConfigResponse, SdkworkError> {
         let path = backend_path(&"/nginx/configs".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
-    /// 获取 Nginx 配置详情
+    /// Retrieve an Nginx configuration
     pub async fn configs_retrieve(&self, config_id: &str) -> Result<NginxConfigResponse, SdkworkError> {
         let path = backend_path(&format!("/nginx/etc/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
-    /// 更新 Nginx 配置
+    /// Update an Nginx configuration
     pub async fn configs_update(&self, config_id: &str, body: &UpdateNginxConfigRequest) -> Result<NginxConfigResponse, SdkworkError> {
         let path = backend_path(&format!("/nginx/etc/{}", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.put(&path, Some(body), None, None, Some("application/json")).await
     }
 
-    /// 校验 Nginx 配置
+    /// Validate an Nginx configuration
     pub async fn configs_validate(&self, config_id: &str) -> Result<NginxValidateResponse, SdkworkError> {
         let path = backend_path(&format!("/nginx/etc/{}/validate", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
     }
 
-    /// 部署 Nginx 配置
+    /// Deploy an Nginx configuration
     pub async fn configs_deploy(&self, config_id: &str) -> Result<NginxDeployResponse, SdkworkError> {
         let path = backend_path(&format!("/nginx/etc/{}/deploy", serialize_path_parameter(config_id, PathParameterSpec::new("configId", "simple", false))));
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
     }
 
-    /// 热加载 Nginx
+    /// Reload Nginx
     pub async fn reload(&self) -> Result<NginxReloadResponse, SdkworkError> {
         let path = backend_path(&"/nginx/reload".to_string());
         self.client.post(&path, Option::<&serde_json::Value>::None, None, None, None).await
     }
 
-    /// 获取 Nginx 状态
+    /// Retrieve Nginx status
     pub async fn status_retrieve(&self) -> Result<NginxStatusResponse, SdkworkError> {
         let path = backend_path(&"/nginx/status".to_string());
         self.client.get(&path, None, None).await

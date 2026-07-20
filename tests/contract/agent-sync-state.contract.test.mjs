@@ -14,7 +14,7 @@ test('node daemon sync state is durable, checksummed, bounded, and fail-closed',
   assert.match(state, /const MAX_STATE_BYTES: u64 = 8 \* 1024/u);
   assert.match(state, /SYNC_VERSION_PREFIX: &str = "sv1:"/u);
   assert.match(state, /struct StateChecksumPayload/u);
-  assert.match(state, /Sha256::digest/u);
+  assert.match(state, /sdkwork_utils_rust::crypto::sha256_hash/u);
   assert.match(state, /NamedTempFile::new_in/u);
   assert.match(state, /staged\.as_file\(\)\.sync_all\(\)/u);
   assert.match(state, /reject_symlink_ancestors/u);
@@ -51,13 +51,12 @@ test('node daemon persists desired before apply and observed only after real rel
   );
   assert.match(source, /MAX_SYNC_RESPONSE_BYTES: usize = 16 \* 1024 \* 1024/u);
   assert.match(source, /MAX_NGINX_CONFIGS_PER_SYNC: usize = 2_048/u);
-  assert.match(source, /while let Some\(chunk\) = response\.chunk\(\)\.await/u);
-  assert.match(source, /Client::builder\(\)/u);
-  assert.match(
-    source,
-    /SdkWorkApiResponse<SdkWorkResourceData<T>>/u,
-  );
-  assert.match(source, /response\.code != SDKWORK_SUCCESS_CODE/u);
+  assert.match(source, /SdkworkBackendClient/u);
+  assert.match(source, /config\.max_response_body_bytes = maximum_response_bytes/u);
+  assert.match(source, /client\.set_agent_token/u);
+  assert.match(source, /\.heartbeat\(&heartbeat\)\.await/u);
+  assert.match(source, /\.retrieve\(local_state\.observed_sync_version\(\)\)/u);
+  assert.doesNotMatch(source, /reqwest::/u);
   assert.doesNotMatch(source, /response\.json\(\)\.await/u);
   assert.doesNotMatch(
     source,
@@ -67,8 +66,10 @@ test('node daemon persists desired before apply and observed only after real rel
 
 test('node daemon state contract is present in root verification and component metadata', () => {
   const packageJson = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-  assert.match(packageJson.scripts.test, /agent-sync-state\.contract\.test\.mjs/u);
-  assert.match(packageJson.scripts.verify, /agent-sync-state\.contract\.test\.mjs/u);
+  assert.equal(packageJson.scripts.test, 'pnpm exec sdkwork-app test');
+  assert.equal(packageJson.scripts.verify, 'pnpm exec sdkwork-app verify');
+  assert.match(packageJson.scripts['_sdkwork:test'], /agent-sync-state\.contract\.test\.mjs/u);
+  assert.match(packageJson.scripts['_sdkwork:verify'], /agent-sync-state\.contract\.test\.mjs/u);
 
   const component = JSON.parse(
     readFileSync(

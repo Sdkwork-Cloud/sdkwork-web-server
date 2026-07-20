@@ -5,21 +5,13 @@ use sdkwork_utils_rust::{
     PageInfo, PageMode, SdkWorkApiResponse, SdkWorkPageData, SdkWorkResourceData,
     SDKWORK_TRACE_ID_HEADER,
 };
-use sdkwork_web_core::new_request_id;
 use sdkwork_webserver_contract::{
     AuditLogPage, CertificatePage, DeploymentPage, DomainPage, EnvVariablePage, HealthCheckPage,
     NginxConfigPage, ServerPage, SitePage, WebServiceResult,
 };
 use serde::Serialize;
 
-use crate::{correlation::WebProblemCorrelation, WebApiError};
-
-fn resolved_trace_id() -> String {
-    WebProblemCorrelation::current()
-        .and_then(|correlation| correlation.trace_id.clone())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(new_request_id)
-}
+use crate::{correlation::resolved_trace_id, WebApiError};
 
 fn attach_trace_header(response: &mut Response, trace_id: &str) {
     if let (Ok(name), Ok(value)) = (

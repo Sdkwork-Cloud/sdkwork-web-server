@@ -1,6 +1,8 @@
 use sdkwork_webserver_contract::WebServiceError;
 use sqlx::Row;
 
+use super::EnginePool;
+
 #[derive(Clone, Debug)]
 pub struct DomainRecord {
     pub internal_id: i64,
@@ -10,7 +12,7 @@ pub struct DomainRecord {
 }
 
 pub(crate) async fn resolve_domain_by_uuid(
-    pool: &sqlx::AnyPool,
+    pool: &EnginePool,
     tenant_id: i64,
     domain_uuid: &str,
 ) -> Result<DomainRecord, WebServiceError> {
@@ -24,7 +26,7 @@ pub(crate) async fn resolve_domain_by_uuid(
     .bind(domain_uuid)
     .fetch_optional(pool)
     .await
-    .map_err(|error| crate::support::store_error("resolve web_domain", error))?;
+    .map_err(|error| super::support::store_error("resolve web_domain", error))?;
 
     let row = row.ok_or_else(|| WebServiceError::not_found("domain not found"))?;
     Ok(DomainRecord {
@@ -37,7 +39,7 @@ pub(crate) async fn resolve_domain_by_uuid(
         hostname: row.try_get("hostname").map_err(|error| {
             WebServiceError::Internal(format!("resolve domain hostname: {error}"))
         })?,
-        is_verified: crate::support::bool_from_row(&row, "is_verified").map_err(|error| {
+        is_verified: super::support::bool_from_row(&row, "is_verified").map_err(|error| {
             WebServiceError::Internal(format!("resolve domain is_verified: {error}"))
         })?,
     })

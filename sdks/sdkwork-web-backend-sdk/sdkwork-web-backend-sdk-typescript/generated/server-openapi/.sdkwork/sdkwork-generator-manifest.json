@@ -44,7 +44,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "5c3ea7b2669654be950cc2a9d5d04025aeeb41181d472615b8a2850a2e59f272"
+      "sha256": "0c8a9a5ed24817e54008fb86945c44884b1682c1843b2df16e02d4a1294278e9"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -52,11 +52,11 @@
     },
     {
       "path": "src/api/agent.ts",
-      "sha256": "72f8b9402e4f3f1ac0825efd85b728bc42e37587ac5c07a853bac91bad5e60b1"
+      "sha256": "33431585d0da64c15aafd7022d45e61c9fe7c6774cca9daea0f42ebead612268"
     },
     {
       "path": "src/api/audit.ts",
-      "sha256": "beb0bb7e65c60ebed7f84181753570779500f71533111efd5a59010448d0b506"
+      "sha256": "5938647b0201e4f2ebefcd2803ff1b5aaf4d6c4a007f7bb9bdbe090b2f553369"
     },
     {
       "path": "src/api/base.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/nginx.ts",
-      "sha256": "dcffe9ff02799a8dd738f638124ce3b3791b0f07fb727ef5f0287f7a58e5823d"
+      "sha256": "6f5d0e30d9012de97141060db463c7e6ac5f0e80abf3210e8aceed0946166917"
     },
     {
       "path": "src/api/paths.ts",
@@ -76,7 +76,7 @@
     },
     {
       "path": "src/api/server.ts",
-      "sha256": "6b1821f47fd4145b24156fbd13fe3bd760e85ae57b8928afacb29dc1f2f3c85d"
+      "sha256": "55a8ccf9108f2b03afaf5c3fc1aad395b8c68f1af860b1820a11a45a16ea5c67"
     },
     {
       "path": "src/auth/index.ts",
@@ -100,7 +100,7 @@
     },
     {
       "path": "src/types/agent-certificate-bundle.ts",
-      "sha256": "e51f2e67b88eb203207f3f0a5f59a599529fd50a84243d5febcfae98ce6128be"
+      "sha256": "0ce1b4f2f2ec8cbd1c5785c0e5bb4cee176a8d13a67f1e96e3691b54e931546a"
     },
     {
       "path": "src/types/agent-heartbeat-post-response.ts",
@@ -112,19 +112,19 @@
     },
     {
       "path": "src/types/agent-heartbeat-response.ts",
-      "sha256": "ba1ca25dc1c839226cc3f232ceba0c108f1135b68b70fd9a35f512d55f590c11"
+      "sha256": "dc7b8d6fadd05f52fecb9bb864ab2309c8996f0ef585acec0d70bb16ad0eecd4"
     },
     {
       "path": "src/types/agent-nginx-config-bundle.ts",
-      "sha256": "6ba34d5e08c05a72891a60188fb39c3fc158b42f31338dab2bdad122db8abd9d"
+      "sha256": "496fd34efc7051dcad8c365be4441d2b7ff04e7232d8ffbd7ed1b994d9eada90"
     },
     {
-      "path": "src/types/agent-sync-get-response.ts",
-      "sha256": "1e9dd88c48b11ff3687de1a8f6a071f5b08224dcc35cde51f80c2735072fbf9c"
+      "path": "src/types/agent-retrieve-response.ts",
+      "sha256": "399804d7f1d94f6ca22a667b21aeb74b5792711f0247b6e21652fca99a05fa3b"
     },
     {
       "path": "src/types/agent-sync-response.ts",
-      "sha256": "e35d97675823f8f9348cef6663827ef0a289af763e496d3b22b62f0de3c29c9d"
+      "sha256": "75803e9825f4030b52de4f3cdf207a3bb0de7d3ab7af41acd957d788bc240619"
     },
     {
       "path": "src/types/audit-log-page.ts",
@@ -160,7 +160,7 @@
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "4e608cddd60f05ee09e8d16137075bea8b36769020f77b0e996b28302bb5bf34"
+      "sha256": "5b7094886313adf724a744fda9f1785dd420bd8c99b1b619bc3f41fa2a6ee963"
     },
     {
       "path": "src/types/nginx-config-page.ts",
@@ -248,7 +248,7 @@
     },
     {
       "path": "src/types/sdk-work-platform-error-code.ts",
-      "sha256": "f5e30be72be3d1aebd8200627bfac368f10cdd69d2271d24e6b4a2d7edf97fb7"
+      "sha256": "a93a015c2483702e2a79f9fedfb9c9daab71d481ed2200b31f6fb49185057f35"
     },
     {
       "path": "src/types/sdk-work-resource-data.ts",

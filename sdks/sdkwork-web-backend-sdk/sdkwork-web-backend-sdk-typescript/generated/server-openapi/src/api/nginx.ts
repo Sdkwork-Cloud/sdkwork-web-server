@@ -12,7 +12,7 @@ export class NginxStatusApi {
   }
 
 
-/** 获取 Nginx 状态 */
+/** Retrieve Nginx status */
   async retrieve(): Promise<NginxStatusResponse> {
     return this.client.get<NginxStatusResponse>(backendApiPath(`/nginx/status`));
   }
@@ -34,7 +34,7 @@ export class NginxConfigsApi {
   }
 
 
-/** 获取 Nginx 配置列表 */
+/** List Nginx configurations */
   async list(params?: NginxConfigsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
@@ -46,27 +46,27 @@ export class NginxConfigsApi {
     return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/nginx/configs`), query));
   }
 
-/** 创建 Nginx 配置 */
+/** Create an Nginx configuration */
   async create(body: CreateNginxConfigRequest): Promise<NginxConfigResponse> {
     return this.client.post<NginxConfigResponse>(backendApiPath(`/nginx/configs`), body, undefined, undefined, 'application/json');
   }
 
-/** 获取 Nginx 配置详情 */
+/** Retrieve an Nginx configuration */
   async retrieve(configId: string): Promise<NginxConfigResponse> {
     return this.client.get<NginxConfigResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`));
   }
 
-/** 更新 Nginx 配置 */
+/** Update an Nginx configuration */
   async update(configId: string, body: UpdateNginxConfigRequest): Promise<NginxConfigResponse> {
     return this.client.put<NginxConfigResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 
-/** 校验 Nginx 配置 */
+/** Validate an Nginx configuration */
   async validate(configId: string): Promise<NginxValidateResponse> {
     return this.client.post<NginxValidateResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/validate`));
   }
 
-/** 部署 Nginx 配置 */
+/** Deploy an Nginx configuration */
   async deploy(configId: string): Promise<NginxDeployResponse> {
     return this.client.post<NginxDeployResponse>(backendApiPath(`/nginx/etc/${serializePathParameter(configId, { name: 'configId', style: 'simple', explode: false })}/deploy`));
   }
@@ -84,7 +84,7 @@ export class NginxApi {
   }
 
 
-/** 热加载 Nginx */
+/** Reload Nginx */
   async reload(): Promise<NginxReloadResponse> {
     return this.client.post<NginxReloadResponse>(backendApiPath(`/nginx/reload`));
   }

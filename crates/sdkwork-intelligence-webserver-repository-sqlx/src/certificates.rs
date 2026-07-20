@@ -4,14 +4,14 @@ use sdkwork_webserver_contract::{
     WebServiceError, WebServiceResult,
 };
 use serde_json::json;
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::domains_lookup::{cert_name_from_hostname, resolve_domain_by_uuid};
-use crate::support::{
+use super::domains_lookup::{cert_name_from_hostname, resolve_domain_by_uuid};
+use super::support::{
     bool_from_row, instant_write_expression, json_from_row, json_write_expression, new_uuid,
     next_id, now_rfc3339, pagination, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_certificates_repo(
@@ -373,7 +373,7 @@ impl WebRepository {
     }
 }
 
-fn map_certificate_row(row: &AnyRow) -> Result<CertificateResponse, sqlx::Error> {
+fn map_certificate_row(row: &EngineRow) -> Result<CertificateResponse, sqlx::Error> {
     Ok(CertificateResponse {
         id: row.try_get("uuid")?,
         cert_name: row.try_get("cert_name")?,

@@ -16,3 +16,4 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 sdkwork-intelligence-webserver-repository-sqlx.workspace = true
 sdkwork-intelligence-webserver-service.workspace = true
+sdkwork-database-sqlx.workspace = true

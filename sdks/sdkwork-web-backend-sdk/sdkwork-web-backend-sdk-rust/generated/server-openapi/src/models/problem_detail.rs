@@ -1,15 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+use crate::models::{FieldError};
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ProblemDetail {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub r#type: Option<String>,
+    pub r#type: String,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
+    pub title: String,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<i64>,
+    pub status: i64,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
@@ -17,7 +16,13 @@ pub struct ProblemDetail {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance: Option<String>,
 
-    #[serde(rename = "requestId")]
+    /// Platform or domain error code per API_SPEC.md section 15.3.
+    pub code: i64,
+
+    /// Server-owned request correlation id.
+    #[serde(rename = "traceId")]
+    pub trace_id: String,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
+    pub errors: Option<Vec<FieldError>>,
 }

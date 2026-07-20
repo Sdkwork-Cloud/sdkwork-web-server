@@ -63,20 +63,58 @@ const PACKAGE_ASSETS = [
     source: 'etc/node-daemon/development.env.example',
     target: 'etc/node-daemon/development.env.example',
   },
+  { source: 'database/README.md', target: 'database/README.md' },
+  {
+    source: 'database/database.manifest.json',
+    target: 'database/database.manifest.json',
+  },
+  {
+    source: 'database/contract/prefix-registry.json',
+    target: 'database/contract/prefix-registry.json',
+  },
+  {
+    source: 'database/contract/schema.yaml',
+    target: 'database/contract/schema.yaml',
+  },
+  {
+    source: 'database/contract/table-registry.json',
+    target: 'database/contract/table-registry.json',
+  },
+  {
+    source: 'database/ddl/baseline/postgres/0001_web_baseline.sql',
+    target: 'database/ddl/baseline/postgres/0001_web_baseline.sql',
+  },
+  {
+    source: 'database/ddl/baseline/sqlite/0001_web_baseline.sql',
+    target: 'database/ddl/baseline/sqlite/0001_web_baseline.sql',
+  },
+  {
+    source: 'database/drift/policy.yaml',
+    target: 'database/drift/policy.yaml',
+  },
+  {
+    source: 'database/seeds/seed.manifest.json',
+    target: 'database/seeds/seed.manifest.json',
+  },
+  {
+    source: 'database/seeds/common/001_bootstrap.sql',
+    target: 'database/seeds/common/001_bootstrap.sql',
+  },
 ];
 const EXPECTED_CONTENT_PATHS = [
   ...BINARIES.map((binary) => `bin/${binary}`),
   ...PACKAGE_ASSETS.map((asset) => asset.target),
 ].sort();
-const EXPECTED_ARCHIVE_DIRECTORIES = [
-  'sdkwork-web',
-  'sdkwork-web/bin',
-  'sdkwork-web/etc',
-  'sdkwork-web/etc/examples',
-  'sdkwork-web/etc/examples/public',
-  'sdkwork-web/etc/node-daemon',
-  'sdkwork-web/specs',
-].sort();
+const EXPECTED_ARCHIVE_DIRECTORIES = Array.from(
+  new Set(
+    EXPECTED_CONTENT_PATHS.flatMap((contentPath) => {
+      const segments = contentPath.split('/');
+      return segments.slice(0, -1).map((_, index) =>
+        ['sdkwork-web', ...segments.slice(0, index + 1)].join('/'),
+      );
+    }).concat('sdkwork-web'),
+  ),
+).sort();
 
 function parseArgs(argv) {
   const settings = {
@@ -262,7 +300,7 @@ function resolveVersion(settings) {
   if (packageVersion && compatibilityVersion && packageVersion !== compatibilityVersion) {
     throw new Error('SDKWORK_PACKAGE_VERSION conflicts with SDKWORK_RELEASE_VERSION');
   }
-  const version = settings.version || packageVersion || compatibilityVersion || manifest.release?.defaultVersion;
+  const version = settings.version || packageVersion || compatibilityVersion || manifest.release?.currentVersion;
   if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/u.test(version ?? '')) {
     throw new Error('release version must be an explicit semantic version');
   }

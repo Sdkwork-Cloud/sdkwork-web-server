@@ -4,8 +4,8 @@ use std::{
     path::Path,
 };
 
+use sdkwork_utils_rust::crypto::sha256_hash;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 
 use super::{
     validate_webserver_config, CompiledWebServerApp, ConfigDiagnostic, WebServerAppConfig,
@@ -68,7 +68,7 @@ pub fn load_and_compile_webserver_config_revision(
 ) -> Result<CompiledWebServerRevision, WebServerConfigError> {
     let path = path.as_ref();
     let bytes = read_bounded_config(path)?;
-    let sha256 = hex::encode(Sha256::digest(&bytes));
+    let sha256 = sha256_hash(&bytes);
     compile_webserver_config_revision(path, bytes, sha256)
 }
 
@@ -77,7 +77,7 @@ pub fn inspect_webserver_config_revision(
 ) -> Result<WebServerConfigFileRevision, WebServerConfigError> {
     let bytes = read_bounded_config(path.as_ref())?;
     Ok(WebServerConfigFileRevision {
-        sha256: hex::encode(Sha256::digest(&bytes)),
+        sha256: sha256_hash(&bytes),
         size_bytes: bytes.len() as u64,
     })
 }

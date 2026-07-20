@@ -99,6 +99,13 @@
         "run": "node scripts/webserver-release.mjs package"
       }
     ],
+    "sign": [
+      {
+        "name": "Sign immutable web server archive with Sigstore",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-sign.mjs sign"
+      }
+    ],
     "sbom": [
       {
         "name": "Generate deterministic CycloneDX release SBOM",
@@ -111,6 +118,11 @@
         "name": "Validate immutable web server archive",
         "shell": "pwsh",
         "run": "node scripts/webserver-release.mjs validate"
+      },
+      {
+        "name": "Verify immutable web server archive signature",
+        "shell": "pwsh",
+        "run": "node scripts/webserver-sign.mjs verify"
       },
       {
         "name": "Smoke-test packaged Linux web server",
@@ -160,6 +172,7 @@
       "outputGlobs": [
         "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz",
         "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.sigstore.json",
         "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.cdx.json",
         "dist/release/sdkwork-web-linux-x64-cloud-server-*.tar.gz.cdx.json.sha256"
       ],
@@ -176,6 +189,7 @@
       "outputGlobs": [
         "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz",
         "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.sigstore.json",
         "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.cdx.json",
         "dist/release/sdkwork-web-linux-x64-standalone-server-*.tar.gz.cdx.json.sha256"
       ],
@@ -192,6 +206,7 @@
       "outputGlobs": [
         "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz",
         "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.sigstore.json",
         "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.cdx.json",
         "dist/release/sdkwork-web-linux-arm64-cloud-server-*.tar.gz.cdx.json.sha256"
       ],
@@ -208,6 +223,7 @@
       "outputGlobs": [
         "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz",
         "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.sha256",
+        "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.sigstore.json",
         "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.cdx.json",
         "dist/release/sdkwork-web-linux-arm64-standalone-server-*.tar.gz.cdx.json.sha256"
       ],
@@ -218,7 +234,7 @@
   "security": {
     "artifactAttestations": true,
     "sbomRequired": true,
-    "signingRequired": false
+    "signingRequired": true
   },
   "publish": {
     "workflowArtifact": true,

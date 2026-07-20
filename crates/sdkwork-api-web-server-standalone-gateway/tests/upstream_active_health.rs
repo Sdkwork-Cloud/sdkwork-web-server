@@ -21,7 +21,8 @@ use tokio::{
 };
 
 type ServerTask = JoinHandle<()>;
-type DataPlaneTask = JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>;
+type DataPlaneTask =
+    JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>;
 
 const HEALTHY: u8 = 0;
 const WRONG_STATUS: u8 = 1;

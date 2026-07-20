@@ -18,6 +18,7 @@ fn init_tracing() {
 #[tokio::main]
 async fn main() {
     init_tracing();
+    sdkwork_database_sqlx::enable_process_shared_database_pool();
     if let Err(error) = run().await {
         tracing::error!(error = %error, "sdkwork-api-web-server-standalone-gateway failed");
         std::process::exit(1);

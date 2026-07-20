@@ -1,6 +1,6 @@
 # apps/
 
-Application: sdkwork-web
+Application: sdkwork-web-server
 Status: active
 Owner: SDKWork maintainers
 Specs: APPLICATION_SPEC.md, SDKWORK_WORKSPACE_SPEC.md
@@ -14,7 +14,7 @@ The repository root `sdkwork.app.config.json` governs the primary application ma
 
 | Directory | Surface role | Runnable | Purpose | Entry |
 | --- | --- | --- | --- | --- |
-| sdkwork-web-pc | pc | yes | SDKWork Web PC Management Client | [README](sdkwork-web-pc/README.md) |
+| sdkwork-web-server-pc | pc | no | Planned SDKWork Web Server PC management client | [README](sdkwork-web-server-pc/README.md) |
 
 ## Allowed Content
 

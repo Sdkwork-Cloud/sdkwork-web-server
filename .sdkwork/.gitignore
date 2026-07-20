@@ -1,6 +1,7 @@
 local/
 tmp/
 cache/
+runtime/
 secrets/
 manual-backups/
 *.local.json

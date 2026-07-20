@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/web-server-pc-core",
+    "displayName": "SDKWork Web PC Core",
+    "version": "0.0.0",
+    "type": "typescript-package",
+    "root": "sdkwork-web-server/apps/sdkwork-web-server-pc/packages/sdkwork-web-server-pc-core",
+    "domain": "platform",
+    "capability": "component",
+    "status": "planned",
+    "languages": ["typescript"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "dependencies": {
+    "sdkFamilies": ["sdkwork-web-app-sdk", "sdkwork-web-backend-sdk"]
+  },
+  "contracts": {
+    "layerRole": "frontend-core",
+    "providedPorts": [],
+    "requiredPorts": []
+  }
+}

@@ -5,8 +5,7 @@ use axum::{
     response::Response,
 };
 use sdkwork_web_core::{
-    new_request_id, trace_id_from_traceparent, WebRequestContext, REQUEST_ID_HEADER,
-    TRACEPARENT_HEADER,
+    new_request_id, trace_id_from_traceparent, WebRequestContext, TRACEPARENT_HEADER,
 };
 use tracing::Instrument;
 
@@ -42,7 +41,7 @@ impl WebProblemCorrelation {
             };
         }
 
-        let request_id = read_header(headers, REQUEST_ID_HEADER).unwrap_or_else(new_request_id);
+        let request_id = new_request_id();
         let trace_id = read_header(headers, TRACEPARENT_HEADER)
             .and_then(|traceparent| trace_id_from_traceparent(&traceparent).map(str::to_owned));
         Self {
@@ -58,6 +57,13 @@ impl WebProblemCorrelation {
     pub fn current() -> Option<Self> {
         CURRENT_PROBLEM_CORRELATION.try_with(Clone::clone).ok()
     }
+}
+
+pub(crate) fn resolved_trace_id() -> String {
+    WebProblemCorrelation::current()
+        .and_then(|correlation| correlation.trace_id)
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(new_request_id)
 }
 
 pub async fn problem_correlation_middleware(request: Request, next: Next) -> Response {
@@ -84,4 +90,35 @@ pub async fn problem_correlation_middleware(request: Request, next: Next) -> Res
 
 pub fn with_problem_correlation(router: axum::Router) -> axum::Router {
     router.layer(axum::middleware::from_fn(problem_correlation_middleware))
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::http::{HeaderMap, HeaderValue};
+    use sdkwork_web_core::{REQUEST_ID_HEADER, TRACEPARENT_HEADER};
+
+    use super::WebProblemCorrelation;
+
+    #[test]
+    fn fallback_correlation_uses_server_request_id_and_valid_traceparent() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            REQUEST_ID_HEADER,
+            HeaderValue::from_static("attacker-controlled-request-id"),
+        );
+        headers.insert(
+            TRACEPARENT_HEADER,
+            HeaderValue::from_static("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
+        );
+
+        let correlation =
+            WebProblemCorrelation::from_parts(&headers, &axum::http::Extensions::new());
+
+        assert_ne!(correlation.request_id, "attacker-controlled-request-id");
+        assert!(!correlation.request_id.is_empty());
+        assert_eq!(
+            correlation.trace_id.as_deref(),
+            Some("4bf92f3577b34da6a3ce929d0e0e4736")
+        );
+    }
 }

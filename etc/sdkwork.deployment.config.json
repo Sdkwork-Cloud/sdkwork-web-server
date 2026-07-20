@@ -1,14 +1,31 @@
 {
   "schemaVersion": 1,
   "kind": "sdkwork.deployment-index",
-  "application": "sdkwork-web",
+  "application": "sdkwork-web-server",
+  "topology": "../specs/topology.spec.json",
   "defaultProfile": "standalone.development",
+  "environments": {
+    "development": {
+      "applicationOrigin": "http://127.0.0.1:3800",
+      "cloudApiBaseUrl": "https://api-dev.sdkwork.com"
+    },
+    "production": {
+      "applicationOrigin": "https://web.sdkwork.com",
+      "cloudApiBaseUrl": "https://api.sdkwork.com"
+    }
+  },
   "profiles": {
     "standalone.development": {
-      "config": "sdkwork.webserver.im-dev.json"
+      "config": "topology/standalone.development.env"
     },
     "cloud.development": {
-      "config": "node-daemon/cloud.development.json"
+      "config": "topology/cloud.development.env"
+    },
+    "standalone.production": {
+      "config": "topology/standalone.production.env"
+    },
+    "cloud.production": {
+      "config": "topology/cloud.production.env"
     }
   }
 }

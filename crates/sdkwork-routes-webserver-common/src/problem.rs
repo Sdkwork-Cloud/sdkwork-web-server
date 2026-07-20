@@ -4,10 +4,9 @@ use axum::{
     Json,
 };
 use sdkwork_utils_rust::{SdkWorkProblemDetail, SdkWorkResultCode, SDKWORK_TRACE_ID_HEADER};
-use sdkwork_web_core::new_request_id;
 use sdkwork_webserver_contract::WebServiceError;
 
-use crate::correlation::WebProblemCorrelation;
+use crate::correlation::resolved_trace_id;
 
 pub type WebApiResult<T> = Result<T, WebApiError>;
 
@@ -43,13 +42,6 @@ impl From<WebServiceError> for WebApiError {
         };
         Self::new(code, error.to_string())
     }
-}
-
-fn resolved_trace_id() -> String {
-    WebProblemCorrelation::current()
-        .and_then(|correlation| correlation.trace_id.clone())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(new_request_id)
 }
 
 impl IntoResponse for WebApiError {

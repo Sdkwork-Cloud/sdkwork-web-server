@@ -2,12 +2,12 @@ use sdkwork_webserver_contract::{
     CreateHealthCheckRequest, HealthCheckPage, HealthCheckResponse, WebServiceError,
     WebServiceResult,
 };
-use sqlx::{any::AnyRow, Row};
+use super::{EngineRow, WebRepository};
+use sqlx::Row;
 
-use crate::support::{
+use super::support::{
     instant_write_expression, new_uuid, next_id, now_rfc3339, resolve_site_internal_id, store_error,
 };
-use crate::WebRepository;
 
 impl WebRepository {
     pub(super) async fn list_health_checks_repo(
@@ -92,7 +92,7 @@ impl WebRepository {
     }
 }
 
-fn map_health_check_row(row: &AnyRow) -> Result<HealthCheckResponse, sqlx::Error> {
+fn map_health_check_row(row: &EngineRow) -> Result<HealthCheckResponse, sqlx::Error> {
     Ok(HealthCheckResponse {
         id: row.try_get("uuid")?,
         check_type: row.try_get("check_type")?,
