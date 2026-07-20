@@ -13,6 +13,8 @@ name = "sdkwork-api-web-server-standalone-gateway"
 path = "src/main.rs"
 
 [dependencies]
+sdkwork-web-bootstrap = { workspace = true }
+sdkwork_api_web_server_assembly = { package = "sdkwork-api-web-server-assembly", path = "../sdkwork-api-web-server-assembly" }
 atomic-waker.workspace = true
 arc-swap.workspace = true
 axum.workspace = true

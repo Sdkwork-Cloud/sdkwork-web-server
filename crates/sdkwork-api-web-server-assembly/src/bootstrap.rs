@@ -14,7 +14,7 @@ pub struct ApiAssembly {
     pub router: Router,
 }
 
-pub async fn assemble_api_router() -> Result<ApiAssembly, String> {
+pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
     let runtime = bootstrap_web_runtime_from_env().await?;
     let service = Arc::new(runtime.service);
     let app = wrap_app(mount_app(service.clone())).await;
@@ -28,5 +28,5 @@ pub async fn assemble_api_router() -> Result<ApiAssembly, String> {
 }
 
 pub async fn assemble_api_router() -> Result<ApiAssembly, String> {
-    assemble_api_router().await
+    assemble_business_routes().await
 }
