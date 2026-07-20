@@ -1,0 +1,16 @@
+[package]
+name = "sdkwork-api-web-server-assembly"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "Generated API assembly for sdkwork-web-server application HTTP plane."
+
+[lib]
+name = "sdkwork_api_web_server_assembly"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+sdkwork-routes-webserver-app-api.workspace = true
+sdkwork-routes-webserver-backend-api.workspace = true
