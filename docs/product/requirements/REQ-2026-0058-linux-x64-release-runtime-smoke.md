@@ -52,7 +52,7 @@ trace:
   components:
     - scripts/webserver-release.mjs
     - tests/contract/release-archive.contract.test.mjs
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
     - etc/examples/sdkwork.webserver.config.json
 verification:
   - node --test tests/contract/release-archive.contract.test.mjs tests/contract/deployment-profile-commands.contract.test.mjs

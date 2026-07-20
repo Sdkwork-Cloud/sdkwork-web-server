@@ -50,13 +50,13 @@ trace:
     - TEST_SPEC.md
   components:
     - crates/sdkwork-webserver-core
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
   - cargo test -p sdkwork-webserver-core --test webserver_config
-  - cargo test -p sdkwork-web-standalone-gateway --test proxy_protocol
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy -p sdkwork-webserver-core --all-targets -- -D warnings
-  - cargo clippy -p sdkwork-web-standalone-gateway --all-targets -- -D warnings
+  - cargo clippy -p sdkwork-api-web-server-standalone-gateway --all-targets -- -D warnings
   - cargo fmt --all -- --check
   - git diff --check
   - pnpm.cmd verify
@@ -86,9 +86,9 @@ CRC32C is integrity checking, not authentication. The immediate TCP peer CIDR re
 ## Verification Evidence
 
 - `cargo test -p sdkwork-webserver-core --test webserver_config` passes 60/60 configuration tests, including the compatibility default, strict token rejection, and the v2 semantic dependency.
-- `cargo test -p sdkwork-web-standalone-gateway --test proxy_protocol` passes 3/3 real-socket integrations. The matrix covers default-ignore mismatch compatibility, valid/missing/wrong/duplicate/malformed CRC, truncated metadata/value, unknown TLVs, fragmented HTTP, TLS ALPN H2, PROXY/LOCAL, required policy, and retained active policy after a Watch candidate.
+- `cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol` passes 3/3 real-socket integrations. The matrix covers default-ignore mismatch compatibility, valid/missing/wrong/duplicate/malformed CRC, truncated metadata/value, unknown TLVs, fragmented HTTP, TLS ALPN H2, PROXY/LOCAL, required policy, and retained active policy after a Watch candidate.
 - The complete standalone gateway suite passes 204 tests: 99 library tests and 105 integration tests across the broader HTTP/HTTPS/H2, WebSocket, DNS/TLS, health, capacity, retry, reload, and shutdown surfaces.
-- Strict Clippy passes independently for `sdkwork-webserver-core` and `sdkwork-web-standalone-gateway` with all targets and `-D warnings`. `cargo fmt --all -- --check` and `git diff --check` pass.
+- Strict Clippy passes independently for `sdkwork-webserver-core` and `sdkwork-api-web-server-standalone-gateway` with all targets and `-D warnings`. `cargo fmt --all -- --check` and `git diff --check` pass.
 - Isolated-target `pnpm.cmd verify` passes workspace Rust tests, contract tests, API materialization consistency, repository standards, topology, database framework validation, SQLite lifecycle, and cloud gateway validation. Its environment-gated PostgreSQL tests are ignored in this invocation; database parity evidence is owned by REQ-2026-0004 and is not claimed by this transport requirement.
 
 ## Remaining Boundary

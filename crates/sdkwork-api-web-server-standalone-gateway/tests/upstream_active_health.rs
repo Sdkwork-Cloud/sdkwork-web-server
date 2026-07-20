@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-use sdkwork_web_standalone_gateway::run_data_plane_from_config_until;
+use sdkwork_api_web_server_standalone_gateway::run_data_plane_from_config_until;
 use serde_json::{json, Value};
 use tempfile::TempDir;
 use tokio::{
@@ -21,7 +21,7 @@ use tokio::{
 };
 
 type ServerTask = JoinHandle<()>;
-type DataPlaneTask = JoinHandle<Result<(), sdkwork_web_standalone_gateway::DataPlaneError>>;
+type DataPlaneTask = JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>;
 
 const HEALTHY: u8 = 0;
 const WRONG_STATUS: u8 = 1;

@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "crates/sdkwork-api-web-server-assembly",
-    "crates/sdkwork-web-server-gateway-assembly",
+    "crates/sdkwork-api-web-server-assembly",
   "crates/sdkwork-webserver-database-host",
   "crates/sdkwork-routes-webserver-common",
   "crates/sdkwork-webserver-contract",
@@ -15,7 +15,7 @@ members = [
   "crates/sdkwork-intelligence-webserver-repository-sqlx",
   "crates/sdkwork-routes-webserver-app-api",
   "crates/sdkwork-routes-webserver-backend-api",
-  "crates/sdkwork-web-standalone-gateway",
+  "crates/sdkwork-api-web-server-standalone-gateway",
 ]
 
 [workspace.package]
@@ -85,7 +85,7 @@ sdkwork-intelligence-webserver-repository-sqlx = { path = "crates/sdkwork-intell
 sdkwork-routes-webserver-app-api = { path = "crates/sdkwork-routes-webserver-app-api" }
 sdkwork-routes-webserver-backend-api = { path = "crates/sdkwork-routes-webserver-backend-api" }
 sdkwork-routes-webserver-common = { path = "crates/sdkwork-routes-webserver-common" }
-sdkwork-web-standalone-gateway = { path = "crates/sdkwork-web-standalone-gateway" }
+sdkwork-api-web-server-standalone-gateway = { path = "crates/sdkwork-api-web-server-standalone-gateway" }
 
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }

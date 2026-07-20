@@ -78,7 +78,7 @@ test('cloud development uses one remote HTTPS control plane and starts only the 
 
   const source = readFileSync(path.join(REPO_ROOT, 'scripts/webserver-cloud-dev.mjs'), 'utf8');
   assert.equal(source.match(/\bspawn\(/gu)?.length, 1);
-  assert.doesNotMatch(source, /webserver-dev\.mjs|sdkwork-web-standalone-gateway|database host/iu);
+  assert.doesNotMatch(source, /webserver-dev\.mjs|sdkwork-api-web-server-standalone-gateway|database host/iu);
   const envExample = readFileSync(path.join(REPO_ROOT, 'etc/agent/development.env.example'), 'utf8');
   assert.match(envExample, /^SDKWORK_WEB_NODE_TOKEN=$/mu);
 });

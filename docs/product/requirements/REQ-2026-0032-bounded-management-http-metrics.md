@@ -51,7 +51,7 @@ trace:
     - ../sdkwork-web-framework/crates/sdkwork-web-core
     - crates/sdkwork-routes-webserver-app-api
     - crates/sdkwork-routes-webserver-backend-api
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
   - cargo test -p sdkwork-web-core metrics::tests
   - cargo test -p sdkwork-routes-webserver-app-api --test app_web_framework_routes

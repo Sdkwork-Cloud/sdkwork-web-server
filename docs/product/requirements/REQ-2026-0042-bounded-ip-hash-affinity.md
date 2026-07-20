@@ -48,13 +48,13 @@ trace:
     - TEST_SPEC.md
   components:
     - crates/sdkwork-webserver-core
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
   - cargo test -p sdkwork-webserver-core --test webserver_config
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::proxy
-  - cargo test -p sdkwork-web-standalone-gateway --test upstream_ip_hash
-  - cargo test -p sdkwork-web-standalone-gateway --test upstream_safe_retries
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::proxy
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test upstream_ip_hash
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test upstream_safe_retries
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check

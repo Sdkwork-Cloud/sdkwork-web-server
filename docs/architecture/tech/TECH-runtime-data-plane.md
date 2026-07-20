@@ -47,7 +47,7 @@ Each request loads one generation before routing and uses that same generation t
 | Crate | Added responsibility | Forbidden responsibility |
 | --- | --- | --- |
 | `sdkwork-webserver-core` | Config types, file loading, semantic errors, normalized domains/paths, route matching, compiled indexes, hard limit validation. | Axum handlers, sockets, TLS I/O, SQLx, management APIs, process control. |
-| `sdkwork-web-standalone-gateway` | Operation dispatch, HTTP/HTTPS binds, static service adapters, proxy transport, request limits, graceful shutdown, management/data-plane composition. | Business rules, SQL queries, generated SDK ownership, raw credential parsing. |
+| `sdkwork-api-web-server-standalone-gateway` | Operation dispatch, HTTP/HTTPS binds, static service adapters, proxy transport, request limits, graceful shutdown, management/data-plane composition. | Business rules, SQL queries, generated SDK ownership, raw credential parsing. |
 | `sdkwork-webserver-edge-runtime` | Existing external Nginx artifact validation/materialization until renamed or superseded by a later reviewed boundary. | Rust request-path serving. |
 
 The existing `sdkwork-webserver-edge-runtime` name predates the current naming standard. This requirement does not expand it; a separate migration must choose a responsibility-specific replacement without breaking current consumers.

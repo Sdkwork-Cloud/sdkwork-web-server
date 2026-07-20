@@ -60,7 +60,7 @@ fn management_metrics_dimensions_from_env() -> Result<HttpMetricsDimensions, Str
             ),
         };
     Ok(HttpMetricsDimensions {
-        service: "sdkwork-web-standalone-gateway".to_owned(),
+        service: "sdkwork-api-web-server-standalone-gateway".to_owned(),
         environment: dimensions.environment,
         deployment_profile: dimensions.deployment_profile,
         runtime_target: dimensions.runtime_target,

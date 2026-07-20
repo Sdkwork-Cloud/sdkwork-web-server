@@ -28,7 +28,7 @@ use rustls::{
     version::{TLS12, TLS13},
     ClientConfig, RootCertStore, ServerConfig,
 };
-use sdkwork_web_standalone_gateway::{run_data_plane_from_config_until, run_data_plane_until};
+use sdkwork_api_web_server_standalone_gateway::{run_data_plane_from_config_until, run_data_plane_until};
 use sdkwork_webserver_core::load_and_compile_webserver_config;
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -781,7 +781,7 @@ fn spawn_data_plane(
     config_path: &Path,
 ) -> (
     oneshot::Sender<()>,
-    JoinHandle<Result<(), sdkwork_web_standalone_gateway::DataPlaneError>>,
+    JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>,
 ) {
     let compiled =
         load_and_compile_webserver_config(config_path).expect("compile data-plane config");
@@ -799,7 +799,7 @@ fn spawn_watched_data_plane(
     config_path: &Path,
 ) -> (
     oneshot::Sender<()>,
-    JoinHandle<Result<(), sdkwork_web_standalone_gateway::DataPlaneError>>,
+    JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>,
 ) {
     let config_path = config_path.to_path_buf();
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -891,7 +891,7 @@ fn watched_response_config(port: u16, body: &str) -> Value {
 
 async fn stop_data_plane(
     shutdown: oneshot::Sender<()>,
-    task: JoinHandle<Result<(), sdkwork_web_standalone_gateway::DataPlaneError>>,
+    task: JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>,
 ) {
     shutdown.send(()).expect("send shutdown");
     timeout(Duration::from_secs(3), task)
@@ -1998,7 +1998,7 @@ async fn invalid_upstream_tls_material_fails_before_listener_activation() {
     assert!(
         matches!(
             &malformed_error,
-            sdkwork_web_standalone_gateway::DataPlaneError::InvalidUpstreamCaBundle { .. }
+            sdkwork_api_web_server_standalone_gateway::DataPlaneError::InvalidUpstreamCaBundle { .. }
         ),
         "{malformed_error:?}"
     );
@@ -2020,7 +2020,7 @@ async fn invalid_upstream_tls_material_fails_before_listener_activation() {
         .expect_err("empty CA must fail before listener activation");
     assert!(matches!(
         empty_error,
-        sdkwork_web_standalone_gateway::DataPlaneError::EmptyUpstreamCaBundle { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::EmptyUpstreamCaBundle { .. }
     ));
 
     fs::write(
@@ -2045,7 +2045,7 @@ async fn invalid_upstream_tls_material_fails_before_listener_activation() {
         .expect_err("oversized CA must fail before listener activation");
     assert!(matches!(
         oversized_error,
-        sdkwork_web_standalone_gateway::DataPlaneError::TlsMaterialTooLarge { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::TlsMaterialTooLarge { .. }
     ));
 
     let many_roots_authority = write_test_ca(directory.path(), "many-roots-ca");
@@ -2071,7 +2071,7 @@ async fn invalid_upstream_tls_material_fails_before_listener_activation() {
         .expect_err("more than 64 custom roots must fail before listener activation");
     assert!(matches!(
         many_roots_error,
-        sdkwork_web_standalone_gateway::DataPlaneError::TooManyUpstreamRootCertificates { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::TooManyUpstreamRootCertificates { .. }
     ));
 
     let authority = write_test_ca(directory.path(), "identity-ca");
@@ -2107,7 +2107,7 @@ async fn invalid_upstream_tls_material_fails_before_listener_activation() {
         .expect_err("mismatched client identity must fail before listener activation");
     assert!(matches!(
         mismatched_error,
-        sdkwork_web_standalone_gateway::DataPlaneError::UpstreamClient { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::UpstreamClient { .. }
     ));
 }
 
@@ -2570,7 +2570,7 @@ async fn rejects_certificate_whose_san_does_not_cover_declared_name() {
         .expect_err("mismatched SAN must fail before serving");
     assert!(matches!(
         error,
-        sdkwork_web_standalone_gateway::DataPlaneError::TlsFiles { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::TlsFiles { .. }
     ));
 }
 
@@ -2593,7 +2593,7 @@ async fn rejects_certificate_and_private_key_mismatch_before_listener_start() {
         .expect_err("mismatched private key must fail before serving");
     assert!(matches!(
         error,
-        sdkwork_web_standalone_gateway::DataPlaneError::TlsFiles { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::TlsFiles { .. }
     ));
 }
 
@@ -5214,7 +5214,7 @@ async fn rejects_oversized_tls_material_before_listener_start() {
         .expect_err("oversized TLS material must fail before serving");
     assert!(matches!(
         error,
-        sdkwork_web_standalone_gateway::DataPlaneError::TlsMaterialTooLarge { .. }
+        sdkwork_api_web_server_standalone_gateway::DataPlaneError::TlsMaterialTooLarge { .. }
     ));
 }
 

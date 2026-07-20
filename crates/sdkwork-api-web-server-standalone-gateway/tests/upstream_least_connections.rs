@@ -13,7 +13,7 @@ use axum::{body::Body, http::Response, routing::any, Router};
 use bytes::Bytes;
 use http_body::Frame;
 use http_body_util::channel::Channel;
-use sdkwork_web_standalone_gateway::{
+use sdkwork_api_web_server_standalone_gateway::{
     run_data_plane_from_config_until, run_data_plane_until, DataPlaneError,
 };
 use sdkwork_webserver_core::load_and_compile_webserver_config;

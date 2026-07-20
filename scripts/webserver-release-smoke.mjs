@@ -26,7 +26,7 @@ const START_TIMEOUT_MS = 15 * 1000;
 const STOP_TIMEOUT_MS = 10 * 1000;
 const SUPPORTED_ARCHITECTURES = new Set(['x64', 'arm64']);
 const EXPECTED_BINARIES = [
-  'sdkwork-web-standalone-gateway',
+  'sdkwork-api-web-server-standalone-gateway',
   'sdkwork-web-node-daemon',
   'sdkwork-web-agent',
   'sdkwork-webserver-certificate-worker',
@@ -341,7 +341,7 @@ async function smoke(settings) {
       }
     }
 
-    const gateway = path.join(binRoot, 'sdkwork-web-standalone-gateway');
+    const gateway = path.join(binRoot, 'sdkwork-api-web-server-standalone-gateway');
     const packagedExample = path.join(packageRoot, 'etc', 'examples', 'sdkwork.webserver.config.json');
     run(gateway, ['--help'], { cwd: packageRoot });
     run(gateway, ['validate', packagedExample], { cwd: packageRoot });

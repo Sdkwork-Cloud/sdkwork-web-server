@@ -42,11 +42,11 @@ trace:
     - TEST_SPEC.md
   components:
     - crates/sdkwork-webserver-core
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
     - tests/nginx/uri-normalization/nginx.conf
 verification:
   - cargo test -p sdkwork-webserver-core
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm verify
 ```

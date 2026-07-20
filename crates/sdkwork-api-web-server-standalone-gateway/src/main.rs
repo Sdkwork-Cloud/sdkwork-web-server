@@ -1,6 +1,6 @@
 use std::{error::Error, io, path::PathBuf};
 
-use sdkwork_web_standalone_gateway::{
+use sdkwork_api_web_server_standalone_gateway::{
     build_router, run_data_plane_from_config_with_operations_until, run_database_migrate_only,
     DataPlaneOperationsConfig,
 };
@@ -19,7 +19,7 @@ fn init_tracing() {
 async fn main() {
     init_tracing();
     if let Err(error) = run().await {
-        tracing::error!(error = %error, "sdkwork-web-standalone-gateway failed");
+        tracing::error!(error = %error, "sdkwork-api-web-server-standalone-gateway failed");
         std::process::exit(1);
     }
 }
@@ -111,7 +111,7 @@ fn config_path(argument: Option<String>) -> MainResult<PathBuf> {
 
 fn print_help() {
     println!(
-        "sdkwork-web-standalone-gateway\n\
+        "sdkwork-api-web-server-standalone-gateway\n\
          \n\
          Operations:\n\
            serve-management       Start the existing management API (default).\n\

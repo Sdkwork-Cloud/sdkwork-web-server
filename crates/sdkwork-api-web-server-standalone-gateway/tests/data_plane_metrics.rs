@@ -1,6 +1,6 @@
 use std::{fs, net::TcpListener, sync::Arc, time::Duration};
 
-use sdkwork_web_standalone_gateway::{
+use sdkwork_api_web_server_standalone_gateway::{
     run_data_plane_with_operations_until, DataPlaneOperationsConfig,
 };
 use sdkwork_webserver_core::load_and_compile_webserver_config;
@@ -185,7 +185,7 @@ async fn isolated_operations_listener_reports_real_stream_lifetimes() {
         .expect("application response body")
         .contains("sdkwork_web_data_plane_"));
 
-    let common = "service=\"sdkwork-web-standalone-gateway\",environment=\"test\",deployment_profile=\"standalone\",runtime_target=\"server\"";
+    let common = "service=\"sdkwork-api-web-server-standalone-gateway\",environment=\"test\",deployment_profile=\"standalone\",runtime_target=\"server\"";
     wait_for_metric(
         &client,
         &format!("{operations_url}/metrics"),

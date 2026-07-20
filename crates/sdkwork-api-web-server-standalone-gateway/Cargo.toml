@@ -1,15 +1,15 @@
 [package]
-name = "sdkwork-web-standalone-gateway"
+name = "sdkwork-api-web-server-standalone-gateway"
 version.workspace = true
 edition.workspace = true
 
 [lib]
-name = "sdkwork_web_standalone_gateway"
+name = "sdkwork_api_web_server_standalone_gateway"
 path = "src/lib.rs"
 
 
 [[bin]]
-name = "sdkwork-web-standalone-gateway"
+name = "sdkwork-api-web-server-standalone-gateway"
 path = "src/main.rs"
 
 [dependencies]

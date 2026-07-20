@@ -40,7 +40,7 @@ const CARGO_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 const SBOM_TIMEOUT_MS = 3 * 60 * 1000;
 const SUPPORTED_ARCHITECTURES = new Set(['x64', 'arm64']);
 const BINARIES = [
-  'sdkwork-web-standalone-gateway',
+  'sdkwork-api-web-server-standalone-gateway',
   'sdkwork-web-node-daemon',
   'sdkwork-web-agent',
   'sdkwork-webserver-certificate-worker',

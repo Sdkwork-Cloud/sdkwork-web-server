@@ -9,7 +9,7 @@ use std::{
 
 use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
 use reqwest::{Client, Method, StatusCode, Version};
-use sdkwork_web_standalone_gateway::run_data_plane_from_config_until;
+use sdkwork_api_web_server_standalone_gateway::run_data_plane_from_config_until;
 use sdkwork_webserver_core::load_and_compile_webserver_config;
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -296,7 +296,7 @@ fn spawn_watched_data_plane(
     config_path: &Path,
 ) -> (
     oneshot::Sender<()>,
-    JoinHandle<Result<(), sdkwork_web_standalone_gateway::DataPlaneError>>,
+    JoinHandle<Result<(), sdkwork_api_web_server_standalone_gateway::DataPlaneError>>,
 ) {
     load_and_compile_webserver_config(config_path)
         .expect("compile watched resource-pressure configuration before startup");

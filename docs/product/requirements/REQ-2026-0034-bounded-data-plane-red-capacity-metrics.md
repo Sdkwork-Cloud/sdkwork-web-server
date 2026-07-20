@@ -51,12 +51,12 @@ trace:
     - RUST_CODE_SPEC.md
     - TEST_SPEC.md
   components:
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::metrics
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::dns
-  - cargo test -p sdkwork-web-standalone-gateway --test data_plane_metrics
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::metrics
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::dns
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test data_plane_metrics
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check
@@ -86,5 +86,5 @@ Accepted on 2026-07-17 with the following evidence:
 - The fixed histogram and registry tests force bucket, count, sum, and lifecycle counters to `u64::MAX` and prove saturation without wrap. Sub-microsecond excess above a bucket boundary is classified into the next bucket rather than rounded down.
 - A real proxy plus separate operations-listener test proves upstream latency is recorded at response Headers while request latency remains open until Body completion. It also proves DNS, byte, protocol, and capacity metric names render with canonical dimensions and fixed labels, while tenant domain, route id, path, address, request, and trace values remain absent.
 - Standalone gateway verification passes with 72 library tests, 55 primary data-plane tests, 1 focused metrics test, 4 raw HTTP/1 tests, 1 resource-pressure test, 4 active-health tests, 5 physical-connection tests, 4 response-Header tests, 2 weighted-selection tests, and 9 WebSocket tests: 157 tests total.
-- `cargo clippy -p sdkwork-web-standalone-gateway --all-targets -- -D warnings`, full `pnpm.cmd verify`, full-workspace strict Clippy, formatting, whitespace, pagination, API operation/envelope, SDK import, layering, Rust composition, route collision, topology, documentation, database-framework, cloud-gateway, and SQLite lifecycle checks pass with the isolated F-drive target.
+- `cargo clippy -p sdkwork-api-web-server-standalone-gateway --all-targets -- -D warnings`, full `pnpm.cmd verify`, full-workspace strict Clippy, formatting, whitespace, pagination, API operation/envelope, SDK import, layering, Rust composition, route collision, topology, documentation, database-framework, cloud-gateway, and SQLite lifecycle checks pass with the isolated F-drive target.
 - PostgreSQL lifecycle remains explicitly unverified because `SDKWORK_WEB_POSTGRES_TEST_DATABASE_URL` is not configured. This requirement changes no database contract and does not claim PostgreSQL evidence.

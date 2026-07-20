@@ -93,7 +93,7 @@ Validate source configuration ownership and the runnable example with:
 
 ```powershell
 node ..\sdkwork-specs\tools\check-source-config-standard.mjs --root .
-cargo run -p sdkwork-web-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json
+cargo run -p sdkwork-api-web-server-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json
 pnpm release:smoke:standalone   # Linux x64 only: extracted HTTP/HTTPS/stop smoke
 pnpm release:smoke:cloud        # Linux x64 only: extracted HTTP/HTTPS/stop smoke
 ```

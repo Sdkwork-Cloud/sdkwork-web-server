@@ -29,15 +29,15 @@
   "contracts": {
     "layerRole": "runtime-gateway",
     "publicExports": [
-      "crates/sdkwork-web-standalone-gateway",
+      "crates/sdkwork-api-web-server-standalone-gateway",
       "crates/sdkwork-routes-webserver-app-api",
       "crates/sdkwork-routes-webserver-backend-api"
     ],
     "runtimeEntrypoints": [
       {
         "id": "standalone-gateway",
-        "crate": "sdkwork-web-standalone-gateway",
-        "binary": "sdkwork-web-standalone-gateway"
+        "crate": "sdkwork-api-web-server-standalone-gateway",
+        "binary": "sdkwork-api-web-server-standalone-gateway"
       }
     ]
   }

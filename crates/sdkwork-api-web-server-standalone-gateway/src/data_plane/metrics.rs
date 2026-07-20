@@ -368,7 +368,7 @@ impl DataPlaneMetrics {
 
     pub(super) fn render_prometheus(&self, runtime: &DataPlaneRuntime) -> String {
         let common = format!(
-            "service=\"sdkwork-web-standalone-gateway\",environment=\"{}\",deployment_profile=\"{}\",runtime_target=\"{}\"",
+            "service=\"sdkwork-api-web-server-standalone-gateway\",environment=\"{}\",deployment_profile=\"{}\",runtime_target=\"{}\"",
             self.dimensions.environment,
             self.dimensions.deployment_profile,
             self.dimensions.runtime_target,

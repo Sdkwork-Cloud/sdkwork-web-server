@@ -18,7 +18,7 @@ use rustls::{
     pki_types::{CertificateDer, ServerName},
     ClientConfig, RootCertStore,
 };
-use sdkwork_web_standalone_gateway::{run_data_plane_from_config_until, DataPlaneError};
+use sdkwork_api_web_server_standalone_gateway::{run_data_plane_from_config_until, DataPlaneError};
 use sdkwork_webserver_core::load_and_compile_webserver_config;
 use serde_json::{json, Value};
 use tempfile::TempDir;

@@ -30,7 +30,7 @@ const ARCHIVE_DIRECTORIES = [
   'sdkwork-web/specs',
 ];
 const PACKAGE_FILES = new Map([
-  ['bin/sdkwork-web-standalone-gateway', 'gateway fixture\n'],
+  ['bin/sdkwork-api-web-server-standalone-gateway', 'gateway fixture\n'],
   ['bin/sdkwork-web-node-daemon', 'canonical node daemon fixture\n'],
   ['bin/sdkwork-web-agent', 'node daemon fixture\n'],
   ['bin/sdkwork-webserver-certificate-worker', 'certificate worker fixture\n'],
@@ -288,7 +288,7 @@ test('CycloneDX SBOM binds the archive and locked Cargo closure and rejects sema
     assert.ok(sbom.components.length > 0 && sbom.components.length <= 20_000);
     for (const packageName of [
       'sdkwork-web-agent',
-      'sdkwork-web-standalone-gateway',
+      'sdkwork-api-web-server-standalone-gateway',
       'sdkwork-webserver-certificate-worker',
     ]) {
       assert.ok(sbom.components.some((component) => component.name === packageName));

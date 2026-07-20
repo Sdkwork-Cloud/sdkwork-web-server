@@ -11,8 +11,8 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const CRITICAL_SOURCE_FILES = [
   '.env.postgres.example',
   'Cargo.toml',
-  'crates/sdkwork-web-standalone-gateway/Cargo.toml',
-  'crates/sdkwork-web-standalone-gateway/src/main.rs',
+  'crates/sdkwork-api-web-server-standalone-gateway/Cargo.toml',
+  'crates/sdkwork-api-web-server-standalone-gateway/src/main.rs',
 ];
 const POSTGRES_ENV_PREFIX = 'SDKWORK_CLAW_DATABASE_';
 
@@ -203,9 +203,9 @@ async function run() {
   const args = [
     'run',
     '-p',
-    'sdkwork-web-standalone-gateway',
+    'sdkwork-api-web-server-standalone-gateway',
     '--bin',
-    'sdkwork-web-standalone-gateway',
+    'sdkwork-api-web-server-standalone-gateway',
   ];
   if (settings.dryRun) {
     console.log(`[sdkwork-web] command=${command} ${args.join(' ')}`);
@@ -225,7 +225,7 @@ async function run() {
       if (code === 0 || signal === 'SIGINT' || signal === 'SIGTERM') {
         resolve();
       } else {
-        reject(new Error(`sdkwork-web-standalone-gateway exited with code ${code ?? 1}`));
+        reject(new Error(`sdkwork-api-web-server-standalone-gateway exited with code ${code ?? 1}`));
       }
     });
   });

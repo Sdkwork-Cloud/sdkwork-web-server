@@ -61,7 +61,7 @@ The target rows are not implementation-complete until the linked requirement evi
 ## 3. System Boundaries
 
 ```text
-sdkwork-web-standalone-gateway
+sdkwork-api-web-server-standalone-gateway
   |-- management bootstrap -> app/backend route crates -> service -> repository -> database
   |-- data-plane bootstrap -> compiled Web Server config -> HTTP/HTTPS/static/proxy
   `-- host operations -> config, signals, readiness, drain, runtime paths

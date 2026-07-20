@@ -1,4 +1,4 @@
-# sdkwork-web-standalone-gateway
+# sdkwork-api-web-server-standalone-gateway
 
 Domain: platform
 Capability: webserver
@@ -92,6 +92,6 @@ New route actions and listener capabilities must first exist in the root schema/
 ## Verification
 
 ```powershell
-cargo test -p sdkwork-web-standalone-gateway
-cargo run -p sdkwork-web-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json
+cargo test -p sdkwork-api-web-server-standalone-gateway
+cargo run -p sdkwork-api-web-server-standalone-gateway -- validate etc/examples/sdkwork.webserver.config.json
 ```

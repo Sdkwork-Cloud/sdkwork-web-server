@@ -49,14 +49,14 @@ trace:
     - RUST_CODE_SPEC.md
     - TEST_SPEC.md
   components:
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::smooth_weighted
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::proxy
-  - cargo test -p sdkwork-web-standalone-gateway --test upstream_weighted_selection
-  - cargo test -p sdkwork-web-standalone-gateway --test upstream_safe_retries
-  - cargo test -p sdkwork-web-standalone-gateway --test data_plane_metrics
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::smooth_weighted
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::proxy
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test upstream_weighted_selection
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test upstream_safe_retries
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test data_plane_metrics
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check

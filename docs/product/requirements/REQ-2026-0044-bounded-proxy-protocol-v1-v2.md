@@ -50,11 +50,11 @@ trace:
     - TEST_SPEC.md
   components:
     - crates/sdkwork-webserver-core
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
   - cargo test -p sdkwork-webserver-core --test webserver_config
-  - cargo test -p sdkwork-web-standalone-gateway --test proxy_protocol
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check
@@ -76,7 +76,7 @@ The wire parser follows HAProxy PROXY protocol v1/v2 framing and the common Ngin
 ## Verification Evidence
 
 - `cargo test -p sdkwork-webserver-core --test webserver_config` passes 60 configuration tests, including strict PROXY defaults, bounds, unknown-field rejection, CIDR/version validation, and `trustedProxy` mutual exclusion.
-- `cargo test -p sdkwork-web-standalone-gateway --test proxy_protocol` passes both real-socket integrations. The matrix covers fragmented v1, strict CRLF, canonical ports, v1/v2 IPv4 and IPv6, v1 `UNKNOWN`, v2 `LOCAL`, bounded TLV discard, HTTP/1, TLS ALPN H2, missing/partial timeout, malformed/oversized/unsupported input, untrusted peers, disabled versions, and retained active policy after a Restart-only Watch candidate.
+- `cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol` passes both real-socket integrations. The matrix covers fragmented v1, strict CRLF, canonical ports, v1/v2 IPv4 and IPv6, v1 `UNKNOWN`, v2 `LOCAL`, bounded TLV discard, HTTP/1, TLS ALPN H2, missing/partial timeout, malformed/oversized/unsupported input, untrusted peers, disabled versions, and retained active policy after a Restart-only Watch candidate.
 - The complete standalone gateway suite passes 203 tests: 99 library tests and 104 integration tests across HTTP/HTTPS/H2, WebSocket, DNS/TLS, health, capacity, retry, forwarding identity, PROXY protocol, reload, and shutdown behavior. The separately isolated HTTP/1 semantics test passes 4/4; its earlier long wall time was single-job cold compilation, while execution completed in 0.54 seconds.
 - `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all -- --check`, and isolated-target `pnpm.cmd verify` pass. The latter covers all workspace Rust tests, contract tests, API materialization, repository checks, topology, SQLite lifecycle, and cloud gateway validation without additional generated diff.
 - Source-config, agent/workflow, repository docs, apps index, pagination, API operation/envelope, application layering, Rust backend composition, strict component-port, route-collision, SDK consumer import, identity naming, database framework, and `verify-repo` validators pass. Production gateway CORS now fails closed with exact `https://web.sdkwork.com`, derived from the canonical cloud public-host topology.

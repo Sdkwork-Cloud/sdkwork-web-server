@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use sdkwork_web_standalone_gateway::run_data_plane_until;
+use sdkwork_api_web_server_standalone_gateway::run_data_plane_until;
 use sdkwork_webserver_core::load_and_compile_webserver_config;
 use serde_json::{json, Value};
 use tempfile::TempDir;

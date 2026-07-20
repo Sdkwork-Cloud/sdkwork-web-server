@@ -3,10 +3,10 @@
   "kind": "sdkwork.component.spec",
   "component": {
     "name": "sdkwork-api-web-server-assembly",
-    "displayName": "SDKWork web-server API Assembly",
+    "displayName": "SDKWork web-server Gateway Assembly",
     "version": "0.1.0",
     "type": "rust-api-assembly",
-    "root": "sdkwork-web-server/crates/sdkwork-api-web-server-assembly",
+    "root": "crates/sdkwork-api-web-server-assembly",
     "domain": "application",
     "capability": "api-assembly",
     "surface": "api-assembly",
@@ -21,14 +21,9 @@
   },
   "canonicalSpecs": [
     {
-      "file": "API_ASSEMBLY_SPEC.md",
-      "path": "../../../sdkwork-specs/API_ASSEMBLY_SPEC.md",
-      "purpose": "API ownership, host-neutral composition, and verification rules."
-    },
-    {
       "file": "APPLICATION_GATEWAY_SPEC.md",
       "path": "../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
-      "purpose": "Standalone and cloud gateway host boundaries."
+      "purpose": "Gateway assembly discovery, business-only mounting, and verification rules."
     },
     {
       "file": "WEB_FRAMEWORK_SPEC.md",
@@ -42,6 +37,7 @@
     }
   ],
   "contracts": {
+    "layerRole": "runtime-composition",
     "publicExports": [
       "."
     ],

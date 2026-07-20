@@ -51,12 +51,12 @@ trace:
     - TEST_SPEC.md
   components:
     - crates/sdkwork-webserver-core
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
   - cargo test -p sdkwork-webserver-core --test webserver_config
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::proxy
-  - cargo test -p sdkwork-web-standalone-gateway --test upstream_safe_retries
-  - cargo test -p sdkwork-web-standalone-gateway
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::proxy
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test upstream_safe_retries
+  - cargo test -p sdkwork-api-web-server-standalone-gateway
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check
@@ -74,7 +74,7 @@ Retry is disabled unless `upstream.retry` is present. The initial profile intent
 - Replay eligibility fails closed to Body-end-of-stream GET, HEAD, OPTIONS, TRACE, PUT, and DELETE. POST, PATCH, Body-bearing GET, pending Body/Trailer Frames, WebSocket upgrades, request Body failures, and local connection saturation remain terminal. Omitted policy uses the original single-attempt client timeout path.
 - A stack-owned probe lease releases half-open ownership on every branch and future cancellation. A separate completed-Body control state prevents replay-safe empty requests from being misclassified as early upstream responses and preserves downstream HTTP/1 Keep-Alive reuse.
 - Real dual-origin tests prove configured 503 failover, transport-close failover, per-attempt timeout failover while total budget remains, final 503 Body forwarding on exhaustion, omitted-policy single-attempt behavior, POST and Body-bearing GET refusal, and total-deadline exhaustion without contacting the second target. The complete standalone gateway suite passes 161 tests, including the HTTP/1 Keep-Alive regression.
-- `cargo clippy -p sdkwork-web-standalone-gateway --all-targets -- -D warnings`, `cargo clippy --workspace --all-targets -- -D warnings`, `pnpm.cmd verify`, `cargo fmt --all -- --check`, and `git diff --check` pass.
+- `cargo clippy -p sdkwork-api-web-server-standalone-gateway --all-targets -- -D warnings`, `cargo clippy --workspace --all-targets -- -D warnings`, `pnpm.cmd verify`, `cargo fmt --all -- --check`, and `git diff --check` pass.
 - SDKWork pagination, API operation-pattern, response-envelope, app-SDK consumer-import, application-layering, Rust backend-composition, and route-collision validators pass. SQLite lifecycle coverage passes inside workspace verification; PostgreSQL lifecycle remains ignored because `SDKWORK_WEB_POSTGRES_TEST_DATABASE_URL` is not available and is not claimed by this requirement.
 
 ## Accepted Boundary

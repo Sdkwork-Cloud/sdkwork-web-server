@@ -51,10 +51,10 @@ trace:
     - RUST_CODE_SPEC.md
     - TEST_SPEC.md
   components:
-    - crates/sdkwork-web-standalone-gateway
+    - crates/sdkwork-api-web-server-standalone-gateway
 verification:
-  - cargo test -p sdkwork-web-standalone-gateway data_plane::metrics
-  - cargo test -p sdkwork-web-standalone-gateway --test data_plane_metrics
+  - cargo test -p sdkwork-api-web-server-standalone-gateway data_plane::metrics
+  - cargo test -p sdkwork-api-web-server-standalone-gateway --test data_plane_metrics
   - cargo clippy --workspace --all-targets -- -D warnings
   - pnpm.cmd verify
   - cargo fmt --all -- --check
