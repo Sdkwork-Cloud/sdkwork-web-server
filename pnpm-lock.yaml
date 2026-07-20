@@ -35,12 +35,17 @@ importers:
 
   .:
     dependencies:
+      '@sdkwork/app-topology':
+        specifier: workspace:*
+        version: link:../sdkwork-app-topology
       tar:
         specifier: 7.5.20
         version: 7.5.20
       yaml:
         specifier: ^2.8.0
         version: 2.9.0
+
+  ../sdkwork-app-topology: {}
 
   ../sdkwork-appbase/packages/common/foundation/sdkwork-runtime-bootstrap:
     dependencies:
