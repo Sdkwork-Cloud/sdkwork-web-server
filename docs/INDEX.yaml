@@ -5,6 +5,14 @@ canon:
   prd: docs/product/prd/PRD.md
   techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
 entries:
+  - id: REQ-2026-0060
+    path: docs/product/requirements/REQ-2026-0060-cloud-site-delivery-data-plane.md
+    kind: req
+    status: ready
+  - id: ADR-20260721-compiled-website-runtime-descriptor
+    path: docs/architecture/decisions/ADR-20260721-compiled-website-runtime-descriptor.md
+    kind: adr
+    status: proposed
   - id: ADR-20260716-canonical-uri-dual-representation
     path: docs/architecture/decisions/ADR-20260716-canonical-uri-dual-representation.md
     kind: adr

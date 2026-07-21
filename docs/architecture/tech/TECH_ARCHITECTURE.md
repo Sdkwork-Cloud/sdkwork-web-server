@@ -2,10 +2,14 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-20
+Updated: 2026-07-21
 Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, WEB_FRAMEWORK_SPEC.md, WEB_BACKEND_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, CONFIG_SPEC.md, SECURITY_SPEC.md, DEPLOYMENT_SPEC.md, NGINX_SPEC.md
 
 ## Document Map
+
+- [TECH-cloud-site-delivery-data-plane.md](TECH-cloud-site-delivery-data-plane.md) - proposed
+  descriptor ingestion, domain/path/Variant/Mount routing, provider adapters, cache/event
+  consistency, TLS snapshot separation, and commercial runtime evidence.
 
 - [TECH-runtime-data-plane.md](TECH-runtime-data-plane.md) - target and implementation status for the Rust HTTP/HTTPS request data plane.
 - [TECH-standards-alignment.md](TECH-standards-alignment.md) - pointer to the repository standards-alignment matrix.
@@ -114,6 +118,8 @@ The request path does not call management services or repositories. Management r
 - External Nginx remains an edge activation option and is not required for Rust request handling.
 
 ## 8. Architecture Decision Index
+
+- [ADR-20260721 Compiled Website Runtime Descriptor](../decisions/ADR-20260721-compiled-website-runtime-descriptor.md) - proposed cloud data-plane input and authority boundary.
 
 | ADR | Topic | Status |
 | --- | --- | --- |

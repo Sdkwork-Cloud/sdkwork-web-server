@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-07-15
+Updated: 2026-07-21
 Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md, PERFORMANCE_SPEC.md, PAGINATION_SPEC.md, DEPLOYMENT_SPEC.md, CONFIG_SPEC.md, RUNTIME_DIRECTORY_SPEC.md, OBSERVABILITY_SPEC.md
 
 ## Document Map
@@ -13,6 +13,9 @@ Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC
 - [PRD-production-operations.md](PRD-production-operations.md) - process lifecycle, overload control, observability, deployment, high availability, upgrades, and commercial operations.
 - [PRD-nginx-compatibility.md](PRD-nginx-compatibility.md) - Nginx HTTP compatibility scope, import/export behavior, and conformance requirements.
 - [PRD-https-and-certificates.md](PRD-https-and-certificates.md) - HTTPS, TLS, certificate lifecycle, ACME, SNI, key security, and cluster distribution.
+- [PRD-cloud-site-delivery-data-plane.md](PRD-cloud-site-delivery-data-plane.md) - execution-plane
+  contract for opaque Drive Space-root/folder WebsiteRoots and canonical Knowledgebase Wiki Sites
+  compiled by the Deploy control plane.
 - [TECH_ARCHITECTURE.md](../../architecture/tech/TECH_ARCHITECTURE.md) - current technical architecture; it must be revised before implementation to reflect this PRD.
 
 ## 1. Background And Problem

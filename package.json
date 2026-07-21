@@ -1,92 +1,92 @@
-{
-  "name": "sdkwork-web-workspace",
-  "private": true,
-  "license": "UNLICENSED",
-  "type": "module",
-  "packageManager": "pnpm@10.33.0",
-  "dependencies": {
-    "tar": "7.5.20",
-    "sigstore": "4.1.1",
-    "yaml": "^2.8.0",
-    "@sdkwork/app-topology": "workspace:*"
-  },
-  "pnpm": {
-    "overrides": {
-      "vitepress>vite": "6.4.3"
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "@docsearch/react>@types/react": "19",
-        "@docsearch/react>react": "19",
-        "@docsearch/react>react-dom": "19"
-      }
-    }
-  },
-  "scripts": {
-    "dev": "pnpm dev:standalone",
-    "dev:standalone": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
-    "dev:cloud": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud",
-    "dev:server": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
-    "dev:server:postgres": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
-    "dev:server:postgres:standalone": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
-    "dev:server:sqlite": "node scripts/webserver-dev.mjs --database sqlite --deployment-profile standalone --environment development",
-    "stop": "pnpm exec sdkwork-app stop",
-    "build": "pnpm exec sdkwork-app build",
-    "release:package:standalone": "pnpm exec sdkwork-app release:package --deployment-profile standalone",
-    "release:package:cloud": "pnpm exec sdkwork-app release:package --deployment-profile cloud",
-    "release:validate:standalone": "pnpm exec sdkwork-app release:validate --deployment-profile standalone",
-    "release:validate:cloud": "pnpm exec sdkwork-app release:validate --deployment-profile cloud",
-    "release:smoke:standalone": "node scripts/webserver-release-smoke.mjs --deployment-profile standalone",
-    "release:smoke:cloud": "node scripts/webserver-release-smoke.mjs --deployment-profile cloud",
-    "test": "pnpm exec sdkwork-app test",
-    "test:database:recovery": "node scripts/database-recovery-verify.mjs",
-    "test:postgres:ha": "node scripts/postgres-ha-verify.mjs",
-    "test:postgres:required": "node scripts/postgres-ci-verify.mjs",
-    "check": "pnpm exec sdkwork-app check",
-    "check:api-envelope": "node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .",
-    "check:repository-docs": "node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .",
-    "check:pnpm-script-standard": "node ../sdkwork-specs/tools/check-pnpm-script-standard.mjs --root . --product-prefix web",
-    "check:agent-workflow-standard": "node ../sdkwork-specs/tools/check-agent-workflow-standard.mjs --root .",
-    "verify": "pnpm exec sdkwork-app verify",
-    "clean": "pnpm exec sdkwork-app clean",
-    "api:materialize": "node tools/materialize_web_phase1_contracts.mjs && cargo fmt",
-    "sdk:generate": "node sdks/sdkwork-web-app-sdk/bin/generate-sdk.mjs && node sdks/sdkwork-web-backend-sdk/bin/generate-sdk.mjs",
-    "sdk:generate:app": "node sdks/sdkwork-web-app-sdk/bin/generate-sdk.mjs",
-    "sdk:generate:backend": "node sdks/sdkwork-web-backend-sdk/bin/generate-sdk.mjs",
-    "db:materialize:contract": "node ../sdkwork-specs/tools/materialize-database-contract-from-baseline.mjs --root . --baseline database/ddl/baseline/postgres/0001_web_baseline.sql --module-id web --owner web-platform --prefixes web_ --engines postgres,sqlite",
-    "db:validate": "node ../sdkwork-specs/tools/check-database-framework-standard.mjs --root .",
-    "db:plan": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . plan",
-    "db:init": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . init",
-    "db:migrate": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . migrate",
-    "db:seed": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . seed",
-    "db:status": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . status",
-    "db:drift": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . drift",
-    "db:drift:check": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . drift-check",
-    "db:bootstrap": "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . bootstrap",
-    "db:postgres:plan": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode plan --config .env.postgres --app-root . --dry-run",
-    "db:postgres:init": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode init --config .env.postgres --app-root .",
-    "db:test:sqlite": "cargo test -p sdkwork-webserver-database-host --test sqlite_lifecycle",
-    "db:test:postgres": "cargo test -p sdkwork-webserver-database-host --test postgres_lifecycle -- --ignored",
-    "topology:validate": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs validate --root . --spec specs/topology.spec.json",
-    "topology:plan": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs plan --root . --spec specs/topology.spec.json",
-    "check:app-composition": "node ../sdkwork-specs/tools/verify-repo.mjs --root .",
-    "api:assembly:materialize": "node ../sdkwork-specs/tools/materialize-api-assembly.mjs --root .",
-    "api:assembly:validate": "node ../sdkwork-specs/tools/validate-api-assembly.mjs --root .",
-    "_sdkwork:build": "cargo build --workspace --release",
-    "_sdkwork:test": "cargo test --workspace && node --test tests/contract/agent-sync-state.contract.test.mjs tests/contract/backend-openapi-text.contract.test.mjs tests/contract/capability-boundaries.contract.test.mjs tests/contract/database-framework.contract.test.mjs tests/contract/database-recovery.contract.test.mjs tests/contract/deployment-profile-commands.contract.test.mjs tests/contract/dev-runner.contract.test.mjs tests/contract/node-sync-manifest.contract.test.mjs tests/contract/postgres-ci.contract.test.mjs tests/contract/postgres-ha.contract.test.mjs tests/contract/release-archive.contract.test.mjs",
-    "_sdkwork:check": "pnpm run check:app-composition && pnpm check:api-envelope && pnpm check:repository-docs && pnpm check:pnpm-script-standard && pnpm check:agent-workflow-standard && pnpm topology:validate && pnpm db:validate",
-    "_sdkwork:verify": "cargo fmt -- --check && cargo test --workspace && node --test tests/contract/agent-sync-state.contract.test.mjs tests/contract/backend-openapi-text.contract.test.mjs tests/contract/capability-boundaries.contract.test.mjs tests/contract/database-framework.contract.test.mjs tests/contract/database-recovery.contract.test.mjs tests/contract/deployment-profile-commands.contract.test.mjs tests/contract/dev-runner.contract.test.mjs tests/contract/node-sync-manifest.contract.test.mjs tests/contract/postgres-ci.contract.test.mjs tests/contract/postgres-ha.contract.test.mjs tests/contract/release-archive.contract.test.mjs && pnpm api:materialize && cargo fmt -- --check && pnpm check && pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud --dry-run",
-    "_sdkwork:clean": "cargo clean",
-    "_sdkwork:release:package:standalone": "node scripts/webserver-release.mjs package --deployment-profile standalone",
-    "_sdkwork:release:package:cloud": "node scripts/webserver-release.mjs package --deployment-profile cloud",
-    "_sdkwork:release:validate:standalone": "node scripts/webserver-release.mjs validate --deployment-profile standalone",
-    "_sdkwork:release:validate:cloud": "node scripts/webserver-release.mjs validate --deployment-profile cloud"
-  },
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
-  }
+﻿{
+    "name":  "sdkwork-web-workspace",
+    "private":  true,
+    "license": "AGPL-3.0-or-later",
+    "type":  "module",
+    "packageManager":  "pnpm@10.33.0",
+    "dependencies":  {
+                         "tar":  "7.5.20",
+                         "sigstore":  "4.1.1",
+                         "yaml":  "^2.8.0",
+                         "@sdkwork/app-topology":  "workspace:*"
+                     },
+    "pnpm":  {
+                 "overrides":  {
+                                   "vitepress\u003evite":  "6.4.3"
+                               },
+                 "peerDependencyRules":  {
+                                             "allowedVersions":  {
+                                                                     "@docsearch/react\u003e@types/react":  "19",
+                                                                     "@docsearch/react\u003ereact":  "19",
+                                                                     "@docsearch/react\u003ereact-dom":  "19"
+                                                                 }
+                                         }
+             },
+    "scripts":  {
+                    "dev":  "pnpm dev:standalone",
+                    "dev:standalone":  "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
+                    "dev:cloud":  "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud",
+                    "dev:server":  "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
+                    "dev:server:postgres":  "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
+                    "dev:server:postgres:standalone":  "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
+                    "dev:server:sqlite":  "node scripts/webserver-dev.mjs --database sqlite --deployment-profile standalone --environment development",
+                    "stop":  "pnpm exec sdkwork-app stop",
+                    "build":  "pnpm exec sdkwork-app build",
+                    "release:package:standalone":  "pnpm exec sdkwork-app release:package --deployment-profile standalone",
+                    "release:package:cloud":  "pnpm exec sdkwork-app release:package --deployment-profile cloud",
+                    "release:validate:standalone":  "pnpm exec sdkwork-app release:validate --deployment-profile standalone",
+                    "release:validate:cloud":  "pnpm exec sdkwork-app release:validate --deployment-profile cloud",
+                    "release:smoke:standalone":  "node scripts/webserver-release-smoke.mjs --deployment-profile standalone",
+                    "release:smoke:cloud":  "node scripts/webserver-release-smoke.mjs --deployment-profile cloud",
+                    "test":  "pnpm exec sdkwork-app test",
+                    "test:database:recovery":  "node scripts/database-recovery-verify.mjs",
+                    "test:postgres:ha":  "node scripts/postgres-ha-verify.mjs",
+                    "test:postgres:required":  "node scripts/postgres-ci-verify.mjs",
+                    "check":  "pnpm exec sdkwork-app check",
+                    "check:api-envelope":  "node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .",
+                    "check:repository-docs":  "node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .",
+                    "check:pnpm-script-standard":  "node ../sdkwork-specs/tools/check-pnpm-script-standard.mjs --root . --product-prefix web",
+                    "check:agent-workflow-standard":  "node ../sdkwork-specs/tools/check-agent-workflow-standard.mjs --root .",
+                    "verify":  "pnpm exec sdkwork-app verify",
+                    "clean":  "pnpm exec sdkwork-app clean",
+                    "api:materialize":  "node tools/materialize_web_phase1_contracts.mjs \u0026\u0026 cargo fmt",
+                    "sdk:generate":  "node sdks/sdkwork-web-app-sdk/bin/generate-sdk.mjs \u0026\u0026 node sdks/sdkwork-web-backend-sdk/bin/generate-sdk.mjs",
+                    "sdk:generate:app":  "node sdks/sdkwork-web-app-sdk/bin/generate-sdk.mjs",
+                    "sdk:generate:backend":  "node sdks/sdkwork-web-backend-sdk/bin/generate-sdk.mjs",
+                    "db:materialize:contract":  "node ../sdkwork-specs/tools/materialize-database-contract-from-baseline.mjs --root . --baseline database/ddl/baseline/postgres/0001_web_baseline.sql --module-id web --owner web-platform --prefixes web_ --engines postgres,sqlite",
+                    "db:validate":  "node ../sdkwork-specs/tools/check-database-framework-standard.mjs --root .",
+                    "db:plan":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . plan",
+                    "db:init":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . init",
+                    "db:migrate":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . migrate",
+                    "db:seed":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . seed",
+                    "db:status":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . status",
+                    "db:drift":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . drift",
+                    "db:drift:check":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . drift-check",
+                    "db:bootstrap":  "cargo run --manifest-path ../sdkwork-database/Cargo.toml -p sdkwork-database-cli -- --app-root . bootstrap",
+                    "db:postgres:plan":  "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode plan --config .env.postgres --app-root . --dry-run",
+                    "db:postgres:init":  "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode init --config .env.postgres --app-root .",
+                    "db:test:sqlite":  "cargo test -p sdkwork-webserver-database-host --test sqlite_lifecycle",
+                    "db:test:postgres":  "cargo test -p sdkwork-webserver-database-host --test postgres_lifecycle -- --ignored",
+                    "topology:validate":  "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs validate --root . --spec specs/topology.spec.json",
+                    "topology:plan":  "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs plan --root . --spec specs/topology.spec.json",
+                    "check:app-composition":  "node ../sdkwork-specs/tools/verify-repo.mjs --root .",
+                    "api:assembly:materialize":  "node ../sdkwork-specs/tools/materialize-api-assembly.mjs --root .",
+                    "api:assembly:validate":  "node ../sdkwork-specs/tools/validate-api-assembly.mjs --root .",
+                    "_sdkwork:build":  "cargo build --workspace --release",
+                    "_sdkwork:test":  "cargo test --workspace \u0026\u0026 node --test tests/contract/agent-sync-state.contract.test.mjs tests/contract/backend-openapi-text.contract.test.mjs tests/contract/capability-boundaries.contract.test.mjs tests/contract/database-framework.contract.test.mjs tests/contract/database-recovery.contract.test.mjs tests/contract/deployment-profile-commands.contract.test.mjs tests/contract/dev-runner.contract.test.mjs tests/contract/node-sync-manifest.contract.test.mjs tests/contract/postgres-ci.contract.test.mjs tests/contract/postgres-ha.contract.test.mjs tests/contract/release-archive.contract.test.mjs",
+                    "_sdkwork:check":  "pnpm run check:app-composition \u0026\u0026 pnpm check:api-envelope \u0026\u0026 pnpm check:repository-docs \u0026\u0026 pnpm check:pnpm-script-standard \u0026\u0026 pnpm check:agent-workflow-standard \u0026\u0026 pnpm topology:validate \u0026\u0026 pnpm db:validate",
+                    "_sdkwork:verify":  "cargo fmt -- --check \u0026\u0026 cargo test --workspace \u0026\u0026 node --test tests/contract/agent-sync-state.contract.test.mjs tests/contract/backend-openapi-text.contract.test.mjs tests/contract/capability-boundaries.contract.test.mjs tests/contract/database-framework.contract.test.mjs tests/contract/database-recovery.contract.test.mjs tests/contract/deployment-profile-commands.contract.test.mjs tests/contract/dev-runner.contract.test.mjs tests/contract/node-sync-manifest.contract.test.mjs tests/contract/postgres-ci.contract.test.mjs tests/contract/postgres-ha.contract.test.mjs tests/contract/release-archive.contract.test.mjs \u0026\u0026 pnpm api:materialize \u0026\u0026 cargo fmt -- --check \u0026\u0026 pnpm check \u0026\u0026 pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud --dry-run",
+                    "_sdkwork:clean":  "cargo clean",
+                    "_sdkwork:release:package:standalone":  "node scripts/webserver-release.mjs package --deployment-profile standalone",
+                    "_sdkwork:release:package:cloud":  "node scripts/webserver-release.mjs package --deployment-profile cloud",
+                    "_sdkwork:release:validate:standalone":  "node scripts/webserver-release.mjs validate --deployment-profile standalone",
+                    "_sdkwork:release:validate:cloud":  "node scripts/webserver-release.mjs validate --deployment-profile cloud"
+                },
+    "exports":  {
+                    ".":  {
+                              "types":  "./src/index.ts",
+                              "import":  "./src/index.ts",
+                              "default":  "./src/index.ts"
+                          }
+                }
 }

@@ -1,0 +1,270 @@
+# SDKWork Cloud Site Delivery Data Plane PRD
+
+Status: draft
+Owner: SDKWork Web Server maintainers
+Application: sdkwork-web
+Updated: 2026-07-21
+Requirement: REQ-2026-0060
+Parent: [PRD.md](PRD.md)
+Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md,
+PRIVACY_SPEC.md, PERFORMANCE_SPEC.md, OBSERVABILITY_SPEC.md, DEPLOYMENT_SPEC.md, TEST_SPEC.md
+
+## 1. Purpose
+
+Define the Web Server runtime behavior required to deliver cloud Sites whose sources are opaque live
+Drive WebsiteRoots (whole-Space or selected-folder) or canonical Knowledgebase Wiki publications.
+The Web Server is the HTTP/TLS execution plane. It
+does not become an independent writable authority for cloud Site, domain, Variant, Mount,
+certificate, or commercial state.
+
+The data plane consumes two independently activated inputs:
+
+- an immutable `WebsiteRuntimeDescriptor` compiled by `sdkwork-deployments`;
+- a node-scoped TLS runtime snapshot containing only approved certificate assignments/material.
+
+File and page changes are resolved live from source providers and do not require a configuration
+reload, Deploy Release, or SiteRevision.
+
+## 2. Users And Jobs
+
+| User/system | Job |
+| --- | --- |
+| Anonymous browser | Receive the correct secure representation for host, path, and client class. |
+| Tenant operator | Trust that preview/activation/rollback has observable runtime evidence. |
+| Platform SRE | Operate a bounded, horizontally scalable, last-known-good delivery fleet. |
+| Security operator | Verify TLS, routing, origin confinement, headers, and non-disclosure. |
+| Drive provider | Resolve public directory content without exposing storage topology. |
+| Knowledgebase provider | Resolve only eligible public Wiki routes and rendered representations. |
+| Deploy control plane | Distribute desired immutable snapshots and receive observations. |
+
+## 3. Goals
+
+- Deterministically route exact/wildcard hosts, longest Binding prefixes, client Variants, and
+  longest Mount prefixes from an in-memory immutable snapshot.
+- Deliver STATIC, SPA, and WIKI handlers with Nginx-compatible supported root/alias/index behavior.
+- Treat Drive `SPACE_ROOT`/`FOLDER` selection as provider-owned WebsiteRoot metadata and keep it
+  distinct from URL Mount `ROOT`/`ALIAS` translation.
+- Use typed provider resource ports/SDKs; never use arbitrary filesystem paths, raw origin URLs,
+  provider object keys, or handwritten HTTP/auth.
+- Make ordinary provider changes visible within the publishing freshness target through events and
+  read-through revalidation.
+- Protect private/draft/revoked/deleted content across cache, origin, and failure paths.
+- Activate website and TLS snapshots atomically and independently while preserving last-known-good
+  service.
+- Stream bodies and keep connections, queues, caches, descriptors, rendering, background work, and
+  telemetry cardinality bounded.
+- Emit request, cache, origin, revision, certificate, and usage evidence required for commercial
+  operations.
+
+## 4. Non-Goals
+
+- Own cloud Site authoring, domain claims, certificate orders, entitlements, billing, or Wiki page
+  state.
+- Continue serving writable `/app/v3/api/sites...` control-plane operations or authoritative
+  `web_site`, `web_domain`, `web_deployment`, and `web_certificate` state after cutover.
+- Infer publication from Drive Space visibility or filesystem/object-store reachability.
+- Reconstruct, override, or authorize a Drive root selector or Knowledgebase publication from
+  diagnostic Space/folder fields in the descriptor.
+- Build React applications or compile Markdown into immutable release bundles on each change.
+- Execute customer server code, arbitrary plugins, arbitrary regular expressions, or untrusted
+  templates.
+- Expose bucket/object/presigned/private upstream identities through public errors or descriptors.
+- Guarantee performance of customer-authored JavaScript after the server response is delivered.
+
+## 5. Runtime Inputs And Truthfulness
+
+The node accepts a website snapshot only after schema, size, canonical hash, signature/source,
+compatibility, referential integrity, policy, and local safety validation. It stages the complete
+snapshot, builds all indexes away from request threads, then swaps one immutable pointer. A partial
+snapshot is never visible.
+
+The node accepts a TLS snapshot only after assignment, decrypt/secret resolution, key/certificate
+match, chain, hostname, validity, algorithm, policy, and local load validation. Website activation
+never waits for an unrelated certificate renewal, and certificate renewal never creates a website
+revision.
+
+Success observations mean the exact revision/hash or certificate fingerprint is loaded and probed.
+Receiving a message, writing a file, or updating a database row is not success evidence.
+
+## 6. Request Behavior
+
+### 6.1 Ingress And Binding
+
+1. Apply listener, connection, protocol, header, URI, and admission bounds.
+2. Normalize SNI, Host, scheme, port, and path using one canonical policy.
+3. Serve an active, exact ACME HTTP-01 token before ordinary Site routing.
+4. Match exact host before approved wildcard and longest segment-aware Binding path.
+5. Reject absent, ambiguous, paused, unverified, or incompatible bindings without tenant disclosure.
+
+### 6.2 Variant And Mount
+
+Apply forced Binding Variant, signed preference, path rule, Client Hints, bounded User-Agent, bot,
+Binding default, then Site default. The selected reason is internally observable. It cannot grant
+authorization.
+
+Within the Variant, choose the longest segment-aware Mount prefix. Translate the remainder using
+`ROOT` or `ALIAS`. Normalize provider-relative paths once, reject traversal/encoded ambiguity, and
+keep them confined to the declared provider root.
+
+Mount `ROOT`/`ALIAS` is URL translation only. It is unrelated to Drive WebsiteRoot
+`SPACE_ROOT`/`FOLDER`: Web Server receives an opaque stable WebsiteRoot reference and starts every
+provider-relative lookup at `/` of its current effective generation. It never prepends a Space path
+or selected folder UUID from descriptor diagnostics.
+
+### 6.3 Handler Behavior
+
+| Handler | Required behavior |
+| --- | --- |
+| STATIC | directory-faithful files, bounded index lookup, conditional/range support, no listing by default |
+| SPA | STATIC behavior plus an explicit resource-confined fallback for eligible navigation requests |
+| WIKI | provider-owned route/page resolution, sanitized rendering, navigation/search/SEO metadata, visibility enforcement |
+
+SPA fallback shall not turn a missing hashed asset into `index.html` merely because the Site is an
+SPA. WIKI shall never use Drive visibility alone and shall never expose `okf/`, `output/`,
+`.sdkwork/`, or paths outside `sources/raw`.
+
+### 6.4 Response
+
+Apply provider/version-aware `ETag`/`Last-Modified`, cache, MIME, range, compression, CSP,
+`nosniff`, referrer, frame, robots, redirect, and error policies. Stream response bodies. Record a
+bounded outcome and usage fact after response accounting without delaying the client on the billing
+pipeline.
+
+## 7. Freshness And Cache Requirements
+
+- Cache identity includes tenant-safe Site/Binding/Variant/Mount/resource/path/public-version and
+  renderer/template representation identity.
+- Provider events are idempotent and invalidate exact keys or advance a provider-wide generation.
+  Wiki private processing changes no public cache version; a page edit advances its route-scoped
+  page public version instead of flushing the full Wiki.
+- Event gaps and reconnects force provider revalidation; negative cache TTLs are short.
+- A transition from public to private/deleted/revoked has priority invalidation and cannot be served
+  indefinitely from stale cache.
+- Allowed stale serving is explicit per policy, bounded by time, and applies only to representations
+  previously verified public.
+- Concurrent cache misses coalesce within a bounded single-flight mechanism; overload does not form
+  an unbounded origin queue.
+- Hashed immutable assets may use long cache policy only after the provider declares the content
+  version immutable.
+
+## 8. Provider Integration
+
+The Drive provider port supports eligibility validation for both Space-root and folder-root
+WebsiteRoots, path metadata resolution from provider `/`, conditional open, range/open stream,
+version observation, and content change events. The Knowledgebase provider port resolves the one
+canonical publication for a Knowledgebase resource and supports publication validation, public route
+resolution, rendered page/navigation/search representations, asset open, state/version observation,
+and change events. A DRAFT/PAUSED Wiki fails public eligibility even if it is present in a descriptor.
+Knowledgebase events are consumed directly from the provider event authority; Deploy remains the
+configuration/snapshot authority and is not a per-content-event proxy.
+
+Cloud runtime integration uses owner-generated `sdkwork-drive-internal-sdk` and
+`sdkwork-knowledgebase-internal-sdk` through injected clients and
+the approved authentication/runtime context. Same-process standalone composition may use an
+equivalent typed Rust service port. Raw HTTP, manual auth headers, direct provider database access,
+and direct object-storage SDK access are prohibited.
+
+## 9. TLS Execution
+
+Web Server reuses its bounded ACME provider and certificate activation crates as execution
+capabilities. In cloud mode, Deploy owns account/order/challenge/certificate metadata and scheduling;
+Web Server workers execute typed jobs and report redacted observations. In approved standalone mode,
+the same runtime engine may be driven by local configuration without claiming cloud authority.
+
+HTTP-01 token handling precedes Site routing only for an active authorized token. Certificate
+versions are hot-loaded with SNI verification; existing connections retain the old context and new
+connections use the verified current context. Failed renewal/load/probe keeps the previous valid
+version active.
+
+## 10. Operations And Admin Projection
+
+Web Server supplies the data behind Deploy platform-admin views:
+
+- node version, region, readiness, capacity, connection and queue pressure;
+- desired/observed website revision and descriptor hash;
+- desired/observed certificate version and served fingerprint;
+- request/error/latency/bytes/cache/origin summaries;
+- provider health, event lag, invalidation backlog, circuit state, and stale serving;
+- rejected descriptors/TLS snapshots with bounded reason codes;
+- rollout, probe, drain, restart, and rollback observations.
+
+Nodes do not provide a competing tenant Site editor. Local diagnostics are operator-only, protected,
+bounded, and do not reveal content, secrets, private endpoints, or uncontrolled host/path labels.
+
+## 11. Security And Privacy
+
+- Enforce tenant-qualified runtime/cache/provider identity even though the public request is
+  anonymous.
+- Reject Host/SNI mismatch according to listener policy, encoded traversal, null/control bytes,
+  invalid ranges, header injection, unsafe redirects, and root escape.
+- Deny dotfiles, source maps, manifests, active content types, and reserved paths according to the
+  compiled policy; secure defaults win when the descriptor omits a field.
+- Bound Wiki render input/output/time and sanitize HTML, links, images, SVG, embeds, and metadata.
+- Redact tokens, cookies, query values, private paths, secret references, certificate material,
+  provider payloads, and customer content from logs/support bundles.
+- Apply trusted-proxy policy before using client IP. IP and User-Agent telemetry follow retention,
+  minimization, and consent requirements.
+- Public not-found behavior does not distinguish missing Site, private page, wrong tenant, paused
+  publication, or revoked resource.
+
+## 12. Performance And Reliability Targets
+
+| Target | Objective |
+| --- | --- |
+| Snapshot routing lookup | bounded indexed lookup; no scan across all Sites/certificates |
+| Cached static p95 server latency | <= 100 ms in-region |
+| Eligible uncached provider p95 | <= 500 ms in-region |
+| Content freshness | p95 <= 5 seconds, p99 <= 30 seconds after provider commit |
+| Website activation | p95 <= 30 seconds to target quorum |
+| Graceful reload | no partial map; established connections drain on prior context |
+| Availability | 99.95% standard target after production certification |
+
+The node continues last-known-good website and TLS snapshots through temporary control-plane
+failure. Provider failure uses bounded timeout/retry/circuit behavior and policy-governed stale
+cache. A node with invalid/missing assigned snapshots fails readiness for affected traffic rather
+than inventing defaults.
+
+## 13. Observability And Metering
+
+Every request correlates trace, node, region, Site, Binding, revision, Variant, Mount, provider type,
+resource, cache result, status, bytes, and latency. Metrics use bounded identifiers or aggregated
+labels; arbitrary hostname/path/page title is not a metric label.
+
+Usage events include stable deduplication/window identity and are delivered asynchronously. The
+data plane reports facts; Deploy aggregates and Commerce prices them. Backpressure, spool capacity,
+loss policy, replay, duplicate handling, and reconciliation are observable and tested.
+
+## 14. Acceptance Criteria
+
+- Golden tests prove deterministic descriptor validation/indexing/hash and atomic pointer swap.
+- Property/fuzz tests cover Host, SNI, IDNA, path, prefix, alias/root, redirect, Variant, range,
+  cache key, and traversal behavior.
+- End-to-end tests route one domain to independent desktop/mobile Drive builds and explain the
+  selected rule.
+- STATIC/SPA tests preserve directory layout and prevent fallback from masking missing assets.
+- STATIC/SPA provider tests serve equivalent trees from Drive `SPACE_ROOT` and `FOLDER`, reject
+  reserved/cross-root access, and prove Mount `ROOT`/`ALIAS` never changes provider root identity.
+- WIKI tests prove per-page state/visibility, sanitization, navigation/search/assets, and reserved
+  root denial.
+- WIKI tests prove every-Knowledgebase capability does not imply public access and that one canonical
+  publication can safely serve multiple Site Resources/Mounts without cache-key collision.
+- Provider event, loss, replay, out-of-order, public-to-private, atomic-root-switch, stampede, and
+  outage tests satisfy freshness and non-disclosure requirements.
+- Exact Drive/Knowledgebase AsyncAPI and internal SDK dependencies are declared by the Web Server
+  app/component manifests and pass standalone/cloud compatibility fixtures.
+- Native auto-public, explicit publish, and priority revocation p95/p99 tests prove route-scoped
+  invalidation and no global cache churn from private processing.
+- Deploy is the only writable Site/domain/TLS authority; overlapping Web app-api write routes and
+  `web_*` business-table authority are retired with shadow-compare and rollback evidence.
+- TLS tests prove challenge precedence, immutable versions, SNI selection, hot switch, served
+  fingerprint, failed-renewal retention, and website/TLS snapshot independence.
+- Load/soak tests prove bounded memory, queues, caches, descriptors, origins, rendering, events, and
+  metrics cardinality.
+- Node/control-plane/provider outage and last-known-good/rollback drills have recorded evidence.
+
+## 15. Dependencies
+
+- Deploy product authority: `sdkwork-deployments/docs/product/prd/PRD-cloud-site-publishing-platform.md`
+- Deploy descriptor/data authority: `sdkwork-deployments/docs/architecture/tech/TECH-cloud-site-publishing-control-plane.md`
+- Local architecture: [TECH-cloud-site-delivery-data-plane.md](../../architecture/tech/TECH-cloud-site-delivery-data-plane.md)
+- Local decision: [ADR-20260721 Compiled Website Runtime Descriptor](../../architecture/decisions/ADR-20260721-compiled-website-runtime-descriptor.md)

@@ -1,4 +1,4 @@
-[workspace]
+﻿[workspace]
 resolver = "2"
 members = [
   "crates/sdkwork-api-web-server-assembly",
@@ -23,7 +23,7 @@ exclude = [
 [workspace.package]
 edition = "2021"
 version = "0.1.0"
-license = "UNLICENSED"
+license = "AGPL-3.0-or-later"
 
 [workspace.dependencies]
 async-trait = "0.1"
