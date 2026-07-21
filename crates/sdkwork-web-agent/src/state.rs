@@ -36,6 +36,7 @@ impl NodeDaemonLock {
         }
         let file = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&lock_path)
@@ -329,17 +330,17 @@ fn default_edge_state_root() -> anyhow::Result<PathBuf> {
     {
         let program_data = std::env::var_os("PROGRAMDATA")
             .ok_or_else(|| anyhow::anyhow!("PROGRAMDATA is required for Web Node Daemon state"))?;
-        return Ok(PathBuf::from(program_data)
+        Ok(PathBuf::from(program_data)
             .join("sdkwork")
             .join("web")
             .join("Data")
-            .join("edge"));
+            .join("edge"))
     }
     #[cfg(target_os = "macos")]
     {
-        return Ok(PathBuf::from(
+        Ok(PathBuf::from(
             "/Library/Application Support/sdkwork/web/Data/edge",
-        ));
+        ))
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {

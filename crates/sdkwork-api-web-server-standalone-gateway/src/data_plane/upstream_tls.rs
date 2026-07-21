@@ -1,7 +1,7 @@
-use std::{io::Cursor, sync::Arc};
+use std::sync::Arc;
 
 use rustls::{
-    pki_types::{CertificateDer, PrivateKeyDer},
+    pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
     version::{TLS12, TLS13},
     ClientConfig, RootCertStore,
 };
@@ -82,7 +82,7 @@ fn add_custom_roots(
     let mut root_count = 0usize;
     for path in ca_paths {
         let pem = read_bounded_tls_material(path)?;
-        let certificates = rustls_pemfile::certs(&mut Cursor::new(&pem))
+        let certificates = CertificateDer::pem_slice_iter(&pem)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| DataPlaneError::InvalidUpstreamCaBundle {
                 upstream_id: upstream.id.clone(),
@@ -125,8 +125,7 @@ fn read_certificate_chain(
     path: &std::path::Path,
 ) -> Result<Vec<CertificateDer<'static>>, Box<dyn std::error::Error + Send + Sync>> {
     let pem = read_bounded_tls_material(path)?;
-    let certificates =
-        rustls_pemfile::certs(&mut Cursor::new(pem)).collect::<Result<Vec<_>, _>>()?;
+    let certificates = CertificateDer::pem_slice_iter(&pem).collect::<Result<Vec<_>, _>>()?;
     if certificates.is_empty() {
         return Err("client certificate file contains no certificates".into());
     }
@@ -137,6 +136,5 @@ fn read_private_key(
     path: &std::path::Path,
 ) -> Result<PrivateKeyDer<'static>, Box<dyn std::error::Error + Send + Sync>> {
     let pem = read_bounded_tls_material(path)?;
-    rustls_pemfile::private_key(&mut Cursor::new(pem))?
-        .ok_or_else(|| "client private key file contains no private key".into())
+    PrivateKeyDer::from_pem_slice(&pem).map_err(Into::into)
 }

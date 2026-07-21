@@ -1,18 +1,15 @@
-use std::{
-    collections::HashMap,
-    io::{self, Cursor},
-    path::Path,
-    sync::Arc,
-};
+use std::{collections::HashMap, io, path::Path, sync::Arc};
 
 use axum_server::tls_rustls::RustlsConfig;
 use rustls::{
-    pki_types::PrivateKeyDer,
+    pki_types::{
+        pem::{PemObject, SectionKind},
+        CertificateDer, PrivateKeyDer,
+    },
     server::{ClientHello, ResolvesServerCert},
     sign::CertifiedKey,
     ServerConfig,
 };
-use rustls_pemfile::Item;
 use sdkwork_webserver_core::{normalize_server_name, server_name_covers, ListenerConfig};
 use x509_parser::prelude::{FromDer, GeneralName, X509Certificate};
 
@@ -156,9 +153,12 @@ fn parse_certificate_chain(
     bytes: &[u8],
 ) -> Result<Vec<rustls::pki_types::CertificateDer<'static>>, io::Error> {
     let mut certificates = Vec::new();
-    for item in rustls_pemfile::read_all(&mut Cursor::new(bytes)) {
-        match item? {
-            Item::X509Certificate(certificate) => certificates.push(certificate),
+    for section in <(SectionKind, Vec<u8>)>::pem_slice_iter(bytes) {
+        let section = section.map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        match section {
+            (SectionKind::Certificate, certificate) => {
+                certificates.push(CertificateDer::from(certificate));
+            }
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -239,17 +239,19 @@ fn validate_leaf_certificate(
 }
 
 fn parse_single_private_key(bytes: &[u8]) -> Result<PrivateKeyDer<'static>, io::Error> {
-    let mut keys = rustls_pemfile::read_all(&mut Cursor::new(bytes))
-        .map(|item| {
-            item.and_then(|item| match item {
-                Item::Pkcs1Key(key) => Ok(Some(PrivateKeyDer::Pkcs1(key))),
-                Item::Pkcs8Key(key) => Ok(Some(PrivateKeyDer::Pkcs8(key))),
-                Item::Sec1Key(key) => Ok(Some(PrivateKeyDer::Sec1(key))),
-                _ => Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "private-key file contains a non-key PEM item",
-                )),
-            })
+    let mut keys = <(SectionKind, Vec<u8>)>::pem_slice_iter(bytes)
+        .map(|section| {
+            section
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+                .and_then(|(kind, key)| match kind {
+                    SectionKind::RsaPrivateKey
+                    | SectionKind::PrivateKey
+                    | SectionKind::EcPrivateKey => Ok(PrivateKeyDer::from_pem(kind, key)),
+                    _ => Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "private-key file contains a non-key PEM item",
+                    )),
+                })
         })
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()

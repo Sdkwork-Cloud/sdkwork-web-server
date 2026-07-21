@@ -1,12 +1,13 @@
 use std::fs::OpenOptions;
-use std::io::Cursor;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rustls::pki_types::PrivateKeyDer;
+use rustls::pki_types::{
+    pem::{PemObject, SectionKind},
+    CertificateDer, PrivateKeyDer,
+};
 use rustls::sign::CertifiedKey;
-use rustls_pemfile::Item;
 use tempfile::{Builder, TempDir};
 
 use crate::config::EdgeRuntimeConfig;
@@ -234,11 +235,13 @@ fn validate_certificate_material(cert_pem: &str, private_key_pem: &str) -> EdgeR
     }
 
     let mut certificates = Vec::new();
-    for item in rustls_pemfile::read_all(&mut Cursor::new(cert_pem.as_bytes())) {
-        match item
+    for section in <(SectionKind, Vec<u8>)>::pem_slice_iter(cert_pem.as_bytes()) {
+        match section
             .map_err(|error| EdgeRuntimeError::Config(format!("parse certificate PEM: {error}")))?
         {
-            Item::X509Certificate(certificate) => certificates.push(certificate),
+            (SectionKind::Certificate, certificate) => {
+                certificates.push(CertificateDer::from(certificate));
+            }
             _ => {
                 return Err(EdgeRuntimeError::Config(
                     "certificate PEM contains a non-certificate item".to_string(),
@@ -252,19 +255,20 @@ fn validate_certificate_material(cert_pem: &str, private_key_pem: &str) -> EdgeR
         ));
     }
 
-    let mut private_keys = rustls_pemfile::read_all(&mut Cursor::new(private_key_pem.as_bytes()))
-        .map(|item| {
-            item.map_err(|error| {
-                EdgeRuntimeError::Config(format!("parse private-key PEM: {error}"))
-            })
-            .and_then(|item| match item {
-                Item::Pkcs1Key(key) => Ok(Some(PrivateKeyDer::Pkcs1(key))),
-                Item::Pkcs8Key(key) => Ok(Some(PrivateKeyDer::Pkcs8(key))),
-                Item::Sec1Key(key) => Ok(Some(PrivateKeyDer::Sec1(key))),
-                _ => Err(EdgeRuntimeError::Config(
-                    "private-key PEM contains a non-key item".to_string(),
-                )),
-            })
+    let mut private_keys = <(SectionKind, Vec<u8>)>::pem_slice_iter(private_key_pem.as_bytes())
+        .map(|section| {
+            section
+                .map_err(|error| {
+                    EdgeRuntimeError::Config(format!("parse private-key PEM: {error}"))
+                })
+                .and_then(|(kind, key)| match kind {
+                    SectionKind::RsaPrivateKey
+                    | SectionKind::PrivateKey
+                    | SectionKind::EcPrivateKey => Ok(PrivateKeyDer::from_pem(kind, key)),
+                    _ => Err(EdgeRuntimeError::Config(
+                        "private-key PEM contains a non-key item".to_string(),
+                    )),
+                })
         })
         .collect::<EdgeRuntimeResult<Vec<_>>>()?
         .into_iter()

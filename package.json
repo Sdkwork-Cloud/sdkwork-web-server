@@ -6,14 +6,26 @@
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
     "tar": "7.5.20",
-    "sigstore": "4.0.0",
+    "sigstore": "4.1.1",
     "yaml": "^2.8.0",
     "@sdkwork/app-topology": "workspace:*"
   },
+  "pnpm": {
+    "overrides": {
+      "vitepress>vite": "6.4.3"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@docsearch/react>@types/react": "19",
+        "@docsearch/react>react": "19",
+        "@docsearch/react>react-dom": "19"
+      }
+    }
+  },
   "scripts": {
     "dev": "pnpm dev:standalone",
-    "dev:standalone": "pnpm exec sdkwork-app dev --deployment-profile standalone",
-    "dev:cloud": "pnpm exec sdkwork-app dev --deployment-profile cloud",
+    "dev:standalone": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
+    "dev:cloud": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile cloud",
     "dev:server": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
     "dev:server:postgres": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",
     "dev:server:postgres:standalone": "pnpm exec sdkwork-app dev --runtime-target server --deployment-profile standalone",

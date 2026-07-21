@@ -30,7 +30,6 @@ hyper-util.workspace = true
 ipnet.workspace = true
 percent-encoding.workspace = true
 rustls.workspace = true
-rustls-pemfile.workspace = true
 serde_json.workspace = true
 socket2.workspace = true
 sha2.workspace = true

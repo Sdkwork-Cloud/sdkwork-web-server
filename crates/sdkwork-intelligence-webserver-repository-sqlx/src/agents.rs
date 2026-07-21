@@ -220,7 +220,7 @@ impl WebRepository {
     ) -> WebServiceResult<Vec<AgentNginxConfigBundle>> {
         let content_size = match self.database_engine().await? {
             DatabaseEngine::Sqlite => "LENGTH(CAST(nc.config_content AS BLOB))",
-            DatabaseEngine::Postgres => "OCTET_LENGTH(nc.config_content)",
+            DatabaseEngine::Postgres => "CAST(OCTET_LENGTH(nc.config_content) AS BIGINT)",
         };
         let sql = format!(
             "SELECT nc.uuid,
@@ -300,7 +300,9 @@ impl WebRepository {
          */
         let metadata_size = match self.database_engine().await? {
             DatabaseEngine::Sqlite => "LENGTH(CAST(c.metadata AS BLOB))",
-            DatabaseEngine::Postgres => "OCTET_LENGTH(CAST(c.metadata AS TEXT))",
+            DatabaseEngine::Postgres => {
+                "CAST(OCTET_LENGTH(CAST(c.metadata AS TEXT)) AS BIGINT)"
+            }
         };
         let sql = format!(
             "SELECT c.uuid, c.cert_name, c.fingerprint,

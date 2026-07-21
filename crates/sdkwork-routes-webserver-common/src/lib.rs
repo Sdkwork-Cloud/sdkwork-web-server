@@ -21,6 +21,10 @@ pub use response::{
 
 const PRODUCTION_AUTH_UNAVAILABLE: &str = "production Web auth requires IAM PostgreSQL database";
 
+#[expect(
+    clippy::large_enum_variant,
+    reason = "public route-integration enum; boxing the resolver requires coordinated API review"
+)]
 pub enum WebAuthMode {
     DevInline,
     IamDatabase(IamWebRequestContextResolver),
