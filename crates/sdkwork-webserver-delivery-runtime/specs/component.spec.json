@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-delivery-runtime",
+    "displayName": "SDKWork Web Server Delivery Runtime",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-delivery-runtime",
+    "domain": "platform",
+    "capability": "website-delivery-runtime",
+    "surface": "runtime-composition",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/README.md", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "COMPONENT_SPEC.md", "path": "../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Runtime component ports and integration contracts."},
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored runtime boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Runtime and provider naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure and async behavior."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Tenant context, non-disclosure, bounds, and credential separation."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Runtime and provider contract verification."}
+  ],
+  "contracts": {
+    "layerRole": "runtime-composition",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "websiteDeliveryExecutor", "export": "crate-root"},
+      {"name": "websiteProviderRegistry", "export": "crate-root"},
+      {"name": "websiteRuntimeProviderValidator", "export": "crate-root"},
+      {"name": "websiteProviderEventProcessor", "export": "crate-root"},
+      {"name": "websiteProviderEventCheckpointStore", "export": "crate-root"},
+      {"name": "websiteProviderEventReconciler", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "websiteRuntimeSetRegistry", "export": "crate-root", "provider": "sdkwork-webserver-core"},
+      {"name": "websiteStaticContentProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "websiteWikiProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "websiteProviderEventInvalidator", "export": "crate-root", "provider": "sdkwork-api-web-server-standalone-gateway"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [
+      "drive.node.version.committed.v1",
+      "drive.node.path.changed.v1",
+      "drive.node.eligibility.changed.v1",
+      "drive.node.deleted.v1",
+      "knowledgebase.wiki.provider.changed.v1",
+      "knowledgebase.wiki.route.changed.v1",
+      "knowledgebase.wiki.route.revoked.v1",
+      "knowledgebase.wiki.navigation.changed.v1",
+      "knowledgebase.wiki.search.changed.v1"
+    ],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": [
+      "cargo test -p sdkwork-webserver-delivery-runtime --test delivery_executor",
+      "cargo test -p sdkwork-webserver-delivery-runtime --test provider_activation",
+      "cargo test -p sdkwork-webserver-delivery-runtime --test provider_events"
+    ]
+  }
+}

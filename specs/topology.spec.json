@@ -63,6 +63,13 @@
       "bindEnv": "SDKWORK_WEB_APPLICATION_BACKEND_HTTP_BIND",
       "httpUrlEnv": "SDKWORK_WEB_APPLICATION_BACKEND_HTTP_URL"
     },
+    "edge.website-delivery": {
+      "connectivityPlane": "edge",
+      "protocols": [
+        "http"
+      ],
+      "httpUrlEnv": "SDKWORK_WEB_WEBSITE_DELIVERY_HTTP_URL"
+    },
     "platform.api-gateway": {
       "connectivityPlane": "platform",
       "protocols": [
@@ -129,15 +136,17 @@
       "cloud.production": {
         "processes": [
           {
-            "id": "application.public-ingress",
-            "crate": "sdkwork-api-web-server-standalone-gateway",
-            "binary": "sdkwork-api-web-server-standalone-gateway",
+            "id": "edge.website-delivery",
+            "crate": "sdkwork-web-server-website-delivery-edge-runtime",
+            "binary": "sdkwork-web-server-website-delivery-edge-runtime",
             "required": true,
-            "role": "api-standalone-gateway"
+            "role": "edge-runtime",
+            "script": "_sdkwork:runtime:website-data-plane",
+            "decisionRef": "docs/architecture/decisions/ADR-20260721-compiled-website-runtime-descriptor.md"
           }
         ],
         "healthSurfaces": [
-          "application.public-ingress",
+          "edge.website-delivery",
           "platform.api-gateway"
         ]
       },

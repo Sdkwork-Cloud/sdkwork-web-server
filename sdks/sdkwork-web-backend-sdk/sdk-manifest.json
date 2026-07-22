@@ -187,5 +187,7 @@
       "family": "sdkwork-iam-backend-sdk",
       "reason": "Platform operator IAM for protected backend-api routes."
     }
-  ]
+  ],
+  "sdkSurface": "backend",
+  "sdkType": "backend"
 }

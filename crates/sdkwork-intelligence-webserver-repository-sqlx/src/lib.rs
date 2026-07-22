@@ -93,6 +93,9 @@ macro_rules! repository_engine {
             mod nginx_configs {
                 include!("nginx_configs.rs");
             }
+            mod runtime_assignments {
+                include!("runtime_assignments.rs");
+            }
             mod servers {
                 include!("servers.rs");
             }

@@ -148,11 +148,11 @@
     },
     {
       "path": "src/types/create-server-request.ts",
-      "sha256": "3c96b5c6e953e194a0d9c430dc71f3d2f0bcd86014b524ca7dc57cdcc5d7790f"
+      "sha256": "dc0cbde2cd7eaefc15583548ce850ade8e5d512b4fee8030ab514275cce78cc9"
     },
     {
       "path": "src/types/create-server-response.ts",
-      "sha256": "07cc56eeca462188a0653aefa28fc92928f65d5b52212265a02ca358071210de"
+      "sha256": "285646b7d4e3b5c5f7eb67a4af5cad3f872f556abd2f9984d40c1e361021faac"
     },
     {
       "path": "src/types/field-error.ts",
@@ -264,7 +264,7 @@
     },
     {
       "path": "src/types/server-response.ts",
-      "sha256": "eae453c1bd51e0e284d99d8f314851d94b335f44c97c33568d0eca770cfad911"
+      "sha256": "5a3455b97adcb007a85487d9d27b0c09baea81111711ce874ced6fef95eb9755"
     },
     {
       "path": "src/types/servers-create-response201.ts",

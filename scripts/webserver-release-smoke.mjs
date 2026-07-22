@@ -27,6 +27,7 @@ const STOP_TIMEOUT_MS = 10 * 1000;
 const SUPPORTED_ARCHITECTURES = new Set(['x64', 'arm64']);
 const EXPECTED_BINARIES = [
   'sdkwork-api-web-server-standalone-gateway',
+  'sdkwork-web-server-website-delivery-edge-runtime',
   'sdkwork-web-node-daemon',
   'sdkwork-web-agent',
   'sdkwork-webserver-certificate-worker',
@@ -342,9 +343,21 @@ async function smoke(settings) {
     }
 
     const gateway = path.join(binRoot, 'sdkwork-api-web-server-standalone-gateway');
+    const websiteEdgeRuntime = path.join(
+      binRoot,
+      'sdkwork-web-server-website-delivery-edge-runtime',
+    );
     const packagedExample = path.join(packageRoot, 'etc', 'examples', 'sdkwork.webserver.config.json');
+    const packagedWebsiteHostConfig = path.join(
+      packageRoot,
+      'etc',
+      'data-plane',
+      'website.cloud.config.json',
+    );
     run(gateway, ['--help'], { cwd: packageRoot });
+    run(websiteEdgeRuntime, ['--help'], { cwd: packageRoot });
     run(gateway, ['validate', packagedExample], { cwd: packageRoot });
+    run(websiteEdgeRuntime, ['validate', packagedWebsiteHostConfig], { cwd: packageRoot });
 
     const certificateFile = path.join(temporaryRoot, 'smoke-cert.pem');
     const privateKeyFile = path.join(temporaryRoot, 'smoke-key.pem');

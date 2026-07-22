@@ -1,7 +1,10 @@
 // `WebRepositoryPort` implementation delegated to the engine-specific repository modules.
 
 use async_trait::async_trait;
-use sdkwork_intelligence_webserver_service::{AuditLogWrite, WebRepositoryPort};
+use sdkwork_intelligence_webserver_service::{
+    AuditLogWrite, RuntimeAssignmentTarget, RuntimeAssignmentWrite, RuntimeObservationWrite,
+    WebRepositoryPort,
+};
 use sdkwork_webserver_contract::{
     AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse, AuditLogPage,
     CertificateIssueUpdate, CertificatePage, CertificateResponse, CreateCertificateRequest,
@@ -11,7 +14,8 @@ use sdkwork_webserver_contract::{
     DomainVerifyResponse, EnvVariablePage, EnvVariableResponse, HealthCheckPage,
     HealthCheckResponse, ListNginxConfigsQuery, ListSitesQuery, NginxConfigPage,
     NginxConfigResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse,
-    ServerPage, SitePage, SiteResponse, UpdateNginxConfigRequest, UpdateSiteRequest,
+    RuntimeAssignment, RuntimeAssignmentDelivery, RuntimeObservation, ServerPage, SitePage,
+    SiteResponse, UpdateNginxConfigRequest, UpdateSiteRequest,
 };
 use sdkwork_webserver_contract::{WebServiceError, WebServiceResult};
 
@@ -384,6 +388,52 @@ impl WebRepositoryPort for WebRepository {
     async fn authenticate_agent_token(&self, token: &str) -> WebServiceResult<(String, i64)> {
         let agent = self.authenticate_agent_token_repo(token).await?;
         Ok((agent.server_uuid, agent.tenant_id))
+    }
+
+    async fn resolve_runtime_assignment_target(
+        &self,
+        requester_tenant_id: i64,
+        can_cross_tenant: bool,
+        node_uuid: &str,
+    ) -> WebServiceResult<RuntimeAssignmentTarget> {
+        self.resolve_runtime_assignment_target_repo(
+            requester_tenant_id,
+            can_cross_tenant,
+            node_uuid,
+        )
+        .await
+    }
+
+    async fn publish_runtime_assignment(
+        &self,
+        write: RuntimeAssignmentWrite,
+    ) -> WebServiceResult<RuntimeAssignment> {
+        self.publish_runtime_assignment_repo(write).await
+    }
+
+    async fn retrieve_current_runtime_assignment(
+        &self,
+        tenant_id: i64,
+        node_uuid: &str,
+        environment: &str,
+        if_generation: Option<&str>,
+        if_snapshot_sha256: Option<&str>,
+    ) -> WebServiceResult<RuntimeAssignmentDelivery> {
+        self.retrieve_current_runtime_assignment_repo(
+            tenant_id,
+            node_uuid,
+            environment,
+            if_generation,
+            if_snapshot_sha256,
+        )
+        .await
+    }
+
+    async fn create_runtime_observation(
+        &self,
+        write: RuntimeObservationWrite,
+    ) -> WebServiceResult<RuntimeObservation> {
+        self.create_runtime_observation_repo(write).await
     }
 
     async fn record_agent_heartbeat(

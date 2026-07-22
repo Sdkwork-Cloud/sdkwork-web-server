@@ -5,15 +5,18 @@ use sdkwork_database_config::{DatabaseConfig, DatabaseEngine};
 use sdkwork_database_id::SnowflakeIdGenerator;
 use sdkwork_database_sqlx::{create_any_pool_from_config, create_pool_from_config};
 use sdkwork_intelligence_webserver_repository_sqlx::{PostgresWebRepository, SqliteWebRepository};
-use sdkwork_intelligence_webserver_service::AuditLogWrite;
-use sdkwork_intelligence_webserver_service::WebRepositoryPort;
+use sdkwork_intelligence_webserver_service::{
+    AuditLogWrite, RuntimeAssignmentTarget, RuntimeAssignmentWrite, RuntimeObservationWrite,
+    WebRepositoryPort,
+};
 use sdkwork_webserver_contract::{
     AgentHeartbeatRequest, CertificateIssueUpdate, CreateCertificateRequest,
     CreateDeploymentRequest, CreateDomainRequest, CreateEnvVariableRequest,
     CreateHealthCheckRequest, CreateNginxConfigRequest, CreateServerRequest, CreateSiteRequest,
-    ListNginxConfigsQuery, ListSitesQuery, UpdateNginxConfigRequest, UpdateSiteRequest,
-    WebServiceErrorKind,
+    ListNginxConfigsQuery, ListSitesQuery, RuntimeObservationState, UpdateNginxConfigRequest,
+    UpdateSiteRequest, WebServiceErrorKind, WebsiteRuntimeSetSnapshot,
 };
+use sdkwork_webserver_core::website_runtime::website_runtime_set_snapshot_sha256;
 use sdkwork_webserver_database_host::bootstrap_web_database;
 use sqlx::{AnyPool, Row};
 use tempfile::TempDir;
@@ -567,6 +570,7 @@ async fn verify_public_repository_surface(context: &TestContext, site_id: &str) 
             &CreateServerRequest {
                 name: "Parity Edge".to_string(),
                 host: "192.0.2.44".to_string(),
+                tenant_scope_hash: "a".repeat(64),
                 ssh_port: 22,
             },
         )
@@ -577,6 +581,7 @@ async fn verify_public_repository_surface(context: &TestContext, site_id: &str) 
         .await
         .expect("authenticate agent token from JSON metadata");
     assert_eq!(authenticated, (server.server.id.clone(), TENANT_A));
+    verify_runtime_assignment_contract(context, &server.server.id).await;
     repository
         .record_agent_heartbeat(
             &server.server.id,
@@ -637,6 +642,315 @@ async fn verify_public_repository_surface(context: &TestContext, site_id: &str) 
         .retrieve_site(TENANT_A, site_id)
         .await
         .expect_err("soft-deleted site must not be retrievable");
+}
+
+async fn verify_runtime_assignment_contract(context: &TestContext, node_uuid: &str) {
+    let repository = &context.repository;
+    let target = repository
+        .resolve_runtime_assignment_target(TENANT_A, false, node_uuid)
+        .await
+        .expect("resolve tenant-owned runtime target");
+    assert_eq!(target.node_uuid, node_uuid);
+    assert_eq!(target.tenant_scope_hash, "a".repeat(64));
+    assert_eq!(
+        repository
+            .resolve_runtime_assignment_target(0, true, node_uuid)
+            .await
+            .expect("authorized service resolves target tenant")
+            .tenant_id,
+        TENANT_A
+    );
+    assert_eq!(
+        repository
+            .resolve_runtime_assignment_target(TENANT_B, false, node_uuid)
+            .await
+            .expect_err("another tenant cannot resolve the target")
+            .kind(),
+        WebServiceErrorKind::NotFound
+    );
+
+    let production_one = runtime_assignment_write(&target, "production", 1, "production-one");
+    let first = repository
+        .publish_runtime_assignment(production_one.clone())
+        .await
+        .expect("publish first production assignment");
+    let replay = repository
+        .publish_runtime_assignment(production_one.clone())
+        .await
+        .expect("same generation and hash are idempotent");
+    assert_eq!(replay.assignment_uuid, first.assignment_uuid);
+
+    let generation_conflict = repository
+        .publish_runtime_assignment(runtime_assignment_write(
+            &target,
+            "production",
+            1,
+            "generation-conflict",
+        ))
+        .await
+        .expect_err("same generation with another hash must conflict");
+    assert_eq!(generation_conflict.kind(), WebServiceErrorKind::Conflict);
+
+    let staging_one = runtime_assignment_write(&target, "staging", 1, "staging-one");
+    repository
+        .publish_runtime_assignment(staging_one.clone())
+        .await
+        .expect("environment generations are isolated");
+
+    let initial = repository
+        .retrieve_current_runtime_assignment(TENANT_A, node_uuid, "production", None, None)
+        .await
+        .expect("retrieve current production assignment");
+    assert!(!initial.unchanged);
+    assert_eq!(initial.assignment.generation, "1");
+    assert!(initial.runtime_set.is_some());
+    let unchanged = repository
+        .retrieve_current_runtime_assignment(
+            TENANT_A,
+            node_uuid,
+            "production",
+            Some(&initial.assignment.generation),
+            Some(&initial.assignment.snapshot_sha256),
+        )
+        .await
+        .expect("conditionally retrieve current assignment");
+    assert!(unchanged.unchanged);
+    assert!(unchanged.runtime_set.is_none());
+    let changed = repository
+        .retrieve_current_runtime_assignment(
+            TENANT_A,
+            node_uuid,
+            "production",
+            Some(&initial.assignment.generation),
+            Some(&"f".repeat(64)),
+        )
+        .await
+        .expect("a mismatched condition returns the assignment body");
+    assert!(!changed.unchanged);
+    assert!(changed.runtime_set.is_some());
+    assert_eq!(
+        repository
+            .retrieve_current_runtime_assignment(TENANT_B, node_uuid, "production", None, None,)
+            .await
+            .expect_err("current assignment is tenant scoped")
+            .kind(),
+        WebServiceErrorKind::NotFound
+    );
+
+    let production_two = runtime_assignment_write(&target, "production", 2, "production-two");
+    let second = repository
+        .publish_runtime_assignment(production_two.clone())
+        .await
+        .expect("publish next production generation");
+    assert_eq!(second.generation, "2");
+    assert_eq!(
+        repository
+            .publish_runtime_assignment(production_one)
+            .await
+            .expect_err("a lower generation must remain stale")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+
+    let active_first = runtime_observation_write(
+        &production_two,
+        RuntimeObservationState::Active,
+        Some("1.0.0"),
+        None,
+        None,
+    );
+    assert_eq!(
+        repository
+            .create_runtime_observation(active_first)
+            .await
+            .expect_err("observations cannot start at ACTIVE")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+
+    let received_write = runtime_observation_write(
+        &production_two,
+        RuntimeObservationState::Received,
+        Some("1.0.0"),
+        None,
+        None,
+    );
+    let received = repository
+        .create_runtime_observation(received_write.clone())
+        .await
+        .expect("record RECEIVED");
+    let received_replay = repository
+        .create_runtime_observation(received_write.clone())
+        .await
+        .expect("identical observation is idempotent");
+    assert_eq!(received_replay.observation_uuid, received.observation_uuid);
+    let mut changed_received = received_write;
+    changed_received.node_version = Some("1.0.1".to_owned());
+    assert_eq!(
+        repository
+            .create_runtime_observation(changed_received)
+            .await
+            .expect_err("same state cannot be replayed with another payload")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+    assert_eq!(
+        repository
+            .create_runtime_observation(runtime_observation_write(
+                &production_two,
+                RuntimeObservationState::Staged,
+                Some("1.0.0"),
+                None,
+                None,
+            ))
+            .await
+            .expect_err("normal observation phases cannot be skipped")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+
+    for state in [
+        RuntimeObservationState::Validated,
+        RuntimeObservationState::Staged,
+        RuntimeObservationState::Active,
+    ] {
+        repository
+            .create_runtime_observation(runtime_observation_write(
+                &production_two,
+                state,
+                Some("1.0.0"),
+                None,
+                None,
+            ))
+            .await
+            .expect("advance observation state");
+    }
+    assert_eq!(
+        repository
+            .retrieve_current_runtime_assignment(
+                TENANT_A,
+                node_uuid,
+                "production",
+                Some(&production_two.generation.to_string()),
+                Some(&production_two.snapshot_sha256),
+            )
+            .await
+            .expect("retrieve activation checkpoint")
+            .latest_observation_state,
+        Some(RuntimeObservationState::Active)
+    );
+    assert_eq!(
+        repository
+            .create_runtime_observation(runtime_observation_write(
+                &production_two,
+                RuntimeObservationState::Rejected,
+                Some("1.0.0"),
+                Some("ACTIVATION_FAILED"),
+                Some("must not replace ACTIVE"),
+            ))
+            .await
+            .expect_err("terminal observations are immutable")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+
+    repository
+        .create_runtime_observation(runtime_observation_write(
+            &staging_one,
+            RuntimeObservationState::Received,
+            Some("1.0.0"),
+            None,
+            None,
+        ))
+        .await
+        .expect("record staging RECEIVED");
+    repository
+        .create_runtime_observation(runtime_observation_write(
+            &staging_one,
+            RuntimeObservationState::Rejected,
+            Some("1.0.0"),
+            Some("VALIDATION_FAILED"),
+            Some("synthetic parity rejection"),
+        ))
+        .await
+        .expect("REJECTED may terminate any non-terminal phase");
+    let mut generation_mismatch = runtime_observation_write(
+        &staging_one,
+        RuntimeObservationState::Rejected,
+        Some("1.0.0"),
+        Some("VALIDATION_FAILED"),
+        Some("synthetic parity rejection"),
+    );
+    generation_mismatch.generation += 1;
+    assert_eq!(
+        repository
+            .create_runtime_observation(generation_mismatch)
+            .await
+            .expect_err("observation generation must match assignment")
+            .kind(),
+        WebServiceErrorKind::Conflict
+    );
+}
+
+fn runtime_assignment_write(
+    target: &RuntimeAssignmentTarget,
+    environment: &str,
+    generation: u64,
+    identity: &str,
+) -> RuntimeAssignmentWrite {
+    let snapshot_uuid = format!("snapshot-{generation}-{identity}");
+    let mut value = serde_json::json!({
+        "schemaVersion": "sdkwork.website-runtime-set.v1",
+        "kind": "sdkwork.website-runtime-set.snapshot",
+        "snapshotUuid": snapshot_uuid,
+        "nodeUuid": target.node_uuid,
+        "environment": environment,
+        "generation": generation,
+        "generatedAt": "2026-07-22T00:00:00Z",
+        "compilerVersion": "repository-parity/1",
+        "snapshotSha256": "0".repeat(64),
+        "maximumSites": 8,
+        "descriptors": []
+    });
+    let unsigned: WebsiteRuntimeSetSnapshot =
+        serde_json::from_value(value.clone()).expect("parse unsigned runtime-set fixture");
+    let snapshot_sha256 =
+        website_runtime_set_snapshot_sha256(&unsigned).expect("hash runtime-set fixture");
+    value["snapshotSha256"] = serde_json::Value::String(snapshot_sha256.clone());
+    RuntimeAssignmentWrite {
+        tenant_id: target.tenant_id,
+        server_id: target.server_id,
+        node_uuid: target.node_uuid.clone(),
+        environment: environment.to_owned(),
+        generation,
+        snapshot_uuid,
+        snapshot_sha256,
+        runtime_set_json: serde_json::to_string(&value).expect("serialize runtime-set fixture"),
+        runtime_set_bytes: serde_json::to_vec(&value)
+            .expect("measure runtime-set fixture")
+            .len(),
+        assigned_by_subject: "repository-parity".to_owned(),
+    }
+}
+
+fn runtime_observation_write(
+    assignment: &RuntimeAssignmentWrite,
+    state: RuntimeObservationState,
+    node_version: Option<&str>,
+    reason_code: Option<&str>,
+    detail: Option<&str>,
+) -> RuntimeObservationWrite {
+    RuntimeObservationWrite {
+        tenant_id: assignment.tenant_id,
+        node_uuid: assignment.node_uuid.clone(),
+        snapshot_uuid: assignment.snapshot_uuid.clone(),
+        generation: assignment.generation,
+        snapshot_sha256: assignment.snapshot_sha256.clone(),
+        state,
+        node_version: node_version.map(str::to_owned),
+        reason_code: reason_code.map(str::to_owned),
+        detail: detail.map(str::to_owned),
+    }
 }
 
 async fn verify_node_sync_database_bounds(

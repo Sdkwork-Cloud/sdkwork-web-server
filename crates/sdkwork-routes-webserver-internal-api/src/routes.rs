@@ -1,0 +1,110 @@
+use std::sync::Arc;
+
+use axum::{
+    extract::{DefaultBodyLimit, Path, Query, State},
+    response::Response,
+    routing::{get, post, put},
+    Extension, Json, Router,
+};
+use sdkwork_routes_webserver_common::{created_resource, ok_resource, WebApiError};
+use sdkwork_webserver_contract::{
+    CreateRuntimeObservationRequest, PublishRuntimeAssignmentRequest, WebInternalApi,
+    WebInternalRequestContext, MAX_WEBSITE_RUNTIME_SET_BYTES,
+};
+use serde::Deserialize;
+
+use crate::{auth::require_internal_context, paths};
+
+const PUBLISH_REQUEST_ENVELOPE_BYTES: usize = 1024 * 1024;
+const OBSERVATION_REQUEST_BYTES: usize = 16 * 1024;
+
+#[derive(Clone)]
+struct InternalState {
+    api: Arc<dyn WebInternalApi>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CurrentAssignmentQuery {
+    environment: String,
+    #[serde(default)]
+    if_generation: Option<String>,
+    #[serde(default)]
+    if_snapshot_sha256: Option<String>,
+}
+
+pub fn build_router_with_internal_api<A>(api: A) -> Router
+where
+    A: WebInternalApi + 'static,
+{
+    build_router_with_shared_internal_api(Arc::new(api))
+}
+
+pub fn build_router_with_shared_internal_api(api: Arc<dyn WebInternalApi>) -> Router {
+    Router::new()
+        .route(
+            paths::RUNTIME_ASSIGNMENT,
+            put(publish_runtime_assignment).layer(DefaultBodyLimit::max(
+                MAX_WEBSITE_RUNTIME_SET_BYTES + PUBLISH_REQUEST_ENVELOPE_BYTES,
+            )),
+        )
+        .route(
+            paths::CURRENT_RUNTIME_ASSIGNMENT,
+            get(retrieve_current_runtime_assignment),
+        )
+        .route(
+            paths::RUNTIME_OBSERVATIONS,
+            post(create_runtime_observation)
+                .layer(DefaultBodyLimit::max(OBSERVATION_REQUEST_BYTES)),
+        )
+        .with_state(InternalState { api })
+}
+
+async fn publish_runtime_assignment(
+    State(state): State<InternalState>,
+    context: Option<Extension<WebInternalRequestContext>>,
+    Path((node_uuid, environment)): Path<(String, String)>,
+    Json(request): Json<PublishRuntimeAssignmentRequest>,
+) -> Result<Response, WebApiError> {
+    let context = require_internal_context(context)?;
+    ok_resource(
+        state
+            .api
+            .publish_runtime_assignment(&context, &node_uuid, &environment, &request)
+            .await,
+    )
+}
+
+async fn retrieve_current_runtime_assignment(
+    State(state): State<InternalState>,
+    context: Option<Extension<WebInternalRequestContext>>,
+    Query(query): Query<CurrentAssignmentQuery>,
+) -> Result<Response, WebApiError> {
+    let context = require_internal_context(context)?;
+    ok_resource(
+        state
+            .api
+            .retrieve_current_runtime_assignment(
+                &context,
+                &query.environment,
+                query.if_generation.as_deref(),
+                query.if_snapshot_sha256.as_deref(),
+            )
+            .await,
+    )
+}
+
+async fn create_runtime_observation(
+    State(state): State<InternalState>,
+    context: Option<Extension<WebInternalRequestContext>>,
+    Path(snapshot_uuid): Path<String>,
+    Json(request): Json<CreateRuntimeObservationRequest>,
+) -> Result<Response, WebApiError> {
+    let context = require_internal_context(context)?;
+    created_resource(
+        state
+            .api
+            .create_runtime_observation(&context, &snapshot_uuid, &request)
+            .await,
+    )
+}

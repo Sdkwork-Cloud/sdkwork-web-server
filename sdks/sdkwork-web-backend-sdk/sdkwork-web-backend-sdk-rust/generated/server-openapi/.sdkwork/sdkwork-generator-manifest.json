@@ -76,7 +76,7 @@
     },
     {
       "path": "src/http/client.rs",
-      "sha256": "4ca489ead7131be55653bbfd2f91577f8f4a8b95a752dc7e3fb8e04e3f25f326"
+      "sha256": "b0a7d5a2a3d51bb93a1704bf601cb2962b356a2b89de7ccc2ebdfb2b6060c22f"
     },
     {
       "path": "src/http/mod.rs",
@@ -136,11 +136,11 @@
     },
     {
       "path": "src/models/create_server_request.rs",
-      "sha256": "a05f36f8363c3e6b6877c4969a7af9cf8b1eb76a7e829ca5fa876e78ac777b5c"
+      "sha256": "53090e53517f6bdeab3e58c2517f27348e166670c00a4921f875cf79d86a928a"
     },
     {
       "path": "src/models/create_server_response.rs",
-      "sha256": "323e0b1034056637b7fccbbe4b06adfae6ed2f66ffcc3a25338b63e4b14dd216"
+      "sha256": "b007e328c6030e0c7b62b7c6755d8a2c829acfa86204ae0fafb27cabd94b58d4"
     },
     {
       "path": "src/models/field_error.rs",
@@ -248,7 +248,7 @@
     },
     {
       "path": "src/models/server_response.rs",
-      "sha256": "13116c8dd982d5f2cc60ced28d9b649d2a2f9b9bb0d774b572b89df08e7ae4fc"
+      "sha256": "8b1e423ff4a2334b01efbd652f3dc04cc057eae7c835ad9f634aaf26e1801a8f"
     },
     {
       "path": "src/models/servers_create_response201.rs",

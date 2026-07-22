@@ -5,6 +5,7 @@
   "domain": "web",
   "apiAuthority": "sdkwork-web.backend",
   "apiPrefix": "/backend/v3/api",
+  "sdkSurface": "backend",
   "sdkType": "backend",
   "languages": [
     "typescript",
@@ -23,6 +24,7 @@
   "generator": {
     "package": "@sdkwork/sdk-generator",
     "entrypoint": "../sdkwork-sdk-generator/bin/sdkgen.js",
+    "type": "backend",
     "standardProfile": "sdkwork-v3"
   },
   "contracts": {
@@ -52,7 +54,7 @@
   "requestContextFramework": {
     "apiSurface": "backend-api",
     "contextType": "WebRequestContext",
-    "resolver": "WebRequestContextResolver + AgentTokenResolverDecorator",
+    "resolver": "WebRequestContextResolver + MachineCredentialResolverDecorator",
     "standardInterceptors": [
       "request_identity",
       "surface_classification",

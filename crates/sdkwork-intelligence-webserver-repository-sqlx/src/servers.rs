@@ -1,9 +1,9 @@
+use super::{EngineRow, WebRepository};
 use sdkwork_webserver_contract::{
     CreateServerRequest, CreateServerResponse, ServerPage, ServerResponse, WebServiceError,
     WebServiceResult,
 };
 use serde_json::json;
-use super::{EngineRow, WebRepository};
 use sqlx::Row;
 
 use super::agents::{generate_agent_token, hash_agent_token, parse_last_heartbeat_at};
@@ -30,7 +30,7 @@ impl WebRepository {
         let total: i64 = count_row.try_get("total").unwrap_or(0);
 
         let rows = sqlx::query(
-            "SELECT uuid, name, host, ssh_port, status,
+            "SELECT uuid, name, host, tenant_scope_hash, ssh_port, status,
                     CAST(metadata AS TEXT) AS metadata,
                     CAST(created_at AS TEXT) AS created_at
              FROM web_server
@@ -67,14 +67,14 @@ impl WebRepository {
             "agentTokenHash": hash_agent_token(&agent_token),
         });
         let engine = self.database_engine().await?;
-        let metadata_expression = json_write_expression(engine, "$7");
-        let now_expression = instant_write_expression(engine, "$8");
+        let metadata_expression = json_write_expression(engine, "$8");
+        let now_expression = instant_write_expression(engine, "$9");
         let insert_sql = format!(
             "INSERT INTO web_server (
-                id, uuid, tenant_id, name, host, ssh_port, status, metadata,
+                id, uuid, tenant_id, name, host, tenant_scope_hash, ssh_port, status, metadata,
                 created_at, updated_at, version
              ) VALUES (
-                $1, $2, $3, $4, $5, $6, 0, {metadata_expression},
+                $1, $2, $3, $4, $5, $6, $7, 0, {metadata_expression},
                 {now_expression}, {now_expression}, 0
              )"
         );
@@ -85,6 +85,7 @@ impl WebRepository {
             .bind(tenant_id)
             .bind(&request.name)
             .bind(&request.host)
+            .bind(&request.tenant_scope_hash)
             .bind(request.ssh_port)
             .bind(metadata.to_string())
             .bind(&now)
@@ -97,6 +98,7 @@ impl WebRepository {
                 id: uuid,
                 name: request.name.clone(),
                 host: request.host.clone(),
+                tenant_scope_hash: request.tenant_scope_hash.clone(),
                 ssh_port: request.ssh_port,
                 status: 0,
                 last_heartbeat_at: None,
@@ -115,6 +117,7 @@ fn map_server_row(row: &EngineRow) -> Result<ServerResponse, sqlx::Error> {
         id: row.try_get("uuid")?,
         name: row.try_get("name")?,
         host: row.try_get("host")?,
+        tenant_scope_hash: row.try_get("tenant_scope_hash")?,
         ssh_port: row.try_get("ssh_port")?,
         status: row.try_get("status")?,
         last_heartbeat_at: parse_last_heartbeat_at(&metadata_raw),

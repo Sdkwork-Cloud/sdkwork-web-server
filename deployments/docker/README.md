@@ -21,4 +21,15 @@ The extracted bundle contains the runtime binaries, application manifest, config
 
 Before deployment, publish the image, resolve its registry `sha256` digest, verify provenance/signature/SBOM evidence, and render Kubernetes manifests with that digest. Mutable tags such as `latest` are not accepted as deployment identity.
 
-The runtime executes as uid/gid `10001`, listens on port `3800`, and uses `/tmp` as its only writable filesystem location.
+The cloud image starts `sdkwork-web-server-website-delivery-edge-runtime`, executes as uid/gid
+`10001`, and listens for website traffic on port `8080`. The image filesystem is immutable at
+runtime; Kubernetes supplies `/tmp`, a node-specific protected recovery volume, and secret-file
+credentials. The application standalone gateway remains a packaged standalone-profile binary and
+is not the cloud image entrypoint.
+
+The packaged `/app/etc/data-plane/website.cloud.config.json` is a fail-closed base policy and trusts
+no forwarding headers. A container placed behind an external TLS terminator must mount a
+compiler-validated environment-specific config at `/etc/sdkwork/web/sdkwork.webserver.config.json`,
+set `SDKWORK_WEB_SERVER_CONFIG_FILE` to that path, and list only the terminator's direct peer CIDRs
+under `listeners[].trustedProxy.trustedCidrs`. The Kubernetes renderer performs this materialization;
+setting a universal trusted network is forbidden.

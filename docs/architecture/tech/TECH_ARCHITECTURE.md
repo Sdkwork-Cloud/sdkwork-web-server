@@ -2,14 +2,22 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-21
+Updated: 2026-07-22
 Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, WEB_FRAMEWORK_SPEC.md, WEB_BACKEND_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, CONFIG_SPEC.md, SECURITY_SPEC.md, DEPLOYMENT_SPEC.md, NGINX_SPEC.md
 
 ## Document Map
 
-- [TECH-cloud-site-delivery-data-plane.md](TECH-cloud-site-delivery-data-plane.md) - proposed
-  descriptor ingestion, domain/path/Variant/Mount routing, provider adapters, cache/event
-  consistency, TLS snapshot separation, and commercial runtime evidence.
+- [TECH-cloud-site-delivery-data-plane.md](TECH-cloud-site-delivery-data-plane.md) - in-progress;
+  descriptor v1 ingestion and immutable domain/path/Variant/Mount indexes are implemented, while
+  generated-SDK Drive/Knowledgebase provider adapters, activation-time Provider validation, and the
+  transport-neutral runtime-set delivery executor run through the dedicated
+  `sdkwork-web-server-website-delivery-edge-runtime`. Authenticated conditional cloud assignment pull and phased
+  node observations now run through the generated Web Internal SDK; Deploy producer integration,
+  true upstream SDK streaming, provider-aware cache consistency, TLS snapshot activation, and
+  commercial runtime evidence remain open. Node-local dual-slot runtime-set recovery,
+  owner-authenticated Drive/Knowledgebase event
+  ingress, dual-slot per-stream checkpoints, ordering/gap handling, and generated-SDK reconciliation
+  are implemented.
 
 - [TECH-runtime-data-plane.md](TECH-runtime-data-plane.md) - target and implementation status for the Rust HTTP/HTTPS request data plane.
 - [TECH-standards-alignment.md](TECH-standards-alignment.md) - pointer to the repository standards-alignment matrix.
@@ -31,6 +39,28 @@ Current implemented baseline:
 - durable bounded Web Node Daemon desired/observed apply checkpoints with crash replay;
 - generated Rust backend SDK heartbeat/sync transport with AgentToken and bounded responses;
 - machine-validated Web Server configuration and deterministic virtual-host/route compilation;
+- bounded immutable website runtime-set compilation/activation and generated Drive/Knowledgebase
+  Rust Internal SDK adapters behind transport-neutral resource/static/Wiki provider ports;
+- immutable provider registry plus a runtime-set delivery executor for STATIC/explicit SPA
+  fallback/WIKI outcomes with compiled scope, canonical URL reverse mapping, exact Range evidence,
+  force-HTTPS, consumer-owned deadlines, and bounded streams;
+- an independent single-tenant website delivery edge runtime that watches a verified runtime-set,
+  constructs both generated Provider SDKs with secret-file ingress credentials, validates Provider
+  resources before activation, registers both adapters, and maps typed outcomes and incremental
+  chunks to public HTTP responses;
+- a dedicated tenant-fleet Kubernetes topology whose per-fleet Website Service, Node-specific
+  provider-event Services, Pod selectors, NetworkPolicy, and disruption budget cannot select Nodes
+  assigned to another tenant scope or deliver a signed callback to the wrong Node;
+- a production `cloud` runtime assignment source that uses only the generated Web Internal Rust
+  SDK, a protected Web Node token file, strict node/environment/hash validation, conditional pulls,
+  durable last-known-good recovery, and resumable `RECEIVED -> VALIDATED -> STAGED -> ACTIVE` or
+  terminal `REJECTED` observations;
+- a node-local dual-slot website runtime-set recovery store that preserves the highest valid
+  generation across restart, rejects scope/hash conflicts, and never substitutes for authenticated
+  Deploy distribution;
+- a separate loopback provider-event listener with subscription-bound Drive/Knowledgebase HMAC
+  verification, nine strict owner event contracts, bounded stream-sharded processing, dual-slot
+  checkpoints, gap/conflict uncertainty, and current-runtime Provider reconciliation;
 - bounded HTTP/1, HTTP/2, TLS, static, redirect, reverse-proxy, WebSocket, health, retry, admission,
   pressure, DNS, and observability controls;
 - standalone and cloud development topology plans plus standalone/cloud production deployment
@@ -66,8 +96,12 @@ and production monitoring evidence.
 ```text
 sdkwork-api-web-server-standalone-gateway
   |-- management bootstrap -> app/backend route crates -> service -> repository -> database
-  |-- data-plane bootstrap -> compiled Web Server config -> HTTP/HTTPS/static/proxy
+  |-- data-plane bootstrap -> compiled Web Server config -> legacy HTTP/HTTPS/static/proxy
   `-- host operations -> config, signals, readiness, drain, runtime paths
+
+sdkwork-web-server-website-delivery-edge-runtime
+  `-- management-disabled data-plane library -> host config + cloud assignment or local file
+      -> delivery executor -> generated-SDK provider adapters -> public HTTP response
 
 sdkwork-webserver-core
   `-- framework-independent environment and Web Server config/compiler logic
@@ -87,12 +121,15 @@ The request path does not call management services or repositories. Management r
 - Host process configuration follows `CONFIG_SPEC.md` and `RUNTIME_DIRECTORY_SPEC.md`.
 - Node synchronization publishes bounded immutable `sv1:` snapshots through the Agent contract;
   mutable management DTOs do not enter the request path.
-- OpenAPI remains authority for management app-api/backend-api only.
+- OpenAPI authorities are app-api, backend-api, and the application-ingress Web Internal API. The
+  Web Node consumes the generated `sdkwork-web-internal-sdk`; the internal route crate consumes the
+  local `WebInternalApi` service port and never its own generated client.
 
 ## 5. API, SDK, And Data Ownership
 
 - Management success/error responses follow SDKWork envelopes and Problem Details.
-- Existing SDK families remain `sdkwork-web-app-sdk` and `sdkwork-web-backend-sdk`.
+- SDK families are `sdkwork-web-app-sdk`, `sdkwork-web-backend-sdk`, and the machine-to-machine
+  `sdkwork-web-internal-sdk` used for runtime assignment publication, retrieval, and observations.
 - Request data-plane traffic preserves the configured upstream or static Web protocol; it does not wrap arbitrary application responses in SDKWork management envelopes.
 - PostgreSQL is cloud/default server authority. SQLite is limited to explicitly selected single-node standalone behavior.
 - List/search repositories and SDKs remain subject to store-level SDKWork pagination.
@@ -110,11 +147,16 @@ The request path does not call management services or repositories. Management r
 
 - `standalone`: one packaged gateway runs the composed management and data plane; server-grade
   deployments default to PostgreSQL, with an explicit SQLite single-node development exception.
-- `cloud`: request data-plane nodes consume node-scoped immutable configuration and secret assignments; PostgreSQL remains control-plane authority.
+- `cloud`: the dedicated website delivery edge-runtime nodes consume node-scoped immutable
+  configuration and secret assignments; management assemblies are hosted by the platform cloud
+  gateway and the application standalone gateway is not started.
 - `cloud.development` starts only the local Web Node Daemon client; application/API/database
   surfaces are explicit remote development URLs.
-- `cloud.production` uses digest-bound Kubernetes templates; published image existence is not
-  claimed while release packages remain disabled.
+- `cloud.production` uses digest-bound Kubernetes templates with one Node Secret and recovery PVC
+  per rendered edge-runtime StatefulSet plus a compiler-validated, hash-versioned immutable listener ConfigMap;
+  trusted-proxy CIDRs are explicit deployment inputs and universal networks are rejected. At least
+  two independently rendered Nodes are required for high availability. Published image existence
+  is not claimed while release packages remain disabled.
 - External Nginx remains an edge activation option and is not required for Rust request handling.
 
 ## 8. Architecture Decision Index

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-routes-webserver-internal-api",
+    "displayName": "SDKWork Web Server Internal API Routes",
+    "version": "0.1.0",
+    "type": "rust-route-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-routes-webserver-internal-api",
+    "domain": "platform",
+    "capability": "webserver-runtime-distribution",
+    "surface": "internal-api",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": [
+      "Cargo.toml",
+      "specs/component.spec.json",
+      "../../sdks/_route-manifests/internal-api/sdkwork-routes-webserver-internal-api.route-manifest.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {"file": "API_SPEC.md", "path": "../../../sdkwork-specs/API_SPEC.md", "purpose": "Internal API authority and envelopes."},
+    {"file": "INTERNAL_API_SPEC.md", "path": "../../../sdkwork-specs/INTERNAL_API_SPEC.md", "purpose": "Application ingress contract."},
+    {"file": "WEB_FRAMEWORK_SPEC.md", "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md", "purpose": "Ingress authentication and context injection."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust route structure."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Machine credential isolation."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Executable route verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-route",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "webServerInternalApiRouter", "export": "crate-root"},
+      {"name": "webServerInternalApiGatewayMount", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "webInternalApi", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "webApiCommon", "export": "crate-root", "provider": "sdkwork-routes-webserver-common"}
+    ],
+    "runtimeEntrypoints": ["crate-root#gateway_mount", "crate-root#build_router_with_internal_api"],
+    "routeManifest": "sdks/_route-manifests/internal-api/sdkwork-routes-webserver-internal-api.route-manifest.json",
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "permissionComposition": {},
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-routes-webserver-internal-api"]
+  }
+}

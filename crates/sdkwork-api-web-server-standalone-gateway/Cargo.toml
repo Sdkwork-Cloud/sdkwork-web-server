@@ -3,6 +3,15 @@ name = "sdkwork-api-web-server-standalone-gateway"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = ["management"]
+management = [
+  "dep:sdkwork-api-web-server-assembly",
+  "dep:sdkwork-database-sqlx",
+  "dep:sdkwork-intelligence-webserver-service",
+  "dep:sdkwork-webserver-database-host",
+]
+
 [lib]
 name = "sdkwork_api_web_server_standalone_gateway"
 path = "src/lib.rs"
@@ -11,9 +20,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "sdkwork-api-web-server-standalone-gateway"
 path = "src/main.rs"
+required-features = ["management"]
 
 [dependencies]
-sdkwork-api-web-server-assembly.workspace = true
+sdkwork-api-web-server-assembly = { workspace = true, optional = true }
 atomic-waker.workspace = true
 arc-swap.workspace = true
 axum.workspace = true
@@ -30,11 +40,13 @@ hyper-util.workspace = true
 ipnet.workspace = true
 percent-encoding.workspace = true
 rustls.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 socket2.workspace = true
 sha2.workspace = true
 sync_wrapper.workspace = true
 thiserror.workspace = true
+time.workspace = true
 tokio.workspace = true
 tokio-rustls.workspace = true
 tower.workspace = true
@@ -45,17 +57,28 @@ url.workspace = true
 webpki-roots.workspace = true
 x509-parser.workspace = true
 windows-sys.workspace = true
-sdkwork-intelligence-webserver-service.workspace = true
-sdkwork-database-sqlx.workspace = true
-sdkwork-webserver-database-host.workspace = true
+woothee.workspace = true
+zeroize.workspace = true
+sdkwork-intelligence-webserver-service = { workspace = true, optional = true }
+sdkwork-database-sqlx = { workspace = true, optional = true }
+sdkwork-webserver-database-host = { workspace = true, optional = true }
 sdkwork-webserver-core.workspace = true
+sdkwork-webserver-contract.workspace = true
+sdkwork-webserver-delivery-runtime.workspace = true
+sdkwork-webserver-drive-provider.workspace = true
+sdkwork-webserver-knowledgebase-provider.workspace = true
+sdkwork-drive-internal-sdk.workspace = true
+sdkwork-knowledgebase-internal-sdk.workspace = true
+sdkwork-web-internal-sdk.workspace = true
 sdkwork-web-bootstrap.workspace = true
 sdkwork-utils-rust.workspace = true
 sdkwork-web-core.workspace = true
 
 [dev-dependencies]
+async-trait.workspace = true
 h2.workspace = true
 http-body-util = { workspace = true, features = ["channel"] }
+jsonschema.workspace = true
 rcgen.workspace = true
 reqwest.workspace = true
 tempfile.workspace = true

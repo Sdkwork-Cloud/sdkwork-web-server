@@ -1,4 +1,4 @@
-//! Edge agent heartbeat and sync orchestration.
+//! Web Node heartbeat and sync orchestration for the v3 Agent wire contract.
 
 use sdkwork_webserver_contract::{
     AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse, WebServiceError,
@@ -12,7 +12,7 @@ const MAX_NODE_SYNC_RESPONSE_BYTES: usize = 15 * 1024 * 1024;
 impl WebService {
     /// Authenticates an agent bootstrap token and returns `(server_uuid, tenant_id)`.
     ///
-    /// Called by `AgentTokenResolverDecorator` during the framework authentication stage
+    /// Called by `MachineCredentialResolverDecorator` during framework authentication
     /// (C8-C9) to resolve `X-SDKWork-Agent-Token` into a `WebRequestPrincipal`.
     pub async fn try_authenticate_agent_token(
         &self,
@@ -22,7 +22,7 @@ impl WebService {
     }
 
     /// Records an edge-agent heartbeat after the framework has already authenticated the token
-    /// and resolved `server_id` + `tenant_id` via the `AgentTokenResolverDecorator` (C8-C9).
+    /// and resolved `server_id` + `tenant_id` via `MachineCredentialResolverDecorator` (C8-C9).
     pub async fn agent_heartbeat(
         &self,
         server_id: &str,
@@ -35,7 +35,7 @@ impl WebService {
     }
 
     /// Builds the agent sync manifest after the framework has already authenticated the token
-    /// and resolved `server_id` + `tenant_id` via the `AgentTokenResolverDecorator` (C8-C9).
+    /// and resolved `server_id` + `tenant_id` via `MachineCredentialResolverDecorator` (C8-C9).
     pub async fn agent_sync(
         &self,
         server_id: &str,

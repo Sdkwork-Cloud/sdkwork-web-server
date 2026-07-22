@@ -1,0 +1,153 @@
+use sdkwork_webserver_core::tls_runtime::{
+    compile_tls_assignment_snapshot, tls_assignment_snapshot_sha256, TlsAssignmentSnapshot,
+    TlsRuntimeSnapshotError, MAX_TLS_RUNTIME_SNAPSHOT_BYTES,
+};
+use serde_json::{json, Value};
+
+fn snapshot_fixture() -> Value {
+    json!({
+        "schemaVersion": "sdkwork.tls-runtime.v1",
+        "kind": "sdkwork.tls-runtime.snapshot",
+        "snapshotUuid": "tls-snapshot-0001",
+        "nodeUuid": "web-node-0001",
+        "generatedAt": "2026-07-21T00:00:00Z",
+        "compilerVersion": "deploy-tls-compiler/1",
+        "snapshotSha256": "0".repeat(64),
+        "assignments": [
+            {
+                "assignmentUuid": "assignment-exact",
+                "certificateUuid": "certificate-exact",
+                "certificateVersion": "version-0002",
+                "materialReference": "vault:certificate-exact-version-0002",
+                "expectedFingerprintSha256": "2".repeat(64),
+                "serverNames": ["api.example.com", "example.com"],
+                "notBefore": "2026-07-20T00:00:00Z",
+                "notAfter": "2026-10-18T00:00:00Z",
+                "policy": {
+                    "minimumVersion": "TLS1_2",
+                    "maximumVersion": "TLS1_3",
+                    "alpn": ["h2", "http/1.1"]
+                }
+            },
+            {
+                "assignmentUuid": "assignment-wildcard",
+                "certificateUuid": "certificate-wildcard",
+                "certificateVersion": "version-0007",
+                "materialReference": "vault:certificate-wildcard-version-0007",
+                "expectedFingerprintSha256": "7".repeat(64),
+                "serverNames": ["*.example.com", "*.example.net"],
+                "notBefore": "2026-07-20T00:00:00Z",
+                "notAfter": "2026-10-18T00:00:00Z",
+                "policy": {
+                    "minimumVersion": "TLS1_3",
+                    "maximumVersion": "TLS1_3",
+                    "alpn": ["h2"]
+                }
+            }
+        ],
+        "limits": {
+            "maximumAssignments": 128,
+            "maximumServerNamesPerAssignment": 32
+        }
+    })
+}
+
+fn signed_snapshot(mut value: Value) -> Vec<u8> {
+    let snapshot: TlsAssignmentSnapshot = serde_json::from_value(value.clone()).unwrap();
+    value["snapshotSha256"] = Value::String(tls_assignment_snapshot_sha256(&snapshot).unwrap());
+    serde_json::to_vec(&value).unwrap()
+}
+
+#[test]
+fn compiles_node_scoped_snapshot_and_selects_exact_before_wildcard_sni() {
+    let compiled = compile_tls_assignment_snapshot(&signed_snapshot(snapshot_fixture()))
+        .expect("fixture must compile");
+    assert_eq!(compiled.snapshot().node_uuid, "web-node-0001");
+    assert_eq!(compiled.snapshot_sha256().len(), 64);
+
+    let exact = compiled
+        .select_assignment("API.EXAMPLE.COM.")
+        .unwrap()
+        .unwrap();
+    assert_eq!(exact.assignment_uuid, "assignment-exact");
+
+    let wildcard = compiled
+        .select_assignment("www.example.com")
+        .unwrap()
+        .unwrap();
+    assert_eq!(wildcard.assignment_uuid, "assignment-wildcard");
+    assert!(compiled
+        .select_assignment("deep.www.example.com")
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn rejects_hash_tampering_and_private_key_material() {
+    let error = compile_tls_assignment_snapshot(&serde_json::to_vec(&snapshot_fixture()).unwrap())
+        .expect_err("unsigned fixture hash must fail");
+    assert!(matches!(
+        error,
+        TlsRuntimeSnapshotError::HashMismatch { .. }
+    ));
+
+    let mut with_private_key: Value =
+        serde_json::from_slice(&signed_snapshot(snapshot_fixture())).unwrap();
+    with_private_key["assignments"][0]["privateKeyPem"] =
+        Value::String("-----BEGIN PRIVATE KEY-----".into());
+    let error = compile_tls_assignment_snapshot(&serde_json::to_vec(&with_private_key).unwrap())
+        .expect_err("raw private key material must fail schema validation");
+    assert!(matches!(error, TlsRuntimeSnapshotError::Validation { .. }));
+}
+
+#[test]
+fn rejects_duplicate_sni_ownership_and_incoherent_tls_policy() {
+    let mut duplicate = snapshot_fixture();
+    duplicate["assignments"][1]["serverNames"] = json!(["api.example.com"]);
+    let error = compile_tls_assignment_snapshot(&signed_snapshot(duplicate))
+        .expect_err("duplicate SNI ownership must fail");
+    assert!(error
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("already assigned")));
+
+    let mut policy = snapshot_fixture();
+    policy["assignments"][0]["policy"]["minimumVersion"] = json!("TLS1_3");
+    policy["assignments"][0]["policy"]["maximumVersion"] = json!("TLS1_2");
+    let error = compile_tls_assignment_snapshot(&signed_snapshot(policy))
+        .expect_err("incoherent TLS version policy must fail");
+    assert!(error
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.path.ends_with("/policy/maximumVersion")));
+}
+
+#[test]
+fn rejects_noncanonical_unicode_sni_but_exposes_the_canonical_idna_form() {
+    let mut unicode = snapshot_fixture();
+    unicode["assignments"][0]["serverNames"] = json!(["例子.测试"]);
+    let error = compile_tls_assignment_snapshot(&signed_snapshot(unicode))
+        .expect_err("producer must emit canonical ASCII IDNA names");
+    assert!(error
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("xn--fsqu00a.xn--0zwm56d")));
+}
+
+#[test]
+fn rejects_noncanonical_timestamps_and_oversized_snapshots() {
+    let mut timestamp = snapshot_fixture();
+    timestamp["generatedAt"] = json!("2026-07-21T00:00:00.000Z");
+    let error = compile_tls_assignment_snapshot(&signed_snapshot(timestamp))
+        .expect_err("producer timestamps must use one canonical representation");
+    assert!(error
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.path == "/generatedAt"));
+
+    let oversized = vec![b' '; MAX_TLS_RUNTIME_SNAPSHOT_BYTES + 1];
+    assert!(matches!(
+        compile_tls_assignment_snapshot(&oversized),
+        Err(TlsRuntimeSnapshotError::TooLarge { .. })
+    ));
+}

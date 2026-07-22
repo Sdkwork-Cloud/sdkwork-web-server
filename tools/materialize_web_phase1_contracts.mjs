@@ -36,6 +36,25 @@ const surfaces = [
     prefix: "/backend/v3/api",
     domainTag: "web",
   },
+  {
+    yamlPath: "apis/internal-api/web/sdkwork-web-internal-api.openapi.yaml",
+    jsonAuthorityPath:
+      "apis/internal-api/web/sdkwork-web-internal-api.openapi.json",
+    sdkJsonPath:
+      "sdks/sdkwork-web-internal-sdk/openapi/sdkwork-web-internal-api.openapi.json",
+    routeManifestPath:
+      "sdks/_route-manifests/internal-api/sdkwork-routes-webserver-internal-api.route-manifest.json",
+    crateDir: "crates/sdkwork-routes-webserver-internal-api",
+    manifestFn: "internal_route_manifest",
+    packageName: "sdkwork-routes-webserver-internal-api",
+    surface: "internal-api",
+    apiAuthority: "sdkwork-web-internal-api",
+    sdkFamily: "sdkwork-web-internal-sdk",
+    prefix: "/internal/v3/api",
+    domainTag: "web",
+    languages: ["typescript", "rust"],
+    generatorType: "custom",
+  },
 ];
 
 function writeText(relativePath, content) {
@@ -64,6 +83,19 @@ function formatRustSource(relativePath) {
 
 function enrichOpenApi(openapi, profile) {
   const enriched = structuredClone(openapi);
+  if (profile.surface === "internal-api") {
+    const runtimeSetSchema = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          root,
+          "specs/sdkwork.website-runtime-set.snapshot.schema.json",
+        ),
+        "utf8",
+      ),
+    );
+    enriched.components.schemas.WebsiteRuntimeSetSnapshot =
+      rewriteRuntimeSetSchemaReferences(runtimeSetSchema);
+  }
   const componentResponses = enriched.components?.responses ?? {};
   for (const [pathKey, pathItem] of Object.entries(enriched.paths ?? {})) {
     for (const [method, operation] of Object.entries(pathItem ?? {})) {
@@ -74,7 +106,8 @@ function enrichOpenApi(openapi, profile) {
       operation["x-sdkwork-api-authority"] = profile.apiAuthority;
       operation["x-sdkwork-request-context"] = "WebRequestContext";
       operation["x-sdkwork-auth-mode"] =
-        operation["x-sdkwork-auth-mode"] ?? "dual-token";
+        operation["x-sdkwork-auth-mode"] ??
+        (profile.surface === "internal-api" ? "ingress-token" : "dual-token");
       // Derive x-sdkwork-route-auth from auth-mode when not explicitly declared (C8-C9).
       if (!operation["x-sdkwork-route-auth"]) {
         operation["x-sdkwork-route-auth"] = operation["x-sdkwork-auth-mode"];
@@ -115,6 +148,26 @@ function enrichOpenApi(openapi, profile) {
     }
   }
   return enriched;
+}
+
+function rewriteRuntimeSetSchemaReferences(value) {
+  if (Array.isArray(value)) {
+    return value.map(rewriteRuntimeSetSchemaReferences);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [
+        key,
+        key === "$ref" && typeof child === "string"
+          ? child.replace(
+              "#/$defs/",
+              "#/components/schemas/WebsiteRuntimeSetSnapshot/$defs/",
+            )
+          : rewriteRuntimeSetSchemaReferences(child),
+      ]),
+    );
+  }
+  return value;
 }
 
 function extractRoutes(openapi, profile) {
@@ -174,6 +227,7 @@ const ROUTE_AUTH_VARIANTS = {
   "refresh-token": "refresh_token",
   "public": "public",
   "agent-token": "agent_token",
+  "ingress-token": "ingress_token",
 };
 
 function httpRouteAuthHelper(routeAuth, authMode) {
@@ -261,9 +315,8 @@ const LANGUAGE_MANIFEST_FILE = {
 };
 
 function packageNameFor(family, language) {
-  const isApp = family.endsWith("-app-sdk");
-  const surfaceLabel = isApp ? "app" : "backend";
-  const pascalSurface = isApp ? "App" : "Backend";
+  const surfaceLabel = sdkSurfaceLabel(family);
+  const pascalSurface = pascalCase(surfaceLabel);
   switch (language) {
     case "typescript":
       return `@sdkwork/web-${surfaceLabel}-sdk`;
@@ -290,8 +343,7 @@ function packageNameFor(family, language) {
 }
 
 function csharpProjectName(family) {
-  const isApp = family.endsWith("-app-sdk");
-  return isApp ? "SDKWork.Web.AppSdk" : "SDKWork.Web.BackendSdk";
+  return `SDKWork.Web.${pascalCase(sdkSurfaceLabel(family))}Sdk`;
 }
 
 function csharpManifestFile(family) {
@@ -314,10 +366,11 @@ function manifestFileFor(family, language) {
 }
 
 function namespaceArgsFor(family, language) {
-  const isApp = family.endsWith("-app-sdk");
-  const ns = isApp ? "com.sdkwork.web.app.sdk" : "com.sdkwork.web.backend.sdk";
-  const csharpNs = isApp ? "SDKWork.Web.AppSdk" : "SDKWork.Web.BackendSdk";
-  const phpNs = isApp ? "SDKWork\\Web\\AppSdk" : "SDKWork\\Web\\BackendSdk";
+  const surfaceLabel = sdkSurfaceLabel(family);
+  const pascalSurface = pascalCase(surfaceLabel);
+  const ns = `com.sdkwork.web.${surfaceLabel}.sdk`;
+  const csharpNs = `SDKWork.Web.${pascalSurface}Sdk`;
+  const phpNs = `SDKWork\\Web\\${pascalSurface}Sdk`;
   switch (language) {
     case "java":
     case "kotlin":
@@ -331,6 +384,21 @@ function namespaceArgsFor(family, language) {
   }
 }
 
+function sdkSurfaceLabel(family) {
+  if (family.endsWith("-app-sdk")) return "app";
+  if (family.endsWith("-backend-sdk")) return "backend";
+  if (family.endsWith("-internal-sdk")) return "internal";
+  throw new Error(`Unsupported Web SDK family surface: ${family}`);
+}
+
+function sdkGeneratorType(profile) {
+  return profile.generatorType ?? sdkSurfaceLabel(profile.sdkFamily);
+}
+
+function pascalCase(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function sdkDependenciesFor(surface) {
   if (surface === "app-api") {
     return [
@@ -339,6 +407,9 @@ function sdkDependenciesFor(surface) {
         reason: "IAM login/session and tenant request context for protected app-api routes.",
       },
     ];
+  }
+  if (surface === "internal-api") {
+    return [];
   }
   return [
     {
@@ -352,7 +423,7 @@ function syncSdkManifest(profile) {
   const relativePath = `sdks/${profile.sdkFamily}/sdk-manifest.json`;
   const manifestPath = path.join(root, relativePath);
   if (!fs.existsSync(manifestPath)) {
-    throw new Error(`SDK family manifest not found: ${relativePath}`);
+    writeJson(relativePath, newSdkManifest(profile));
   }
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -371,6 +442,8 @@ function syncSdkManifest(profile) {
   }
 
   manifest.sdkDependencies = sdkDependenciesFor(profile.surface);
+  manifest.sdkSurface = sdkSurfaceLabel(profile.sdkFamily);
+  manifest.sdkType = sdkGeneratorType(profile);
   manifest.metadata = {
     ...manifest.metadata,
     managedBy: "tools/materialize_web_phase1_contracts.mjs",
@@ -379,12 +452,82 @@ function syncSdkManifest(profile) {
   writeJson(relativePath, manifest);
 }
 
+function newSdkManifest(profile) {
+  const family = profile.sdkFamily;
+  const surfaceLabel = sdkSurfaceLabel(family);
+  const languages = profile.languages ?? LANGUAGE_LIST;
+  const sdkgenFileName = `sdkwork-web-${surfaceLabel}-api.sdkgen.yaml`;
+  const authorityFileName = path.basename(profile.sdkJsonPath);
+  const languageEntries = languages.map((language) => {
+    const workspace = `${family}-${language}`;
+    const generatedPath = `${workspace}/generated/server-openapi`;
+    const entry = {
+      language,
+      workspace,
+      generationState: "materialized",
+      releaseState: "not_published",
+      packagePath: generatedPath,
+      manifestPath: `${generatedPath}/${manifestFileFor(family, language)}`,
+      name: packageNameFor(family, language),
+      version: SDK_VERSION,
+      description: `Generator-owned ${language} transport SDK for SDKWork Web ${pascalCase(surfaceLabel)} API.`,
+      generatedPath,
+    };
+    if (language === "typescript") {
+      entry.consumerPackageName = `@sdkwork/web-${surfaceLabel}-sdk`;
+      entry.transportPackageName = `${family}-generated-typescript`;
+    }
+    return entry;
+  });
+  return {
+    schemaVersion: 1,
+    sdkFamily: family,
+    sdkName: family,
+    packageName: `@sdkwork/web-${surfaceLabel}-sdk`,
+    transportPackageName: `${family}-generated-typescript`,
+    typescript: {
+      composedRoot: `${family}-typescript`,
+      composedEntry: `${family}-typescript/src/index.ts`,
+      transportRoot: `${family}-typescript/generated/server-openapi`,
+      transportEntry: `${family}-typescript/generated/server-openapi/src/index.ts`,
+    },
+    workspace: family,
+    title: `SDKWork Web ${pascalCase(surfaceLabel)} API SDK`,
+    apiVersion: SDK_VERSION,
+    openapiVersion: "3.1.2",
+    authoritySpec: `openapi/${authorityFileName}`,
+    generationInputSpec: `openapi/${sdkgenFileName}`,
+    derivedSpecs: {
+      default: `openapi/${sdkgenFileName}`,
+      flutter: `openapi/${sdkgenFileName}`,
+    },
+    sdkOwner: "sdkwork-web",
+    apiAuthority: profile.apiAuthority,
+    sdkSurface: surfaceLabel,
+    sdkType: sdkGeneratorType(profile),
+    discoverySurface: {
+      sdkTarget: surfaceLabel,
+      apiPrefix: profile.prefix,
+      schemaUrl: "/internal/v3/openapi.json",
+      generatedProtocols: ["http-openapi"],
+      manualTransports: [],
+    },
+    metadata: {
+      managedBy: "tools/materialize_web_phase1_contracts.mjs",
+      standardVersion: STANDARD_VERSION,
+    },
+    languages: languageEntries,
+    sdkDependencies: sdkDependenciesFor(profile.surface),
+  };
+}
+
 function writeComponentSpec(profile) {
   const family = profile.sdkFamily;
-  const isApp = profile.surface === "app-api";
-  const sdkType = isApp ? "app" : "backend";
-  const displayName = isApp ? "SDKWork Web App SDK" : "SDKWork Web Backend SDK";
-  const capability = isApp ? "web-app-sdk" : "web-backend-sdk";
+  const surfaceLabel = sdkSurfaceLabel(family);
+  const sdkType = sdkGeneratorType(profile);
+  const displayName = `SDKWork Web ${pascalCase(surfaceLabel)} SDK`;
+  const capability = `web-${surfaceLabel}-sdk`;
+  const languages = profile.languages ?? LANGUAGE_LIST;
   const componentSpec = {
     schemaVersion: 1,
     name: family,
@@ -392,11 +535,13 @@ function writeComponentSpec(profile) {
     domain: "web",
     apiAuthority: profile.apiAuthority,
     apiPrefix: profile.prefix,
+    sdkSurface: surfaceLabel,
     sdkType,
-    languages: LANGUAGE_LIST,
+    languages,
     generator: {
       package: "@sdkwork/sdk-generator",
       entrypoint: "../sdkwork-sdk-generator/bin/sdkgen.js",
+      type: sdkType,
       standardProfile: "sdkwork-v3",
     },
     contracts: {
@@ -409,17 +554,28 @@ function writeComponentSpec(profile) {
       events: [],
       configKeys: [],
     },
-    auth: {
-      mode: "dual-token",
-      authTokenHeader: "Authorization",
-      accessTokenHeader: "Access-Token",
-      requestIdHeader: "X-Request-Id",
-      requestIdOwnership: "server",
-    },
+    auth:
+      profile.surface === "internal-api"
+        ? {
+            mode: "ingress-token",
+            apiKeyHeader: "X-API-Key",
+            requestIdHeader: "X-Request-Id",
+            requestIdOwnership: "server",
+          }
+        : {
+            mode: "dual-token",
+            authTokenHeader: "Authorization",
+            accessTokenHeader: "Access-Token",
+            requestIdHeader: "X-Request-Id",
+            requestIdOwnership: "server",
+          },
     requestContextFramework: {
       apiSurface: profile.surface,
       contextType: "WebRequestContext",
-      resolver: "WebRequestContextResolver + AgentTokenResolverDecorator",
+      resolver:
+        profile.surface === "app-api"
+          ? "WebRequestContextResolver"
+          : "WebRequestContextResolver + MachineCredentialResolverDecorator",
       standardInterceptors: [
         "request_identity",
         "surface_classification",
@@ -450,7 +606,7 @@ function writeComponentSpec(profile) {
       root: `sdkwork-web-server/sdks/${family}`,
       domain: "web",
       capability,
-      languages: LANGUAGE_LIST,
+      languages,
       generated: false,
       manifests: [],
     },
@@ -488,20 +644,22 @@ function writeComponentSpec(profile) {
 
 function writeSdkgenInput(profile, openapi) {
   const family = profile.sdkFamily;
-  const surfaceLabel = profile.surface === "app-api" ? "app" : "backend";
+  const surfaceLabel = sdkSurfaceLabel(family);
   const sdkgenFileName = `sdkwork-web-${surfaceLabel}-api.sdkgen.yaml`;
   writeJson(`sdks/${family}/openapi/${sdkgenFileName}`, openapi);
 }
 
 function writeGenerateSdkScripts(profile) {
   const family = profile.sdkFamily;
-  const isApp = profile.surface === "app-api";
-  const surfaceLabel = isApp ? "app" : "backend";
+  const surfaceLabel = sdkSurfaceLabel(family);
   const sdkName = family;
   const apiPrefix = profile.prefix;
+  const generatorType = sdkGeneratorType(profile);
   const sdkgenFileName = `sdkwork-web-${surfaceLabel}-api.sdkgen.yaml`;
   const familyDir = `sdks/${family}`;
-  const defaultLanguages = isApp ? "typescript" : "typescript,rust";
+  const defaultLanguages = (profile.languages ??
+    (profile.surface === "app-api" ? ["typescript"] : ["typescript", "rust"])
+  ).join(",");
 
   // generate-sdk.mjs (cross-platform entry point)
   const mjs = `#!/usr/bin/env node
@@ -624,7 +782,7 @@ foreach ($LanguageValue in $Languages) {
             -i $InputPath \`
             -o $OutputPath \`
             -n $SdkName \`
-            -t ${isApp ? "app" : "backend"} \`
+            -t ${generatorType} \`
             -l $Language \`
             --fixed-sdk-version $SdkVersion \`
             --base-url $BaseUrl \`
@@ -704,7 +862,7 @@ for language in "\${language_array[@]}"; do
     -i "\${INPUT_PATH}" \\
     -o "\${output_path}" \\
     -n "\${SDK_NAME}" \\
-    -t ${isApp ? "app" : "backend"} \\
+    -t ${generatorType} \\
     -l "\${language}" \\
     --fixed-sdk-version "\${SDK_VERSION}" \\
     --base-url "\${BASE_URL}" \\

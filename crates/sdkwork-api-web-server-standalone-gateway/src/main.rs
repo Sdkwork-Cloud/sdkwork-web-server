@@ -74,7 +74,15 @@ async fn run_management_plane() -> MainResult<()> {
 }
 
 fn validate_config(path: PathBuf) -> MainResult<()> {
-    let revision = load_and_compile_webserver_config_revision(&path)?;
+    let revision = load_and_compile_webserver_config_revision(&path).inspect_err(|error| {
+        for diagnostic in error.diagnostics() {
+            tracing::error!(
+                config_path = %diagnostic.path,
+                message = %diagnostic.message,
+                "Web Server config diagnostic"
+            );
+        }
+    })?;
     let compiled = revision.app();
     let route_count = compiled
         .config()

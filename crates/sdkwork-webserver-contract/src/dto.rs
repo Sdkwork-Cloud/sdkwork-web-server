@@ -333,6 +333,8 @@ pub struct ServerResponse {
     pub id: String,
     pub name: String,
     pub host: String,
+    #[serde(rename = "tenantScopeHash")]
+    pub tenant_scope_hash: String,
     #[serde(rename = "sshPort")]
     pub ssh_port: i32,
     pub status: i32,
@@ -361,6 +363,8 @@ pub struct ServerPage {
 pub struct CreateServerRequest {
     pub name: String,
     pub host: String,
+    #[serde(rename = "tenantScopeHash")]
+    pub tenant_scope_hash: String,
     #[serde(rename = "sshPort", default = "default_ssh_port")]
     pub ssh_port: i32,
 }

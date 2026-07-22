@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-knowledgebase-provider",
+    "displayName": "SDKWork Web Server Knowledgebase Provider",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-knowledgebase-provider",
+    "domain": "platform",
+    "capability": "knowledgebase-wiki-website-provider",
+    "surface": "backend-provider",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/README.md", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "COMPONENT_SPEC.md", "path": "../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component identity, ports, and dependency surface contracts."},
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored adapter boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Provider and SDK adapter naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure."},
+    {"file": "SDK_SPEC.md", "path": "../../../sdkwork-specs/SDK_SPEC.md", "purpose": "Generated dependency SDK consumption."},
+    {"file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Injected Rust SDK client boundary."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Tenant scope, secret, error, and content safety."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Adapter contract verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-provider",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "knowledgebaseWebsiteResourceProvider", "export": "crate-root"},
+      {"name": "knowledgebaseWebsiteWikiProvider", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "websiteResourceProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "websiteWikiProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "knowledgebaseInternalWikiSdk", "export": "crate-root", "provider": "sdkwork-knowledgebase-internal-sdk"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkDependencies": [
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "role": "knowledgebase-public-wiki-provider",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/internal/v3/api",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "generatedTransportImportPolicy": "generated-rust-client-only",
+        "packageByLanguage": {
+          "rust": "sdkwork-knowledgebase-internal-sdk-generated-rust"
+        }
+      }
+    ],
+    "permissionComposition": {},
+    "dependencyApiExports": [
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "sdkFamily": "sdkwork-knowledgebase-internal-sdk",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "exportMode": "service-port",
+        "visibility": "application-internal",
+        "methods": [
+          "wikiPublications.retrieve",
+          "wikiPublications.routes.resolve",
+          "wikiPublications.contents.retrieve",
+          "wikiPublications.navigation.list",
+          "wikiPublications.pages.search"
+        ],
+        "packageExport": "crate-root",
+        "servicePort": "knowledgebaseWebsiteWikiProvider",
+        "runtimeRequired": true
+      }
+    ],
+    "dependencyApiSurfaces": [
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "sdkFamily": "sdkwork-knowledgebase-internal-sdk",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "runtimeMode": "external-service",
+        "sameOriginAllowed": false,
+        "requiredBaseUrlKey": "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_BASE_URL",
+        "clientBaseUrlSource": "bootstrap-injected KnowledgebaseWikiSdkClientResolver",
+        "coverage": "adapter-contract-tested",
+        "evidence": "tests/knowledgebase_wiki_provider.rs"
+      }
+    ],
+    "events": [],
+    "configKeys": [
+      "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_BASE_URL",
+      "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_INGRESS_TOKEN_FILE"
+    ]
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-webserver-knowledgebase-provider"]
+  }
+}

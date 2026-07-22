@@ -490,7 +490,7 @@
             "minLength": 3,
             "maxLength": 64
           },
-          "description": "TCP peer networks authorized to supply the configured real-IP Header. Omission of trustedProxy trusts no forwarding Header."
+          "description": "Immediate TCP peer networks authorized to supply the configured real-IP Header and one X-Forwarded-Proto request scheme. Omission of trustedProxy trusts no forwarding Header. Semantic validation rejects overbroad networks."
         },
         "header": {
           "type": "string",

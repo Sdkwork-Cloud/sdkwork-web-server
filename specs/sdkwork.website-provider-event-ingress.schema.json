@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdkwork.com/schemas/web/sdkwork.website-provider-event-ingress.schema.json",
+  "title": "SDKWork Website Provider Event Ingress",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "bindAddress",
+    "checkpointDirectory",
+    "subscriptions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "sdkwork.website-provider-event-ingress.v1"
+    },
+    "bindAddress": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "description": "Loopback-only socket. Production HTTPS terminates at the controlled internal ingress or sidecar before this listener."
+    },
+    "checkpointDirectory": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "maximumCheckpointStreams": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65536,
+      "default": 4096
+    },
+    "maximumClockSkewSeconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 3600,
+      "default": 300
+    },
+    "maximumConcurrentDeliveries": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256,
+      "default": 32
+    },
+    "subscriptions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/subscription"
+      }
+    }
+  },
+  "$defs": {
+    "subscription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subscriptionId",
+        "provider",
+        "tenantScopeHash",
+        "tenantId",
+        "secretFile"
+      ],
+      "properties": {
+        "subscriptionId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["DRIVE", "KNOWLEDGEBASE"]
+        },
+        "tenantScopeHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "organizationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "driveChannelId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "secretFile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "DRIVE"
+              }
+            },
+            "required": ["provider"]
+          },
+          "then": {
+            "required": ["driveChannelId"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "KNOWLEDGEBASE"
+              }
+            },
+            "required": ["provider"]
+          },
+          "then": {
+            "required": ["organizationId"],
+            "properties": {
+              "driveChannelId": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

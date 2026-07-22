@@ -1,0 +1,538 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdkwork.com/schemas/web/sdkwork.website-runtime.descriptor.schema.json",
+  "title": "SDKWork Website Runtime Descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "revisionUuid",
+    "siteUuid",
+    "tenantScopeHash",
+    "environment",
+    "generatedAt",
+    "compilerVersion",
+    "descriptorSha256",
+    "siteDefaultVariantUuid",
+    "bindings",
+    "variants",
+    "variantRules",
+    "resources",
+    "mounts",
+    "deliveryPolicy",
+    "securityPolicy",
+    "limits",
+    "observabilityPolicy"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "sdkwork.website-runtime.v1"
+    },
+    "kind": {
+      "const": "sdkwork.website-runtime.descriptor"
+    },
+    "revisionUuid": {
+      "$ref": "#/$defs/opaqueId"
+    },
+    "siteUuid": {
+      "$ref": "#/$defs/opaqueId"
+    },
+    "tenantScopeHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "environment": {
+      "enum": ["development", "test", "staging", "production"]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "compilerVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+    },
+    "descriptorSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "siteDefaultVariantUuid": {
+      "$ref": "#/$defs/opaqueId"
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/variant"
+      }
+    },
+    "variantRules": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/variantRule"
+      }
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "mounts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2048,
+      "items": {
+        "$ref": "#/$defs/mount"
+      }
+    },
+    "deliveryPolicy": {
+      "$ref": "#/$defs/deliveryPolicy"
+    },
+    "securityPolicy": {
+      "$ref": "#/$defs/securityPolicy"
+    },
+    "limits": {
+      "$ref": "#/$defs/limits"
+    },
+    "observabilityPolicy": {
+      "$ref": "#/$defs/observabilityPolicy"
+    }
+  },
+  "$defs": {
+    "opaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "hostname": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bindingUuid", "hostname", "pathPrefix", "action"],
+      "properties": {
+        "bindingUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "hostname": {
+          "$ref": "#/$defs/hostname"
+        },
+        "pathPrefix": {
+          "$ref": "#/$defs/path"
+        },
+        "action": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/serveAction"
+            },
+            {
+              "$ref": "#/$defs/redirectAction"
+            }
+          ]
+        }
+      }
+    },
+    "serveAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "const": "SERVE"
+        },
+        "defaultVariantUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "forcedVariantUuid": {
+          "$ref": "#/$defs/opaqueId"
+        }
+      }
+    },
+    "redirectAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "statusCode",
+        "scheme",
+        "hostname",
+        "pathPrefix",
+        "preservePath",
+        "preserveQuery"
+      ],
+      "properties": {
+        "type": {
+          "const": "REDIRECT"
+        },
+        "statusCode": {
+          "enum": [301, 302, 307, 308]
+        },
+        "scheme": {
+          "enum": ["http", "https"]
+        },
+        "hostname": {
+          "$ref": "#/$defs/hostname"
+        },
+        "pathPrefix": {
+          "$ref": "#/$defs/path"
+        },
+        "preservePath": {
+          "type": "boolean"
+        },
+        "preserveQuery": {
+          "type": "boolean"
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variantUuid", "label"],
+      "properties": {
+        "variantUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "variantRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleUuid", "variantUuid", "priority", "match"],
+      "properties": {
+        "ruleUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "variantUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "match": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/pathPrefixMatcher"
+            },
+            {
+              "$ref": "#/$defs/clientClassMatcher"
+            }
+          ]
+        }
+      }
+    },
+    "pathPrefixMatcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "pathPrefix"],
+      "properties": {
+        "type": {
+          "const": "PATH_PREFIX"
+        },
+        "pathPrefix": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "clientClassMatcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "clientClass"],
+      "properties": {
+        "type": {
+          "const": "CLIENT_CLASS"
+        },
+        "clientClass": {
+          "enum": ["DESKTOP", "MOBILE", "TABLET", "BOT", "OTHER"]
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resourceUuid", "provider", "capabilities"],
+      "properties": {
+        "resourceUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "provider": {
+          "$ref": "#/$defs/providerReference"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/resourceCapabilities"
+        }
+      }
+    },
+    "providerReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "providerType",
+        "providerResourceUuid",
+        "providerContractVersion"
+      ],
+      "properties": {
+        "providerType": {
+          "enum": ["DRIVE", "KNOWLEDGEBASE"]
+        },
+        "providerResourceUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "providerContractVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "resourceCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staticContent", "wikiRoutes", "wikiSearch", "rangeRequests"],
+      "properties": {
+        "staticContent": {
+          "type": "boolean"
+        },
+        "wikiRoutes": {
+          "type": "boolean"
+        },
+        "wikiSearch": {
+          "type": "boolean"
+        },
+        "rangeRequests": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mountUuid",
+        "variantUuid",
+        "pathPrefix",
+        "resourceUuid",
+        "handler",
+        "translation",
+        "indexFiles"
+      ],
+      "properties": {
+        "mountUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "variantUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "pathPrefix": {
+          "$ref": "#/$defs/path"
+        },
+        "resourceUuid": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "handler": {
+          "enum": ["STATIC", "SPA", "WIKI"]
+        },
+        "translation": {
+          "$ref": "#/$defs/mountTranslation"
+        },
+        "indexFiles": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "spaFallback": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "mountTranslation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "resourceSubpath"],
+      "properties": {
+        "mode": {
+          "enum": ["ROOT", "ALIAS"]
+        },
+        "resourceSubpath": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "deliveryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "providerTimeoutMs",
+        "metadataCacheTtlSeconds",
+        "negativeCacheTtlSeconds",
+        "staleWhileRevalidateSeconds",
+        "maximumObjectBytes"
+      ],
+      "properties": {
+        "providerTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "metadataCacheTtlSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "negativeCacheTtlSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "staleWhileRevalidateSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        },
+        "maximumObjectBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1099511627776
+        }
+      }
+    },
+    "securityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["forceHttps", "denyDotFiles", "deniedPathPrefixes"],
+      "properties": {
+        "forceHttps": {
+          "type": "boolean"
+        },
+        "denyDotFiles": {
+          "type": "boolean"
+        },
+        "deniedPathPrefixes": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximumBindings",
+        "maximumVariants",
+        "maximumVariantRules",
+        "maximumResources",
+        "maximumMounts",
+        "maximumIndexFilesPerMount",
+        "maximumPathBytes",
+        "maximumPathSegments"
+      ],
+      "properties": {
+        "maximumBindings": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "maximumVariants": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "maximumVariantRules": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "maximumResources": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "maximumMounts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2048
+        },
+        "maximumIndexFilesPerMount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "maximumPathBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "maximumPathSegments": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128
+        }
+      }
+    },
+    "observabilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accessLogEnabled",
+        "usageMeteringEnabled",
+        "traceSampleRatePerMille"
+      ],
+      "properties": {
+        "accessLogEnabled": {
+          "type": "boolean"
+        },
+        "usageMeteringEnabled": {
+          "type": "boolean"
+        },
+        "traceSampleRatePerMille": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,203 @@
+use async_trait::async_trait;
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+    Extension,
+};
+use http_body_util::BodyExt;
+use sdkwork_routes_webserver_internal_api::build_router_with_internal_api;
+use sdkwork_webserver_contract::{
+    CreateRuntimeObservationRequest, PublishRuntimeAssignmentRequest, RuntimeAssignment,
+    RuntimeAssignmentDelivery, RuntimeObservation, WebInternalApi, WebInternalRequestContext,
+    WebServiceResult,
+};
+use serde_json::{json, Value};
+use tower::ServiceExt;
+
+#[derive(Clone)]
+struct TestInternalApi;
+
+#[async_trait]
+impl WebInternalApi for TestInternalApi {
+    async fn publish_runtime_assignment(
+        &self,
+        _context: &WebInternalRequestContext,
+        node_uuid: &str,
+        environment: &str,
+        request: &PublishRuntimeAssignmentRequest,
+    ) -> WebServiceResult<RuntimeAssignment> {
+        Ok(RuntimeAssignment {
+            assignment_uuid: "019b0000-0000-7000-8000-000000000001".to_owned(),
+            node_uuid: node_uuid.to_owned(),
+            environment: environment.to_owned(),
+            generation: request.runtime_set.generation.to_string(),
+            snapshot_uuid: request.runtime_set.snapshot_uuid.clone(),
+            snapshot_sha256: request.runtime_set.snapshot_sha256.clone(),
+            assigned_at: "2026-07-22T00:00:00Z".to_owned(),
+        })
+    }
+
+    async fn retrieve_current_runtime_assignment(
+        &self,
+        context: &WebInternalRequestContext,
+        environment: &str,
+        _if_generation: Option<&str>,
+        _if_snapshot_sha256: Option<&str>,
+    ) -> WebServiceResult<RuntimeAssignmentDelivery> {
+        Ok(RuntimeAssignmentDelivery {
+            unchanged: true,
+            assignment: RuntimeAssignment {
+                assignment_uuid: "019b0000-0000-7000-8000-000000000001".to_owned(),
+                node_uuid: context
+                    .agent_node_uuid
+                    .clone()
+                    .unwrap_or_else(|| "node-missing".to_owned()),
+                environment: environment.to_owned(),
+                generation: "7".to_owned(),
+                snapshot_uuid: "snapshot-7".to_owned(),
+                snapshot_sha256: "a".repeat(64),
+                assigned_at: "2026-07-22T00:00:00Z".to_owned(),
+            },
+            latest_observation_state: None,
+            runtime_set: None,
+        })
+    }
+
+    async fn create_runtime_observation(
+        &self,
+        context: &WebInternalRequestContext,
+        snapshot_uuid: &str,
+        request: &CreateRuntimeObservationRequest,
+    ) -> WebServiceResult<RuntimeObservation> {
+        Ok(RuntimeObservation {
+            observation_uuid: "019b0000-0000-7000-8000-000000000002".to_owned(),
+            assignment_uuid: "019b0000-0000-7000-8000-000000000001".to_owned(),
+            node_uuid: context
+                .agent_node_uuid
+                .clone()
+                .unwrap_or_else(|| "node-missing".to_owned()),
+            generation: request.generation.clone(),
+            snapshot_uuid: snapshot_uuid.to_owned(),
+            snapshot_sha256: request.snapshot_sha256.clone(),
+            state: request.state,
+            node_version: request.node_version.clone(),
+            reason_code: request.reason_code.clone(),
+            detail: request.detail.clone(),
+            observed_at: "2026-07-22T00:00:01Z".to_owned(),
+        })
+    }
+}
+
+#[tokio::test]
+async fn canonical_internal_routes_return_sdkwork_resource_envelopes() {
+    let app = build_router_with_internal_api(TestInternalApi).layer(Extension(agent_context()));
+    let publish = app
+        .clone()
+        .oneshot(json_request(
+            "PUT",
+            "/internal/v3/api/web/runtime_assignments/node-7/production",
+            json!({"runtimeSet": runtime_set()}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(publish.status(), StatusCode::OK);
+    let publish_body = response_json(publish).await;
+    assert_eq!(
+        publish_body.pointer("/data/item/nodeUuid"),
+        Some(&json!("node-7"))
+    );
+
+    let current = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/internal/v3/api/web/runtime_assignments/current?environment=production&ifGeneration=7")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(current.status(), StatusCode::OK);
+    let current_body = response_json(current).await;
+    assert_eq!(
+        current_body.pointer("/data/item/unchanged"),
+        Some(&json!(true))
+    );
+
+    let observation = app
+        .oneshot(json_request(
+            "POST",
+            "/internal/v3/api/web/runtime_assignments/snapshot-7/observations",
+            json!({
+                "generation": "7",
+                "snapshotSha256": "a".repeat(64),
+                "state": "RECEIVED",
+                "nodeVersion": "1.0.0"
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(observation.status(), StatusCode::CREATED);
+    let observation_body = response_json(observation).await;
+    assert_eq!(
+        observation_body.pointer("/data/item/state"),
+        Some(&json!("RECEIVED"))
+    );
+}
+
+#[tokio::test]
+async fn missing_internal_domain_context_fails_closed() {
+    let response = build_router_with_internal_api(TestInternalApi)
+        .oneshot(
+            Request::builder()
+                .uri("/internal/v3/api/web/runtime_assignments/current?environment=production")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        response.headers().get("content-type").unwrap(),
+        "application/problem+json"
+    );
+}
+
+fn agent_context() -> WebInternalRequestContext {
+    WebInternalRequestContext {
+        tenant_id: 42,
+        subject_id: "node-7".to_owned(),
+        agent_node_uuid: Some("node-7".to_owned()),
+        can_publish_cross_tenant: false,
+    }
+}
+
+fn runtime_set() -> Value {
+    json!({
+        "schemaVersion": "sdkwork.website-runtime-set.v1",
+        "kind": "sdkwork.website-runtime-set.snapshot",
+        "snapshotUuid": "snapshot-7",
+        "nodeUuid": "node-7",
+        "environment": "production",
+        "generation": 7,
+        "generatedAt": "2026-07-22T00:00:00Z",
+        "compilerVersion": "internal-route-test/1",
+        "snapshotSha256": "a".repeat(64),
+        "maximumSites": 8,
+        "descriptors": []
+    })
+}
+
+fn json_request(method: &str, uri: &str, body: Value) -> Request<Body> {
+    Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap()
+}
+
+async fn response_json(response: axum::response::Response) -> Value {
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    serde_json::from_slice(&bytes).unwrap()
+}

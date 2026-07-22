@@ -45,8 +45,8 @@ pub fn build_router_with_shared_backend_api(api: Arc<dyn WebBackendApi>) -> Rout
         .route(paths::NGINX_STATUS, get(retrieve_nginx_status))
         .route(paths::SERVERS, get(list_servers).post(create_server))
         .route(paths::AUDIT_LOGS, get(list_audit_logs))
-        // Agent routes (C8-C9): authenticated via X-SDKWork-Agent-Token through
-        // the WebFrameworkLayer + AgentTokenResolverDecorator. Handlers retrieve
+        // V3 Agent routes (C8-C9) retain their wire header and authenticate through
+        // WebFrameworkLayer + MachineCredentialResolverDecorator. Handlers retrieve
         // Arc<WebService> and WebBackendRequestContext from Extension layers.
         .route(paths::AGENT_HEARTBEAT, post(agent_routes::agent_heartbeat))
         .route(paths::AGENT_SYNC, get(agent_routes::agent_sync))

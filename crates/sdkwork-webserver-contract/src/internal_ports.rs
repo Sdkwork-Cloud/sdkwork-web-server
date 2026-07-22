@@ -1,0 +1,170 @@
+use async_trait::async_trait;
+pub use sdkwork_webserver_core::website_runtime::{
+    WebsiteRuntimeSetSnapshot, MAX_WEBSITE_RUNTIME_SET_BYTES,
+};
+use serde::{Deserialize, Serialize};
+
+use crate::problem::WebServiceResult;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AuthenticatedMachineCredential {
+    pub tenant_id: i64,
+    pub subject_id: String,
+    pub app_id: String,
+    pub permission_scope: Vec<String>,
+}
+
+#[async_trait]
+pub trait MachineCredentialAuthenticator: Send + Sync {
+    async fn authenticate_machine_credential(
+        &self,
+        credential: &str,
+    ) -> WebServiceResult<Option<AuthenticatedMachineCredential>>;
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct WebInternalRequestContext {
+    pub tenant_id: i64,
+    pub subject_id: String,
+    pub agent_node_uuid: Option<String>,
+    pub can_publish_cross_tenant: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PublishRuntimeAssignmentRequest {
+    pub runtime_set: WebsiteRuntimeSetSnapshot,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RuntimeAssignment {
+    pub assignment_uuid: String,
+    pub node_uuid: String,
+    pub environment: String,
+    pub generation: String,
+    pub snapshot_uuid: String,
+    pub snapshot_sha256: String,
+    pub assigned_at: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RuntimeAssignmentDelivery {
+    pub unchanged: bool,
+    pub assignment: RuntimeAssignment,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_observation_state: Option<RuntimeObservationState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_set: Option<WebsiteRuntimeSetSnapshot>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RuntimeObservationState {
+    Received,
+    Validated,
+    Staged,
+    Active,
+    Rejected,
+}
+
+impl RuntimeObservationState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Received => "RECEIVED",
+            Self::Validated => "VALIDATED",
+            Self::Staged => "STAGED",
+            Self::Active => "ACTIVE",
+            Self::Rejected => "REJECTED",
+        }
+    }
+
+    pub fn rank(self) -> u8 {
+        match self {
+            Self::Received => 1,
+            Self::Validated => 2,
+            Self::Staged => 3,
+            Self::Active => 4,
+            Self::Rejected => 5,
+        }
+    }
+
+    pub fn is_terminal(self) -> bool {
+        matches!(self, Self::Active | Self::Rejected)
+    }
+}
+
+impl TryFrom<&str> for RuntimeObservationState {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "RECEIVED" => Ok(Self::Received),
+            "VALIDATED" => Ok(Self::Validated),
+            "STAGED" => Ok(Self::Staged),
+            "ACTIVE" => Ok(Self::Active),
+            "REJECTED" => Ok(Self::Rejected),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateRuntimeObservationRequest {
+    pub generation: String,
+    pub snapshot_sha256: String,
+    pub state: RuntimeObservationState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RuntimeObservation {
+    pub observation_uuid: String,
+    pub assignment_uuid: String,
+    pub node_uuid: String,
+    pub generation: String,
+    pub snapshot_uuid: String,
+    pub snapshot_sha256: String,
+    pub state: RuntimeObservationState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    pub observed_at: String,
+}
+
+#[async_trait]
+pub trait WebInternalApi: Send + Sync {
+    async fn publish_runtime_assignment(
+        &self,
+        context: &WebInternalRequestContext,
+        node_uuid: &str,
+        environment: &str,
+        request: &PublishRuntimeAssignmentRequest,
+    ) -> WebServiceResult<RuntimeAssignment>;
+
+    async fn retrieve_current_runtime_assignment(
+        &self,
+        context: &WebInternalRequestContext,
+        environment: &str,
+        if_generation: Option<&str>,
+        if_snapshot_sha256: Option<&str>,
+    ) -> WebServiceResult<RuntimeAssignmentDelivery>;
+
+    async fn create_runtime_observation(
+        &self,
+        context: &WebInternalRequestContext,
+        snapshot_uuid: &str,
+        request: &CreateRuntimeObservationRequest,
+    ) -> WebServiceResult<RuntimeObservation>;
+}

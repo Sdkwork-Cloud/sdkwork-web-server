@@ -413,6 +413,7 @@ CREATE TABLE web_server (
     tenant_id       BIGINT       NOT NULL DEFAULT 0,
     name            VARCHAR(200) NOT NULL,
     host            VARCHAR(255) NOT NULL,
+    tenant_scope_hash VARCHAR(64) NOT NULL,
     ssh_port        INTEGER      NOT NULL DEFAULT 22,
     status          INTEGER      NOT NULL DEFAULT 0,
     metadata        JSONB        NOT NULL DEFAULT '{}',
@@ -421,7 +422,10 @@ CREATE TABLE web_server (
     version         BIGINT       NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
     CONSTRAINT uk_web_server_uuid UNIQUE (uuid),
-    CONSTRAINT uk_web_server_host UNIQUE (tenant_id, host)
+    CONSTRAINT uk_web_server_host UNIQUE (tenant_id, host),
+    CONSTRAINT uk_web_server_tenant_id UNIQUE (tenant_id, id),
+    CONSTRAINT chk_web_server_tenant_scope_hash
+        CHECK (tenant_scope_hash ~ '^[0-9a-f]{64}$')
 );
 
 COMMENT ON TABLE web_server IS 'Web edge server registry';
@@ -429,3 +433,85 @@ COMMENT ON COLUMN web_server.status IS 'Status: 0=offline, 1=online, 2=deploying
 
 CREATE INDEX idx_web_server_tenant_status
     ON web_server (tenant_id, status, updated_at DESC);
+
+CREATE TABLE web_runtime_assignment (
+    id                  BIGINT        NOT NULL,
+    uuid                VARCHAR(64)   NOT NULL,
+    tenant_id           BIGINT        NOT NULL,
+    server_id           BIGINT        NOT NULL,
+    environment         VARCHAR(32)   NOT NULL,
+    generation          BIGINT        NOT NULL,
+    snapshot_uuid       VARCHAR(128)  NOT NULL,
+    snapshot_sha256     VARCHAR(64)   NOT NULL,
+    runtime_set         JSONB         NOT NULL,
+    runtime_set_bytes   BIGINT        NOT NULL,
+    assigned_by_subject VARCHAR(128)  NOT NULL,
+    created_at          TIMESTAMPTZ   NOT NULL,
+    updated_at          TIMESTAMPTZ   NOT NULL,
+    version             BIGINT        NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_web_runtime_assignment_uuid UNIQUE (uuid),
+    CONSTRAINT uk_web_runtime_assignment_tenant_id
+        UNIQUE (tenant_id, id, server_id),
+    CONSTRAINT uk_web_runtime_assignment_generation
+        UNIQUE (tenant_id, server_id, environment, generation),
+    CONSTRAINT uk_web_runtime_assignment_snapshot
+        UNIQUE (tenant_id, server_id, environment, snapshot_uuid),
+    CONSTRAINT fk_web_runtime_assignment_server
+        FOREIGN KEY (tenant_id, server_id) REFERENCES web_server (tenant_id, id),
+    CONSTRAINT chk_web_runtime_assignment_environment
+        CHECK (environment IN ('development', 'test', 'staging', 'production')),
+    CONSTRAINT chk_web_runtime_assignment_generation
+        CHECK (generation BETWEEN 1 AND 9007199254740991),
+    CONSTRAINT chk_web_runtime_assignment_snapshot_sha256
+        CHECK (snapshot_sha256 ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT chk_web_runtime_assignment_runtime_set
+        CHECK (jsonb_typeof(runtime_set) = 'object'),
+    CONSTRAINT chk_web_runtime_assignment_runtime_set_bytes
+        CHECK (runtime_set_bytes BETWEEN 1 AND 67108864)
+);
+
+COMMENT ON TABLE web_runtime_assignment IS
+    'Immutable Website runtime-set assignment delivered to one Web Node environment';
+
+CREATE INDEX idx_web_runtime_assignment_current
+    ON web_runtime_assignment (tenant_id, server_id, environment, generation DESC);
+
+CREATE TABLE web_runtime_observation (
+    id              BIGINT        NOT NULL,
+    uuid            VARCHAR(64)   NOT NULL,
+    tenant_id       BIGINT        NOT NULL,
+    assignment_id   BIGINT        NOT NULL,
+    server_id       BIGINT        NOT NULL,
+    state           VARCHAR(16)   NOT NULL,
+    node_version    VARCHAR(64),
+    reason_code     VARCHAR(64),
+    detail          VARCHAR(512),
+    observed_at     TIMESTAMPTZ   NOT NULL,
+    created_at      TIMESTAMPTZ   NOT NULL,
+    updated_at      TIMESTAMPTZ   NOT NULL,
+    version         BIGINT        NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_web_runtime_observation_uuid UNIQUE (uuid),
+    CONSTRAINT uk_web_runtime_observation_state
+        UNIQUE (tenant_id, assignment_id, state),
+    CONSTRAINT fk_web_runtime_observation_assignment
+        FOREIGN KEY (tenant_id, assignment_id, server_id)
+        REFERENCES web_runtime_assignment (tenant_id, id, server_id),
+    CONSTRAINT chk_web_runtime_observation_state
+        CHECK (state IN ('RECEIVED', 'VALIDATED', 'STAGED', 'ACTIVE', 'REJECTED')),
+    CONSTRAINT chk_web_runtime_observation_reason
+        CHECK (
+            (state = 'REJECTED' AND reason_code IS NOT NULL)
+            OR (state <> 'REJECTED' AND reason_code IS NULL AND detail IS NULL)
+        )
+);
+
+COMMENT ON TABLE web_runtime_observation IS
+    'Append-only Web Node activation observations for an immutable runtime assignment';
+
+CREATE INDEX idx_web_runtime_observation_assignment
+    ON web_runtime_observation (tenant_id, assignment_id, id DESC);
+
+CREATE INDEX idx_web_runtime_observation_node_time
+    ON web_runtime_observation (tenant_id, server_id, observed_at DESC);

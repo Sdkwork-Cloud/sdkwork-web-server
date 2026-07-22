@@ -1,6 +1,7 @@
 //! Shared Web router auth wiring for sdkwork-web-framework integration.
 
 pub mod correlation;
+pub mod machine_credential;
 pub mod problem;
 
 use async_trait::async_trait;
@@ -11,6 +12,7 @@ use sdkwork_webserver_contract::{
 };
 
 pub use correlation::{with_problem_correlation, WebProblemCorrelation};
+pub use machine_credential::MachineCredentialResolverDecorator;
 pub mod response;
 pub use problem::{WebApiError, WebApiResult};
 pub use response::{

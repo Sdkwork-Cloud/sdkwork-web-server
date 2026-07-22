@@ -45,7 +45,8 @@ where
         None => DataPlaneRuntime::build_revision(initial)?,
     };
     if reload.mode == ReloadMode::Disabled {
-        let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
+        let result =
+            run_data_plane_runtime_until(runtime.clone(), operations, None, shutdown).await;
         let health_result = runtime.stop_active_health().await;
         let resource_result = runtime.stop_resource_pressure().await;
         return result.and(health_result).and(resource_result);
@@ -64,7 +65,7 @@ where
         .await;
     });
 
-    let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
+    let result = run_data_plane_runtime_until(runtime.clone(), operations, None, shutdown).await;
     let _ = stop_tx.send(true);
     if let Err(error) = worker.await {
         if result.is_ok() {

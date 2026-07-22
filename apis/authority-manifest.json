@@ -9,6 +9,10 @@
     {
       "authorityPath": "apis/backend-api/web/web-backend-api.openapi.json",
       "sdkPath": "sdks/sdkwork-web-backend-sdk/openapi/web-backend-api.openapi.json"
+    },
+    {
+      "authorityPath": "apis/internal-api/web/sdkwork-web-internal-api.openapi.json",
+      "sdkPath": "sdks/sdkwork-web-internal-sdk/openapi/sdkwork-web-internal-api.openapi.json"
     }
   ]
 }

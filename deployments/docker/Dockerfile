@@ -15,11 +15,11 @@ ENV SDKWORK_WEB_APP_ROOT=/app \
     SDKWORK_WEB_ENVIRONMENT=production \
     SDKWORK_WEB_CONFIG_PROFILE=production \
     SDKWORK_WEB_DEPLOYMENT_PROFILE=cloud \
-    SDKWORK_WEB_SERVICE_LAYOUT=unified-process \
-    SDKWORK_WEB_APPLICATION_PUBLIC_INGRESS_BIND=0.0.0.0:3800
+    SDKWORK_WEB_RUNTIME_TARGET=container \
+    SDKWORK_WEB_SERVICE_LAYOUT=website-data-plane \
+    SDKWORK_WEB_SERVER_CONFIG_FILE=/app/etc/data-plane/website.cloud.config.json
 
 USER 10001:10001
-EXPOSE 3800
+EXPOSE 8080
 
-ENTRYPOINT ["/app/bin/sdkwork-api-web-server-standalone-gateway"]
-CMD ["serve-management"]
+ENTRYPOINT ["/app/bin/sdkwork-web-server-website-delivery-edge-runtime"]

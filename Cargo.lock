@@ -2399,6 +2399,8 @@ dependencies = [
  "sdkwork-intelligence-webserver-service",
  "sdkwork-routes-webserver-app-api",
  "sdkwork-routes-webserver-backend-api",
+ "sdkwork-routes-webserver-internal-api",
+ "sdkwork-webserver-contract",
  "tokio",
 ]
 
@@ -2407,6 +2409,7 @@ name = "sdkwork-api-web-server-standalone-gateway"
 version = "0.1.0"
 dependencies = [
  "arc-swap",
+ "async-trait",
  "atomic-waker",
  "axum",
  "axum-server",
@@ -2421,24 +2424,34 @@ dependencies = [
  "hyper-rustls",
  "hyper-util",
  "ipnet",
+ "jsonschema",
  "percent-encoding",
  "rcgen 0.13.2",
  "reqwest",
  "rustls",
  "sdkwork-api-web-server-assembly",
  "sdkwork-database-sqlx",
+ "sdkwork-drive-internal-sdk-generated-rust",
  "sdkwork-intelligence-webserver-service",
+ "sdkwork-knowledgebase-internal-sdk-generated-rust",
  "sdkwork-utils-rust",
  "sdkwork-web-bootstrap",
  "sdkwork-web-core",
+ "sdkwork-web-internal-sdk",
+ "sdkwork-webserver-contract",
  "sdkwork-webserver-core",
  "sdkwork-webserver-database-host",
+ "sdkwork-webserver-delivery-runtime",
+ "sdkwork-webserver-drive-provider",
+ "sdkwork-webserver-knowledgebase-provider",
+ "serde",
  "serde_json",
  "sha2",
  "socket2",
  "sync_wrapper",
  "tempfile",
  "thiserror 2.0.18",
+ "time",
  "tokio",
  "tokio-rustls",
  "tower",
@@ -2448,7 +2461,9 @@ dependencies = [
  "url",
  "webpki-roots 1.0.8",
  "windows-sys 0.61.2",
+ "woothee",
  "x509-parser 0.16.0",
+ "zeroize",
 ]
 
 [[package]]
@@ -2560,6 +2575,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-drive-internal-sdk-generated-rust"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "sdkwork-iam-bootstrap"
 version = "0.1.0"
 dependencies = [
@@ -2652,6 +2678,7 @@ dependencies = [
  "sdkwork-utils-rust",
  "sdkwork-webserver-acme-service",
  "sdkwork-webserver-contract",
+ "sdkwork-webserver-core",
  "sdkwork-webserver-database-host",
  "sdkwork-webserver-edge-runtime",
  "serde",
@@ -2678,6 +2705,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-knowledgebase-internal-sdk-generated-rust"
+version = "0.1.0"
+dependencies = [
+ "http",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "sdkwork-routes-webserver-app-api"
 version = "0.1.0"
 dependencies = [
@@ -2699,9 +2737,7 @@ dependencies = [
 name = "sdkwork-routes-webserver-backend-api"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "axum",
- "sdkwork-iam-web-adapter",
  "sdkwork-intelligence-webserver-service",
  "sdkwork-routes-webserver-common",
  "sdkwork-utils-rust",
@@ -2725,6 +2761,23 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "sdkwork-routes-webserver-internal-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "http-body-util",
+ "sdkwork-routes-webserver-common",
+ "sdkwork-web-axum",
+ "sdkwork-web-core",
+ "sdkwork-webserver-contract",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
 ]
 
 [[package]]
@@ -2840,6 +2893,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-web-internal-sdk"
+version = "1.0.0"
+dependencies = [
+ "http",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "sdkwork-web-server-website-delivery-edge-runtime"
+version = "0.1.0"
+dependencies = [
+ "sdkwork-api-web-server-standalone-gateway",
+ "sdkwork-webserver-core",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "sdkwork-webserver-acme-service"
 version = "0.1.0"
 dependencies = [
@@ -2893,12 +2968,14 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
 name = "sdkwork-webserver-core"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "ipnet",
  "jsonschema",
  "sdkwork-utils-rust",
@@ -2925,6 +3002,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdkwork-webserver-delivery-runtime"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "sdkwork-utils-rust",
+ "sdkwork-webserver-contract",
+ "sdkwork-webserver-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+]
+
+[[package]]
+name = "sdkwork-webserver-drive-provider"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "sdkwork-drive-internal-sdk-generated-rust",
+ "sdkwork-webserver-contract",
+ "sdkwork-webserver-core",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "sdkwork-webserver-edge-runtime"
 version = "0.1.0"
 dependencies = [
@@ -2939,6 +3047,19 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "sdkwork-webserver-knowledgebase-provider"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "sdkwork-knowledgebase-internal-sdk-generated-rust",
+ "sdkwork-webserver-contract",
+ "sdkwork-webserver-core",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -4413,6 +4534,16 @@ name = "wit-bindgen"
 version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+
+[[package]]
+name = "woothee"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "896174c6a4779d4d7d4523dd27aef7d46609eda2497e370f6c998325c6bf6971"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
 
 [[package]]
 name = "writeable"

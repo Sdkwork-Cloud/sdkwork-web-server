@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -16,12 +17,16 @@ import process from 'node:process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { create } from 'tar';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, parseAllDocuments } from 'yaml';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUTPUT_ROOT = path.join(REPO_ROOT, 'dist', 'release');
 const PACKAGE_FILES = new Map([
   ['bin/sdkwork-api-web-server-standalone-gateway', 'gateway fixture\n'],
+  [
+    'bin/sdkwork-web-server-website-delivery-edge-runtime',
+    'website delivery edge runtime fixture\n',
+  ],
   ['bin/sdkwork-web-node-daemon', 'canonical node daemon fixture\n'],
   ['bin/sdkwork-web-agent', 'node daemon fixture\n'],
   ['bin/sdkwork-webserver-certificate-worker', 'certificate worker fixture\n'],
@@ -29,6 +34,7 @@ const PACKAGE_FILES = new Map([
   ['specs/sdkwork.webserver.config.schema.json', '{}\n'],
   ['etc/examples/sdkwork.webserver.config.json', '{}\n'],
   ['etc/examples/public/index.html', '<h1>release fixture</h1>\n'],
+  ['etc/data-plane/website.cloud.config.json', '{}\n'],
   ['etc/node-daemon/development.env.example', 'SDKWORK_WEB_NODE_TOKEN=\n'],
   ['database/README.md', '# Database\n'],
   ['database/database.manifest.json', '{}\n'],
@@ -98,6 +104,396 @@ function runSbom(operation, profile, version, architecture = 'x64') {
     { cwd: REPO_ROOT, encoding: 'utf8', env, windowsHide: true },
   );
 }
+
+test('Kubernetes renderer binds one tenant fleet and Node identity without cross-fleet selectors', () => {
+  const digest = 'ab'.repeat(32);
+  const tenantFleetName = 'tf-abcde23456fghij';
+  const nodeName = `contract-node-${process.pid}`;
+  const secretName = `contract-node-secret-${process.pid}`;
+  const outputDirectory = path.join(
+    REPO_ROOT,
+    '.sdkwork',
+    'runtime',
+    'kubernetes',
+    `${digest.slice(0, 16)}-${tenantFleetName}-${nodeName}`,
+  );
+  rmSync(outputDirectory, { recursive: true, force: true });
+  try {
+    const rendered = spawnSync(
+      process.execPath,
+      [
+        'scripts/render-kubernetes-manifests.mjs',
+        '--image-digest',
+        digest,
+        '--website-tenant-fleet-name',
+        tenantFleetName,
+        '--website-node-name',
+        nodeName,
+        '--website-node-secret-name',
+        secretName,
+        '--website-trusted-proxy-cidr',
+        '10.42.0.0/16',
+      ],
+      { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true },
+    );
+    assert.equal(rendered.status, 0, rendered.stderr);
+
+    const deploymentText = readFileSync(path.join(outputDirectory, 'deployment.yaml'), 'utf8');
+    assert.doesNotMatch(deploymentText, /__SDKWORK_/u);
+    assert.match(deploymentText, new RegExp(`sha256:${digest}`, 'u'));
+    const deploymentDocuments = parseAllDocuments(deploymentText).map((document) =>
+      document.toJSON(),
+    );
+    const statefulSet = deploymentDocuments.find(
+      (document) => document?.kind === 'StatefulSet',
+    );
+    assert.ok(statefulSet);
+    assert.equal(
+      statefulSet.metadata.name,
+      `sdkwork-web-node-${tenantFleetName}-${nodeName}`,
+    );
+    assert.equal(
+      statefulSet.metadata.labels['sdkwork.com/tenant-fleet'],
+      tenantFleetName,
+    );
+    assert.equal(
+      statefulSet.spec.selector.matchLabels['sdkwork.com/tenant-fleet'],
+      tenantFleetName,
+    );
+    assert.equal(
+      statefulSet.spec.template.metadata.labels['sdkwork.com/tenant-fleet'],
+      tenantFleetName,
+    );
+    assert.equal(
+      statefulSet.spec.serviceName,
+      `sdkwork-web-website-${tenantFleetName}-headless`,
+    );
+    assert.equal(statefulSet.spec.replicas, 1);
+    assert.equal(statefulSet.spec.template.spec.enableServiceLinks, false);
+    assert.deepEqual(
+      statefulSet.spec.template.spec.topologySpreadConstraints.map((constraint) => ({
+        topologyKey: constraint.topologyKey,
+        whenUnsatisfiable: constraint.whenUnsatisfiable,
+        tenantFleet: constraint.labelSelector.matchLabels['sdkwork.com/tenant-fleet'],
+      })),
+      [
+        {
+          topologyKey: 'kubernetes.io/hostname',
+          whenUnsatisfiable: 'DoNotSchedule',
+          tenantFleet: tenantFleetName,
+        },
+        {
+          topologyKey: 'topology.kubernetes.io/zone',
+          whenUnsatisfiable: 'ScheduleAnyway',
+          tenantFleet: tenantFleetName,
+        },
+      ],
+    );
+    const container = statefulSet.spec.template.spec.containers[0];
+    assert.deepEqual(container.command, [
+      '/app/bin/sdkwork-web-server-website-delivery-edge-runtime',
+    ]);
+    assert.equal(container.ports[0].containerPort, 8080);
+    assert.equal(container.resources.requests['ephemeral-storage'], '128Mi');
+    assert.equal(container.resources.limits['ephemeral-storage'], '256Mi');
+    assert.ok(
+      container.env.some(
+        (entry) =>
+          entry.name === 'SDKWORK_WEB_NODE_UUID' &&
+          entry.valueFrom?.secretKeyRef?.name === secretName,
+      ),
+    );
+    assert.ok(
+      container.env.some(
+        (entry) =>
+          entry.name === 'SDKWORK_WEB_NODE_TOKEN_FILE' &&
+          entry.value === '/run/secrets/sdkwork-web-node/node-token',
+      ),
+    );
+    assert.ok(
+      container.env.some(
+        (entry) =>
+          entry.name === 'SDKWORK_WEB_SERVER_CONFIG_FILE' &&
+          entry.value === '/etc/sdkwork/web/sdkwork.webserver.config.json',
+      ),
+    );
+    assert.ok(container.volumeMounts.some((mount) => mount.name === 'host-config'));
+    assert.equal(
+      container.readinessProbe.exec.command[0],
+      '/app/bin/sdkwork-web-server-website-delivery-edge-runtime',
+    );
+    assert.equal(container.readinessProbe.exec.command[2], '/readyz');
+    assert.ok(container.volumeMounts.some((mount) => mount.name === 'recovery'));
+    assert.ok(
+      statefulSet.spec.volumeClaimTemplates.some(
+        (claim) => claim.metadata.name === 'recovery',
+      ),
+    );
+    assert.ok(
+      statefulSet.spec.template.spec.volumes.some(
+        (volume) => volume.secret?.secretName === secretName,
+      ),
+    );
+
+    const serviceDocuments = parseAllDocuments(
+      readFileSync(path.join(outputDirectory, 'service.yaml'), 'utf8'),
+    ).map((document) => document.toJSON());
+    assert.equal(serviceDocuments.filter((document) => document?.kind === 'Service').length, 3);
+    assert.deepEqual(
+      serviceDocuments.map((document) => document.metadata.name).sort(),
+      [
+        `sdkwork-web-events-${tenantFleetName}-${nodeName}`,
+        `sdkwork-web-website-${tenantFleetName}`,
+        `sdkwork-web-website-${tenantFleetName}-headless`,
+      ],
+    );
+    assert.ok(
+      serviceDocuments.every(
+        (document) =>
+          document.metadata.labels['sdkwork.com/tenant-fleet'] === tenantFleetName &&
+          document.spec.selector['sdkwork.com/tenant-fleet'] === tenantFleetName,
+      ),
+    );
+    assert.ok(
+      serviceDocuments.some(
+        (document) => document.spec.ports[0].targetPort === 'website-http',
+      ),
+    );
+    assert.ok(
+      serviceDocuments.some(
+        (document) => document.spec.ports[0].targetPort === 'provider-events',
+      ),
+    );
+    const providerEventService = serviceDocuments.find(
+      (document) => document.spec.ports[0].targetPort === 'provider-events',
+    );
+    assert.equal(providerEventService.spec.selector['sdkwork.com/web-node'], nodeName);
+    const relay = statefulSet.spec.template.spec.containers.find(
+      (candidate) => candidate.name === 'provider-event-relay',
+    );
+    assert.ok(relay);
+    assert.deepEqual(relay.command, [
+      '/app/bin/sdkwork-web-server-website-delivery-edge-runtime',
+      'relay-provider-events',
+    ]);
+    assert.equal(relay.ports[0].containerPort, 3811);
+    assert.equal(relay.resources.requests['ephemeral-storage'], '16Mi');
+    assert.equal(relay.resources.limits['ephemeral-storage'], '64Mi');
+
+    const migrationJob = parseYaml(
+      readFileSync(path.join(outputDirectory, 'migration-job.yaml'), 'utf8'),
+    );
+    assert.equal(migrationJob.spec.template.spec.enableServiceLinks, false);
+    const migrationContainer = migrationJob.spec.template.spec.containers[0];
+    assert.equal(migrationContainer.resources.requests['ephemeral-storage'], '64Mi');
+    assert.equal(migrationContainer.resources.limits['ephemeral-storage'], '128Mi');
+
+    const configMap = parseYaml(
+      readFileSync(path.join(outputDirectory, 'config-map.yaml'), 'utf8'),
+    );
+    assert.equal(configMap.kind, 'ConfigMap');
+    assert.equal(configMap.immutable, true);
+    const hostConfig = JSON.parse(configMap.data['sdkwork.webserver.config.json']);
+    const configRevision = createHash('sha256')
+      .update(configMap.data['sdkwork.webserver.config.json'])
+      .digest('hex');
+    assert.equal(
+      configMap.metadata.name,
+      `sdkwork-web-website-config-${tenantFleetName}-${nodeName}-${configRevision.slice(0, 16)}`,
+    );
+    assert.equal(configMap.metadata.labels['sdkwork.com/tenant-fleet'], tenantFleetName);
+    assert.equal(
+      configMap.metadata.labels['sdkwork.com/config-revision'],
+      configRevision.slice(0, 16),
+    );
+    assert.equal(configMap.metadata.annotations['sdkwork.com/config-sha256'], configRevision);
+    assert.ok(
+      statefulSet.spec.template.spec.volumes.some(
+        (volume) => volume.configMap?.name === configMap.metadata.name,
+      ),
+    );
+    assert.deepEqual(hostConfig.listeners[0].trustedProxy.trustedCidrs, ['10.42.0.0/16']);
+    assert.equal(hostConfig.listeners[0].trustedProxy.header, 'x-forwarded-for');
+
+    const networkPolicy = parseYaml(
+      readFileSync(path.join(outputDirectory, 'network-policy.yaml'), 'utf8'),
+    );
+    assert.equal(networkPolicy.kind, 'NetworkPolicy');
+    assert.equal(
+      networkPolicy.spec.podSelector.matchLabels['sdkwork.com/tenant-fleet'],
+      tenantFleetName,
+    );
+    assert.deepEqual(
+      networkPolicy.spec.ingress.map((rule) => rule.ports[0].port),
+      [8080, 3811],
+    );
+    assert.ok(
+      networkPolicy.spec.ingress.every(
+        (rule) =>
+          rule.from[0].namespaceSelector?.matchLabels?.['sdkwork.com/network-role'] &&
+          rule.from[0].podSelector?.matchLabels?.['sdkwork.com/network-role'],
+      ),
+    );
+    const disruptionBudget = deploymentDocuments.find(
+      (document) => document?.kind === 'PodDisruptionBudget',
+    );
+    assert.equal(
+      disruptionBudget.spec.selector.matchLabels['sdkwork.com/tenant-fleet'],
+      tenantFleetName,
+    );
+    assert.equal(disruptionBudget.spec.maxUnavailable, 1);
+    assert.equal(disruptionBudget.spec.minAvailable, undefined);
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test('Kubernetes renderer rejects universal website trusted-proxy networks', () => {
+  const digest = 'cd'.repeat(32);
+  const tenantFleetName = 'tf-klmno23456pqrst';
+  const nodeName = `contract-unsafe-${process.pid}`;
+  const outputDirectory = path.join(
+    REPO_ROOT,
+    '.sdkwork',
+    'runtime',
+    'kubernetes',
+    `${digest.slice(0, 16)}-${tenantFleetName}-${nodeName}`,
+  );
+  rmSync(outputDirectory, { recursive: true, force: true });
+  const rendered = spawnSync(
+    process.execPath,
+    [
+      'scripts/render-kubernetes-manifests.mjs',
+      '--image-digest',
+      digest,
+      '--website-tenant-fleet-name',
+      tenantFleetName,
+      '--website-node-name',
+      nodeName,
+      '--website-node-secret-name',
+      `${nodeName}-secret`,
+      '--website-trusted-proxy-cidr',
+      '0.0.0.0/0',
+    ],
+    { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true },
+  );
+  assert.notEqual(rendered.status, 0);
+  assert.match(rendered.stderr, /universal trusted proxy CIDRs are forbidden/u);
+  assert.equal(existsSync(outputDirectory), false);
+});
+
+test('Kubernetes renderer requires an opaque non-identifying tenant fleet label', () => {
+  const digest = 'ef'.repeat(32);
+  const commonArgs = [
+    'scripts/render-kubernetes-manifests.mjs',
+    '--image-digest',
+    digest,
+    '--website-node-name',
+    'contract-node',
+    '--website-node-secret-name',
+    'contract-node-secret',
+    '--website-trusted-proxy-cidr',
+    '10.42.0.0/16',
+  ];
+  const missing = spawnSync(process.execPath, commonArgs, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /--website-tenant-fleet-name/u);
+
+  const oversized = spawnSync(
+    process.execPath,
+    [...commonArgs, '--website-tenant-fleet-name', 'tenant-100001'],
+    { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true },
+  );
+  assert.notEqual(oversized.status, 0);
+  assert.match(oversized.stderr, /tf- followed by exactly 15 lowercase base32 characters/u);
+
+  const duplicate = spawnSync(
+    process.execPath,
+    [
+      ...commonArgs,
+      '--website-tenant-fleet-name',
+      'tf-aaaaa22222bbbbb',
+      '--website-tenant-fleet-name',
+      'tf-ccccc33333ddddd',
+    ],
+    { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true },
+  );
+  assert.notEqual(duplicate.status, 0);
+  assert.match(duplicate.stderr, /cannot be provided more than once/u);
+});
+
+test('Kubernetes renderer keeps equal Node labels isolated across tenant fleets', () => {
+  const digest = '12'.repeat(32);
+  const nodeName = `shared-node-${process.pid}`;
+  const renderedFleets = [];
+  const outputDirectories = [];
+  try {
+    for (const tenantFleetName of ['tf-aaaaa22222bbbbb', 'tf-ccccc33333ddddd']) {
+      const outputDirectory = path.join(
+        REPO_ROOT,
+        '.sdkwork',
+        'runtime',
+        'kubernetes',
+        `${digest.slice(0, 16)}-${tenantFleetName}-${nodeName}`,
+      );
+      rmSync(outputDirectory, { recursive: true, force: true });
+      outputDirectories.push(outputDirectory);
+      const rendered = spawnSync(
+        process.execPath,
+        [
+          'scripts/render-kubernetes-manifests.mjs',
+          '--image-digest',
+          digest,
+          '--website-tenant-fleet-name',
+          tenantFleetName,
+          '--website-node-name',
+          nodeName,
+          '--website-node-secret-name',
+          `${tenantFleetName}-secret`,
+          '--website-trusted-proxy-cidr',
+          '10.42.0.0/16',
+        ],
+        { cwd: REPO_ROOT, encoding: 'utf8', windowsHide: true },
+      );
+      assert.equal(rendered.status, 0, rendered.stderr);
+      const services = parseAllDocuments(
+        readFileSync(path.join(outputDirectory, 'service.yaml'), 'utf8'),
+      ).map((document) => document.toJSON());
+      const deployment = parseAllDocuments(
+        readFileSync(path.join(outputDirectory, 'deployment.yaml'), 'utf8'),
+      )
+        .map((document) => document.toJSON())
+        .find((document) => document?.kind === 'StatefulSet');
+      renderedFleets.push({ tenantFleetName, outputDirectory, services, deployment });
+    }
+
+    const [alpha, beta] = renderedFleets;
+    assert.notEqual(alpha.outputDirectory, beta.outputDirectory);
+    assert.notEqual(alpha.deployment.metadata.name, beta.deployment.metadata.name);
+    assert.ok(
+      alpha.services.every(
+        (service) =>
+          service.spec.selector['sdkwork.com/tenant-fleet'] === alpha.tenantFleetName,
+      ),
+    );
+    assert.ok(
+      beta.services.every(
+        (service) =>
+          service.spec.selector['sdkwork.com/tenant-fleet'] === beta.tenantFleetName,
+      ),
+    );
+    const alphaNames = new Set(alpha.services.map((service) => service.metadata.name));
+    assert.ok(beta.services.every((service) => !alphaNames.has(service.metadata.name)));
+  } finally {
+    for (const outputDirectory of outputDirectories) {
+      rmSync(outputDirectory, { recursive: true, force: true });
+    }
+  }
+});
 
 async function createFixture(options) {
   const profile = options.profile ?? 'standalone';
@@ -274,6 +670,9 @@ test('Linux release smoke validates, extracts, serves HTTP and HTTPS, and cleans
   assert.match(source, /extractTar/u);
   assert.match(source, /preservePaths: false/u);
   assert.match(source, /openssl/u);
+  assert.match(source, /sdkwork-web-server-website-delivery-edge-runtime/u);
+  assert.match(source, /run\(websiteEdgeRuntime, \['--help'\]/u);
+  assert.match(source, /run\(websiteEdgeRuntime, \['validate', packagedWebsiteHostConfig\]/u);
   assert.match(source, /\['data-plane', smokeConfigPath\]/u);
   assert.match(source, /waitForHealth\('http'/u);
   assert.match(source, /waitForHealth\('https'/u);
@@ -317,6 +716,7 @@ test('CycloneDX SBOM binds the archive and locked Cargo closure and rejects sema
     for (const packageName of [
       'sdkwork-web-agent',
       'sdkwork-api-web-server-standalone-gateway',
+      'sdkwork-web-server-website-delivery-edge-runtime',
       'sdkwork-webserver-certificate-worker',
     ]) {
       assert.ok(sbom.components.some((component) => component.name === packageName));

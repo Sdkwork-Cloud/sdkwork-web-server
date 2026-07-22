@@ -157,6 +157,7 @@ impl WebBackendApi for WebService {
         request: &CreateServerRequest,
     ) -> WebServiceResult<sdkwork_webserver_contract::CreateServerResponse> {
         let tenant_id = Self::require_backend_tenant(context)?;
+        validate_tenant_scope_hash(&request.tenant_scope_hash)?;
         self.repository.create_server(tenant_id, request).await
     }
 
@@ -170,5 +171,31 @@ impl WebBackendApi for WebService {
         self.repository
             .list_audit_logs(Some(tenant_id), page, page_size)
             .await
+    }
+}
+
+fn validate_tenant_scope_hash(value: &str) -> WebServiceResult<()> {
+    if value.len() != 64
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(WebServiceError::validation(
+            "tenantScopeHash must be a lowercase SHA-256 digest",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_tenant_scope_hash;
+
+    #[test]
+    fn tenant_scope_hash_is_exact_lowercase_sha256_shape() {
+        validate_tenant_scope_hash(&"a".repeat(64)).unwrap();
+        for invalid in ["a".repeat(63), "A".repeat(64), "g".repeat(64)] {
+            assert!(validate_tenant_scope_hash(&invalid).is_err());
+        }
     }
 }

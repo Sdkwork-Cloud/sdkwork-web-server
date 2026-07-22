@@ -76,6 +76,38 @@ resolution model.
   policy become explicit SLO inputs.
 - Web Server cloud management APIs/tables need migration rather than dual ownership.
 
+## Implementation Status
+
+The Web Server consumer foundation is implemented without accepting this ADR as complete:
+
+- strict `sdkwork.website-runtime.v1` JSON Schema and typed Rust model;
+- canonical payload SHA-256 verification and bounded semantic validation;
+- immutable exact/wildcard Host, Binding path, Variant rule, Mount path, and resource indexes;
+- node-scoped `sdkwork.website-runtime-set.v1` schema/hash, stable Site ordering, cross-Site route
+  conflict checks, whole-candidate compilation, serialized activation/rollback writers, one atomic
+  read pointer, scope enforcement, monotonic generation/replay protection, idempotency, and one
+  previous in-memory generation;
+- opaque Drive/Knowledgebase resource references and segment-aware `ROOT`/`ALIAS` translation;
+- fail-closed provider-topology fields, path policy, reference, conflict, and capability checks;
+- separate node-scoped TLS assignment schema/hash and immutable SNI assignment index without raw
+  certificate/private-key material or Site revision coupling;
+- transport-neutral resource/static/Wiki provider ports with typed public-state failures,
+  generations, conditional/range inputs, cursor pagination, redacted handles, and body streaming.
+- generated Drive and Knowledgebase Internal SDK provider adapters plus the standalone
+  `website-data-plane` delivery executor and public HTTP mapping;
+- a public-listener-independent, loopback-only provider-event ingress for four Drive and five
+  Knowledgebase owner events, with owner HMAC verification, tenant/channel binding, bounded
+  stream-sharded processing, dual-slot durable checkpoints, gap/conflict uncertainty, and
+  generated-SDK Provider reconciliation.
+- node-local A/B persistence of complete activated runtime-sets with corruption fallback,
+  highest-generation restart/source recovery, replay protection, and staging/production
+  configuration enforcement.
+
+ADR acceptance remains blocked on producer/compiler conformance, authenticated distribution,
+rollout observations, TLS material validation/hot swap, provider-aware cache behavior and concrete
+event-driven cache invalidation,
+single-writer migration, and the full verification matrix below.
+
 ## Verification
 
 - deterministic compiler/consumer golden fixtures and version compatibility tests;

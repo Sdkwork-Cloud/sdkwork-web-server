@@ -3,9 +3,12 @@
 The authored manifests are production templates. They deliberately contain
 `__SDKWORK_IMAGE_DIGEST__`; apply only rendered output bound to an attested registry digest. The
 application manifest currently defers release builds, so these templates are not an assertion that
-a registry image or production environment exists.
+a registry image or production environment exists. Rendering also produces an immutable,
+Node-specific `config-map.yaml` containing the compiled website listener policy; it contains no
+credentials or certificate material. Its immutable name includes the rendered config SHA-256
+prefix so a policy change creates a new object instead of mutating an active revision.
 
-## Required Runtime Secret
+## Required Secrets
 
 Create `sdkwork-web-server-runtime` through the approved secret manager integration with these keys:
 
@@ -17,21 +20,112 @@ Create `sdkwork-web-server-runtime` through the approved secret manager integrat
 | `certificate-encryption-key` | Certificate private-key encryption root |
 | `acme-contact-email` | ACME account contact |
 
-Do not commit a Secret manifest or plaintext values. Encryption roots must be independent, randomly generated, rotation-governed values.
+This Secret is consumed by the migration Job. Cloud management routes are hosted through the
+platform cloud gateway and the application standalone gateway is not deployed by this workload.
+
+Create one distinct Node Secret for every rendered website data-plane StatefulSet. Every Node in a
+tenant fleet must carry the same authorized tenant scope but a distinct Node UUID, Node token, and
+provider credentials. The Secret name is passed through `--website-node-secret-name` and must
+contain:
+
+| Key | Purpose |
+| --- | --- |
+| `node-uuid` | Stable UUID registered by Deployments for this Web Node |
+| `node-token` | Web Internal API ingress token bound to this Node |
+| `tenant-scope-hash` | Exact lowercase SHA-256 tenant scope assigned to this process |
+| `drive-ingress-token` | Drive Internal SDK service credential for the same tenant scope |
+| `knowledgebase-ingress-token` | Knowledgebase Internal SDK service credential for the same tenant scope |
+| `website-provider-events.json` | Loopback provider-event subscription config for this tenant scope |
+| referenced signing-secret keys | Drive channel verification tokens and Knowledgebase outbox secrets referenced by the event config |
+
+The event config uses `/run/secrets/sdkwork-web-node/<key>` paths for its signing secrets and
+`/var/lib/sdkwork/web/website-provider-events` for checkpoints. Do not reuse a Node Secret across
+StatefulSets. Do not commit a Secret manifest or plaintext values. Encryption roots and Node/provider
+credentials must be independent, randomly generated, least-privilege, rotation-governed values.
 
 ## Release And Apply
 
 1. Build and validate the cloud release archive and container image.
 2. Verify the image checksum, signature, provenance/attestation, and SBOM.
-3. Render manifests with the verified registry digest:
+3. Allocate a stable opaque tenant fleet name matching `^tf-[a-z2-7]{15}$` from a cryptographically
+   secure random source. The 15 Base32 symbols provide approximately 75 bits of non-secret,
+   non-identifying orchestration entropy. Do not derive it from or set it to a tenant ID, tenant
+   scope hash, customer name, email address, or domain. Render one Node workload with the verified
+   registry digest and non-secret deployment names:
 
    ```powershell
-   node scripts/render-kubernetes-manifests.mjs --image-digest <64-hex-sha256>
+   node scripts/render-kubernetes-manifests.mjs `
+     --image-digest <64-hex-sha256> `
+     --website-tenant-fleet-name <tf-plus-15-lowercase-base32-symbols> `
+     --website-node-name <unique-dns-label> `
+     --website-node-secret-name <unique-secret-dns-label> `
+     --website-trusted-proxy-cidr <direct-ingress-cidr>
    ```
 
-4. Apply the rendered `migration-job.yaml`, wait for successful completion, then apply `service.yaml` and `deployment.yaml`.
-5. Wait for the StatefulSet rollout and verify `/healthz`, `/readyz`, and metrics from the operations surface before routing production traffic.
+   Repeat `--website-trusted-proxy-cidr` for every reviewed network from which the Pod can directly
+   receive public-ingress connections. The value is the observed TCP peer network after CNI or
+   load-balancer source NAT, not a browser/client network. The renderer rejects missing, duplicate,
+   universal, IPv4 broader than `/8`, IPv6 broader than `/16`, malformed, or compiler-invalid
+   policies. It invokes the edge runtime's real config compiler before publishing any manifests.
 
-The StatefulSet ordinal becomes the bounded Snowflake node id, giving each replica a stable numeric identity. The workload uses a read-only root filesystem, disabled service-account token mounting, dropped Linux capabilities, RuntimeDefault seccomp, bounded ephemeral storage, startup/readiness/liveness probes, rolling updates, and a PodDisruptionBudget.
+4. Run one rendered `migration-job.yaml` once for the application environment and wait for
+   successful completion; it is not a per-tenant migration. For each tenant fleet, apply
+   `network-policy.yaml` from one of its renders. Apply every Node's `service.yaml`,
+   `config-map.yaml`, and matching `deployment.yaml` into the fleet's dedicated namespace. The
+   Website and headless Services are identical, idempotent fleet objects; the provider-event
+   Service is Node-specific.
+5. Render and deploy at least two different Node names and Node Secrets with the same tenant fleet
+   name and tenant scope before claiming high availability for that tenant. The hard hostname
+   spread constraint requires distinct Kubernetes worker nodes; the zone constraint distributes
+   across labeled availability zones when capacity exists. Wait for every StatefulSet rollout and
+   its `/healthz`, `/readyz`, and `/livez` exec probes before routing production traffic.
+6. Label both the public ingress namespace and its ingress Pods with
+   `sdkwork.com/network-role=public-ingress`. Label both the provider callback ingress namespace
+   and its ingress Pods with `sdkwork.com/network-role=provider-event-ingress`, then apply
+   `network-policy.yaml`.
+7. Configure the reviewed internal HTTPS ingress or service mesh to send exact owner callback
+   subscription requests to
+   `sdkwork-web-events-<tenant-fleet-name>-<node-name>:3811` for the exact subscribed Node. A fleet
+   Service must never randomly distribute signed callbacks because subscription IDs, signing
+   secrets, and checkpoints are Node-bound. The authored relay sidecar preserves the TCP byte
+   stream and forwards it to the loopback receiver, where HMAC, clock-window, tenant,
+   organization, channel, and AsyncAPI checks remain authoritative. Every highly available Node
+   needs its own owner subscription/callback. Production rollout is blocked until the deployment
+   platform supplies TLS/mTLS identity, exact Node routing, and source-policy evidence for that
+   internal ingress.
+8. After every affected Node is Ready on the new config revision and rollback retention has
+   expired, remove only unreferenced older ConfigMaps carrying that Node's
+   `sdkwork.com/web-node` label. Never delete the ConfigMap referenced by the active StatefulSet.
 
-Scaling is limited to 1024 replicas by the node-id contract. A larger deployment requires a reviewed ID-allocation design rather than ordinal reuse.
+Each StatefulSet has exactly one replica because the Node UUID, credentials, and recovery slots are
+identity-bound. Its dedicated `ReadWriteOnce` PVC persists runtime-set A/B slots and provider-event
+checkpoints across Pod replacement. The workload uses a read-only root filesystem, disabled
+service-account token mounting, dropped Linux capabilities, RuntimeDefault seccomp, bounded
+ephemeral-storage requests/limits, disabled Service-link environment injection, loopback-only
+operations, exec probes, a bounded provider-event relay sidecar, ingress NetworkPolicy, rolling
+updates, and a tenant-fleet-scoped PodDisruptionBudget.
+Hostname topology spread is a hard scheduling constraint for Nodes in the same tenant fleet;
+availability-zone spread is preferred without making a single-zone cluster permanently
+unschedulable.
+
+Public website HTTP is available only through the per-tenant ClusterIP
+`sdkwork-web-website-<tenant-fleet-name>`. The external load balancer/CDN owns public exposure and
+must route every custom or platform domain to the Service for its assigned tenant fleet before the
+runtime performs Host, Binding, device Variant, Mount, and resource selection. No shared Service
+may select Pods from different tenant scopes. The `sdkwork.com/tenant-fleet` selector enforces this
+within Kubernetes; the runtime-set tenant scope and Secret-bound provider clients enforce it again
+inside the process. The data plane accepts
+`X-Forwarded-Proto` only from a direct peer in the rendered trusted CIDRs, requires one exact
+`http` or `https` value, rejects malformed trusted metadata, and never lets forwarding metadata
+downgrade native TLS. Website HTTPS redirects, reverse-proxy forwarding headers, and access logs
+consume that same resolved scheme. TLS/SNI hot activation remains a separate release gate until
+the runtime consumes validated TLS assignments; this template does not claim that custom-domain
+certificate activation is complete.
+
+This dedicated-tenant topology is the production-deployable baseline. A shared multi-tenant edge
+fleet is not implemented by these manifests. It requires owner-defined tenant-aware runtime
+assignment, a credential broker/resolver with hot rotation, per-tenant generated Drive and
+Knowledgebase SDK client lifecycle, tenant-aware provider-event subscription authority, bounded
+client/cache eviction, and tenant-qualified readiness, drift, usage, and rollout contracts. Do not
+replace those missing contracts with token maps, tenant headers, raw HTTP, or direct cross-service
+storage access.

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "sdkwork.website-provider-event-ingress.v1",
+  "bindAddress": "127.0.0.1:3810",
+  "checkpointDirectory": ".sdkwork/runtime/website-provider-events",
+  "maximumCheckpointStreams": 4096,
+  "maximumClockSkewSeconds": 300,
+  "maximumConcurrentDeliveries": 32,
+  "subscriptions": [
+    {
+      "subscriptionId": "drive-website-node-1",
+      "provider": "DRIVE",
+      "tenantScopeHash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "tenantId": "100001",
+      "driveChannelId": "website-node-1",
+      "secretFile": ".sdkwork/secrets/drive-website-node-1.token"
+    },
+    {
+      "subscriptionId": "knowledgebase-wiki-node-1",
+      "provider": "KNOWLEDGEBASE",
+      "tenantScopeHash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "tenantId": "100001",
+      "organizationId": "0",
+      "secretFile": ".sdkwork/secrets/knowledgebase-wiki-node-1.secret"
+    }
+  ]
+}

@@ -303,13 +303,19 @@ CREATE TABLE web_server (
     tenant_id       INTEGER      NOT NULL DEFAULT 0,
     name            TEXT         NOT NULL,
     host            TEXT         NOT NULL,
+    tenant_scope_hash TEXT       NOT NULL,
     ssh_port        INTEGER      NOT NULL DEFAULT 22,
     status          INTEGER      NOT NULL DEFAULT 0,
     metadata        TEXT         NOT NULL DEFAULT '{}',
     created_at      TEXT         NOT NULL,
     updated_at      TEXT         NOT NULL,
     version         INTEGER      NOT NULL DEFAULT 0,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT uk_web_server_tenant_id UNIQUE (tenant_id, id),
+    CONSTRAINT chk_web_server_tenant_scope_hash CHECK (
+        length(tenant_scope_hash) = 64
+        AND tenant_scope_hash NOT GLOB '*[^0-9a-f]*'
+    )
 );
 
 CREATE UNIQUE INDEX uk_web_server_uuid
@@ -320,3 +326,86 @@ CREATE UNIQUE INDEX uk_web_server_host
 
 CREATE INDEX idx_web_server_tenant_status
     ON web_server (tenant_id, status, updated_at DESC);
+
+CREATE TABLE web_runtime_assignment (
+    id                  BIGINT       NOT NULL,
+    uuid                TEXT         NOT NULL,
+    tenant_id           INTEGER      NOT NULL,
+    server_id           BIGINT       NOT NULL,
+    environment         TEXT         NOT NULL,
+    generation          BIGINT       NOT NULL,
+    snapshot_uuid       TEXT         NOT NULL,
+    snapshot_sha256     TEXT         NOT NULL,
+    runtime_set         TEXT         NOT NULL,
+    runtime_set_bytes   BIGINT       NOT NULL,
+    assigned_by_subject TEXT         NOT NULL,
+    created_at          TEXT         NOT NULL,
+    updated_at          TEXT         NOT NULL,
+    version             INTEGER      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_web_runtime_assignment_uuid UNIQUE (uuid),
+    CONSTRAINT uk_web_runtime_assignment_tenant_id
+        UNIQUE (tenant_id, id, server_id),
+    CONSTRAINT uk_web_runtime_assignment_generation
+        UNIQUE (tenant_id, server_id, environment, generation),
+    CONSTRAINT uk_web_runtime_assignment_snapshot
+        UNIQUE (tenant_id, server_id, environment, snapshot_uuid),
+    CONSTRAINT fk_web_runtime_assignment_server
+        FOREIGN KEY (tenant_id, server_id) REFERENCES web_server (tenant_id, id),
+    CONSTRAINT chk_web_runtime_assignment_environment
+        CHECK (environment IN ('development', 'test', 'staging', 'production')),
+    CONSTRAINT chk_web_runtime_assignment_generation
+        CHECK (generation BETWEEN 1 AND 9007199254740991),
+    CONSTRAINT chk_web_runtime_assignment_snapshot_sha256 CHECK (
+        length(snapshot_sha256) = 64
+        AND snapshot_sha256 NOT GLOB '*[^0-9a-f]*'
+    ),
+    CONSTRAINT chk_web_runtime_assignment_runtime_set
+        CHECK (json_valid(runtime_set) AND json_type(runtime_set) = 'object'),
+    CONSTRAINT chk_web_runtime_assignment_runtime_set_bytes
+        CHECK (runtime_set_bytes BETWEEN 1 AND 67108864)
+);
+
+CREATE INDEX idx_web_runtime_assignment_current
+    ON web_runtime_assignment (tenant_id, server_id, environment, generation DESC);
+
+CREATE TABLE web_runtime_observation (
+    id              BIGINT       NOT NULL,
+    uuid            TEXT         NOT NULL,
+    tenant_id       INTEGER      NOT NULL,
+    assignment_id   BIGINT       NOT NULL,
+    server_id       BIGINT       NOT NULL,
+    state           TEXT         NOT NULL,
+    node_version    TEXT,
+    reason_code     TEXT,
+    detail          TEXT,
+    observed_at     TEXT         NOT NULL,
+    created_at      TEXT         NOT NULL,
+    updated_at      TEXT         NOT NULL,
+    version         INTEGER      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_web_runtime_observation_uuid UNIQUE (uuid),
+    CONSTRAINT uk_web_runtime_observation_state
+        UNIQUE (tenant_id, assignment_id, state),
+    CONSTRAINT fk_web_runtime_observation_assignment
+        FOREIGN KEY (tenant_id, assignment_id, server_id)
+        REFERENCES web_runtime_assignment (tenant_id, id, server_id),
+    CONSTRAINT chk_web_runtime_observation_state
+        CHECK (state IN ('RECEIVED', 'VALIDATED', 'STAGED', 'ACTIVE', 'REJECTED')),
+    CONSTRAINT chk_web_runtime_observation_node_version
+        CHECK (node_version IS NULL OR length(node_version) BETWEEN 1 AND 64),
+    CONSTRAINT chk_web_runtime_observation_reason_code
+        CHECK (reason_code IS NULL OR length(reason_code) BETWEEN 1 AND 64),
+    CONSTRAINT chk_web_runtime_observation_detail
+        CHECK (detail IS NULL OR length(detail) BETWEEN 1 AND 512),
+    CONSTRAINT chk_web_runtime_observation_reason CHECK (
+        (state = 'REJECTED' AND reason_code IS NOT NULL)
+        OR (state <> 'REJECTED' AND reason_code IS NULL AND detail IS NULL)
+    )
+);
+
+CREATE INDEX idx_web_runtime_observation_assignment
+    ON web_runtime_observation (tenant_id, assignment_id, id DESC);
+
+CREATE INDEX idx_web_runtime_observation_node_time
+    ON web_runtime_observation (tenant_id, server_id, observed_at DESC);

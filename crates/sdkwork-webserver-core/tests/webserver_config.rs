@@ -209,6 +209,11 @@ fn trusted_proxy_schema_rejects_ambiguous_or_unbounded_policy() {
         json!({"trustedCidrs": ["127.0.0.0/8"], "maxHeaderBytes": 65_537}),
         json!({"trustedCidrs": ["not-a-cidr"]}),
         json!({"trustedCidrs": ["127.0.0.0/8"], "trustAll": true}),
+        json!({"trustedCidrs": ["0.0.0.0/0"]}),
+        json!({"trustedCidrs": ["0.0.0.0/7"]}),
+        json!({"trustedCidrs": ["::/0"]}),
+        json!({"trustedCidrs": ["::/15"]}),
+        json!({"trustedCidrs": ["::ffff:0:0/96"]}),
     ];
 
     for (index, policy) in invalid_policies.into_iter().enumerate() {

@@ -1,9 +1,9 @@
 # SDKWork Cloud Site Delivery Data Plane PRD
 
-Status: draft
+Status: in-progress
 Owner: SDKWork Web Server maintainers
 Application: sdkwork-web
-Updated: 2026-07-21
+Updated: 2026-07-22
 Requirement: REQ-2026-0060
 Parent: [PRD.md](PRD.md)
 Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md, NGINX_SPEC.md, SECURITY_SPEC.md,
@@ -31,7 +31,7 @@ reload, Deploy Release, or SiteRevision.
 | --- | --- |
 | Anonymous browser | Receive the correct secure representation for host, path, and client class. |
 | Tenant operator | Trust that preview/activation/rollback has observable runtime evidence. |
-| Platform SRE | Operate a bounded, horizontally scalable, last-known-good delivery fleet. |
+| Platform SRE | Operate bounded, horizontally scalable, last-known-good dedicated tenant fleets. |
 | Security operator | Verify TLS, routing, origin confinement, headers, and non-disclosure. |
 | Drive provider | Resolve public directory content without exposing storage topology. |
 | Knowledgebase provider | Resolve only eligible public Wiki routes and rendered representations. |
@@ -158,6 +158,15 @@ and change events. A DRAFT/PAUSED Wiki fails public eligibility even if it is pr
 Knowledgebase events are consumed directly from the provider event authority; Deploy remains the
 configuration/snapshot authority and is not a per-content-event proxy.
 
+The implemented runtime accepts the four Drive WebsiteRoot and five Knowledgebase Wiki owner event
+types on a separate loopback listener. Subscription identity is bound to provider, tenant scope,
+tenant, organization and Drive channel as applicable; owner-specific HMAC signatures and replay
+windows are verified before strict event parsing. Per-stream dual-slot checkpoints, bounded
+deduplication, Drive contiguous-gap detection, Knowledgebase monotonic ordering, and generated-SDK
+Provider reconciliation make event restart/replay behavior durable on each Web Node. The current
+website path has no content cache, so event invalidation is deliberately cacheless until the bounded
+cache described in section 7 exists.
+
 Cloud runtime integration uses owner-generated `sdkwork-drive-internal-sdk` and
 `sdkwork-knowledgebase-internal-sdk` through injected clients and
 the approved authentication/runtime context. Same-process standalone composition may use an
@@ -202,8 +211,10 @@ bounded, and do not reveal content, secrets, private endpoints, or uncontrolled 
 - Bound Wiki render input/output/time and sanitize HTML, links, images, SVG, embeds, and metadata.
 - Redact tokens, cookies, query values, private paths, secret references, certificate material,
   provider payloads, and customer content from logs/support bundles.
-- Apply trusted-proxy policy before using client IP. IP and User-Agent telemetry follow retention,
-  minimization, and consent requirements.
+- Apply trusted-proxy policy before using client IP or forwarded request scheme. Only a configured
+  direct peer may provide a single exact `X-Forwarded-Proto: http|https`; malformed trusted values
+  fail closed, untrusted values are ignored, and native TLS cannot be downgraded. IP and User-Agent
+  telemetry follow retention, minimization, and consent requirements.
 - Public not-found behavior does not distinguish missing Site, private page, wrong tenant, paused
   publication, or revoked resource.
 
@@ -262,7 +273,120 @@ loss policy, replay, duplicate handling, and reconciliation are observable and t
   metrics cardinality.
 - Node/control-plane/provider outage and last-known-good/rollback drills have recorded evidence.
 
-## 15. Dependencies
+## 15. Implementation Status
+
+The first executable boundary is implemented in `sdkwork-webserver-core::website_runtime`:
+
+- `specs/sdkwork.website-runtime.descriptor.schema.json` is the strict supported v1 consumer
+  contract;
+- the bounded loader verifies canonical payload SHA-256 before semantic activation;
+- semantic validation rejects non-canonical identities/paths/order, broken references, conflicting
+  Host/path or Variant/Mount ownership, unsafe redirects, handler/capability mismatch, provider
+  topology leakage, and runtime limits above hard ceilings;
+- compilation builds immutable Host, Binding path, Variant-rule, Mount path, Resource, and Variant
+  indexes; request selection has no control-plane database dependency;
+- `sdkwork.website-runtime-set.v1` groups a bounded, stable-ordered set of complete Site descriptors
+  for one node/environment; its monotonic generation prevents delayed compilation or distribution
+  from overwriting newer state. The registry compiles the entire candidate before serializing
+  writers and swapping one read pointer, retains one prior complete set, and never exposes a
+  partial, stale, conflicting, or otherwise rejected candidate;
+- Binding-relative URL handling and Mount `ROOT`/`ALIAS` translation cannot mutate the opaque
+  `providerResourceUuid`;
+- `sdkwork.tls-runtime.v1` independently validates node assignment metadata, certificate material
+  references, expected fingerprints, validity metadata, bounded TLS/ALPN policy, and exact/wildcard
+  SNI ownership without carrying certificate or private-key PEM;
+- `sdkwork-webserver-contract::provider` defines injected resource eligibility, static resolve/open,
+  Wiki route/open/navigation/search, cursor pagination, conditional/range metadata, typed failures,
+  redacted content handles, and incremental stream ports without selecting a transport.
+- `sdkwork-webserver-knowledgebase-provider` consumes the generated Knowledgebase Rust Internal SDK
+  through an injected tenant-bound resolver and implements ACTIVE-publication validation,
+  PAGE/REDIRECT resolution, exact content revalidation, navigation/search generations, conditional
+  requests, versioned ETag/Last-Modified metadata, bounded content, deadlines, and non-disclosing
+  error mapping. Its focused provider suite passes.
+- `sdkwork-webserver-drive-provider` consumes the generated Drive Rust Internal SDK and implements
+  WebsiteRoot validation plus static resolve/open for both `SPACE_ROOT` and `FOLDER`, generation and
+  NodeVersion revalidation, conditional and range requests, `If-Range`/`416`, tenant isolation,
+  traversal confinement, bounded content, deadlines, and non-disclosing SDK error mapping. Its
+  focused provider suite passes.
+- `sdkwork-webserver-delivery-runtime` owns an immutable provider registry and a transport-neutral
+  executor that routes from the active runtime-set to STATIC/explicit SPA fallback/WIKI providers,
+  preserves the complete compiled scope, handles HEAD/conditional/redirect/Range outcomes, and
+  bounds streams again at the consumer boundary. It also validates each unique logical resource on
+  the handler-specific Provider port before activation using bounded concurrency and descriptor
+  deadlines, rejecting missing ports, invalid Provider evidence, and unsupported object limits.
+  Its focused executor and activation suites pass.
+- the dedicated `sdkwork-web-server-website-delivery-edge-runtime` process loads and watches a bounded, hash-verified
+  runtime-set, binds the process and both generated Provider clients to one configured tenant scope,
+  loads Drive and Knowledgebase ingress tokens from secret files, registers both adapters, validates
+  every candidate before atomic activation, and calls the executor directly from the existing
+  bounded HTTP/HTTPS listener;
+- production `cloud` assignment mode consumes the generated Web Internal Rust SDK with a protected
+  Web Node token, performs conditional node/environment assignment pulls, rejects response identity
+  or hash mismatch, continues from durable last-known-good state during temporary control-plane
+  loss, and resumes the persisted observation phase through `RECEIVED`, `VALIDATED`, `STAGED`,
+  `ACTIVE`, or terminal `REJECTED`; local `file` mode remains a standalone/development source;
+- node-local A/B slots durably retain complete activated runtime-sets, recover the highest valid
+  generation after restart or temporary source loss, reject stale/same-generation-conflicting and
+  cross-node/environment candidates, and are mandatory in staging and production;
+- a separate loopback-only provider-event ingress authenticates provider/tenant/channel-bound Drive
+  and Knowledgebase deliveries, strictly consumes all nine owner event types, and drives bounded
+  per-stream ordering, deduplication, dual-slot checkpoints, uncertainty, generated-SDK Provider
+  reconciliation, and invalidation without activating a Site revision;
+- HTTP mapping now covers GET/HEAD, `200`/`304`/`308`/`404`/`412`/`416`/`429`/`502`/`503`, exact
+  content/range metadata, canonical locations, query-safe redirects, client-hint Variant selection,
+  force-HTTPS, security headers, and incremental response-body chunks. Focused browser-adapter tests
+  pass through the real Drive and Knowledgebase provider adapters and injected SDK port fakes.
+
+This is not production completion. The Web consumer half of authenticated cloud distribution is
+implemented, but Deployments producer wiring through the generated Web Internal SDK, detached
+source attestation where required, staged probing/quorum/drift reporting, atomic TLS pointer
+activation, TLS
+material/key/chain validation, credential rotation/reload, provider-aware cache and concrete
+event-driven cache invalidation,
+fleet telemetry, single-writer cutover, and deployed browser E2E remain mandatory P0 work. The
+legacy `data-plane` operation intentionally continues to use `ResourceConfig`; website delivery
+uses the independent edge runtime with the management feature disabled. True upstream streaming is still absent
+because both generated owner SDKs return bounded `Vec<u8>` content. Candidate activation therefore
+enforces a 16 MiB Knowledgebase or 256 MiB Drive object ceiling; supporting the schema's future
+1 TiB ceiling requires generated streaming APIs. The sanitizer/rendition chain, rendition-backed
+full-text search, negative-cache/single-flight/stampede controls, and invalidation-storm evidence
+also remain open. Node-local runtime-set recovery and event checkpoints are implemented; they do
+not replace Deploy producer integration, rollout quorum/drift reporting, or production
+restart/backup-restore drill evidence.
+
+The cloud topology, image entrypoint, release archive, and Kubernetes workload now select the
+dedicated edge-runtime binary. The production-deployable baseline is one dedicated fleet per
+tenant scope. A required non-sensitive `tf-` plus 15-symbol random Base32 fleet label partitions
+the Website Service, Pod selectors, NetworkPolicy, and the PodDisruptionBudget; each Node receives
+a separate provider-event Service, and tenant scope hashes and provider credentials remain only in
+per-Node Secrets. Each rendered StatefulSet is single-replica by design
+and binds one Node Secret to one recovery PVC; production high availability requires at least two
+independently rendered Node instances in the same tenant fleet and on distinct Kubernetes workers.
+Hostname topology spread is mandatory and availability-zone spread is preferred. Built-in exec
+probes reach only the loopback operations listener. A bounded
+relay sidecar preserves provider callback bytes and NetworkPolicy separates website traffic from
+the callback ingress through namespace-and-Pod selectors. Rendering requires explicit direct
+ingress CIDRs, runs the real listener compiler, and emits a hash-versioned immutable per-Node
+ConfigMap; Website
+delivery, reverse-proxy forwarding, and logs share the resulting trusted external scheme. Internal
+HTTPS/mTLS termination and source identity, plus multi-node rollout evidence, remain P0 deployment
+gates rather than implicit operator steps.
+
+Every Node requires an independent owner event subscription and exact callback route to
+`sdkwork-web-events-<tenant-fleet-name>-<node-name>`. Kubernetes Service load balancing is not
+event fan-out: sharing one callback Service across a fleet could deliver a signed event to a Node
+with another subscription secret and would leave other Node-local checkpoints uninformed. A
+provider without independent Node subscriptions requires an owner-approved durable fleet fan-out
+contract before event-driven cache can be enabled.
+
+A shared multi-tenant edge fleet remains out of scope for the current production baseline. It may
+be productized only after the owning services publish tenant-aware assignment and credential
+broker contracts, per-tenant generated Provider SDK client lifecycle and hot rotation,
+multi-tenant event subscription authority, bounded tenant cache/client eviction, and
+tenant-qualified readiness, drift, usage, rollout, and rollback evidence. Local token maps, tenant
+headers, raw HTTP, and direct provider storage access are prohibited substitutes.
+
+## 16. Dependencies
 
 - Deploy product authority: `sdkwork-deployments/docs/product/prd/PRD-cloud-site-publishing-platform.md`
 - Deploy descriptor/data authority: `sdkwork-deployments/docs/architecture/tech/TECH-cloud-site-publishing-control-plane.md`

@@ -15,7 +15,7 @@ goals:
   - Use the resolved source as the same effective client identity used by canonical upstream XFF, IP-hash, and safe retries.
 non_goals:
   - Optional or automatic PROXY-header detection.
-  - PROXY v2 TLV semantic consumption, CRC32C validation, authority/SSL TLV trust, or TLV forwarding.
+  - PROXY v2 TLV semantic consumption beyond bounded CRC32C integrity validation, authority/SSL TLV trust, or TLV forwarding.
   - AF_UNIX, UDP/datagram, outbound send-proxy, hostname trust sources, or dynamic cloud-provider CIDR discovery.
   - Nginx directive import/render or byte-for-byte implementation equivalence.
 users:
@@ -29,6 +29,7 @@ acceptance_criteria:
   - v1 has the protocol maximum of 107 bytes including CRLF, requires strict CRLF, and accepts TCP4, TCP6, and UNKNOWN.
   - v2 validates signature/version/command/family/protocol/address length and accepts LOCAL or PROXY over TCP4/TCP6.
   - v2 remaining bytes, including TLVs, are discarded within the declared and configured total bound through fixed scratch memory.
+  - v2 CRC32C policy is explicit (`ignore`, `validate-if-present`, or `required`); malformed, duplicate, missing-required, or mismatched CRC TLVs fail closed.
   - Parsing occurs after non-queuing connection admission but before TLS/HTTP and does not block the listener accept loop.
   - proxyProtocol and HTTP trustedProxy are mutually exclusive, and any proxyProtocol policy change is Restart-only.
   - HTTP/1, HTTPS/H2, fragmented v1, v1/v2 IPv4/IPv6, UNKNOWN, LOCAL, TLV, timeout, malformed, oversized, untrusted, disabled-version, and Watch behavior have executable tests.
@@ -67,17 +68,17 @@ The wire parser follows HAProxy PROXY protocol v1/v2 framing and the common Ngin
 
 ## Implementation Evidence
 
-- The root JSON Schema and public Rust model expose optional listener `proxyProtocol` with 1..64 trusted CIDRs, a unique v1/v2 set, a finite timeout, and a finite total Header ceiling. Defaults are both versions, 3 seconds, and 536 bytes. Semantic validation rejects malformed/duplicate networks and simultaneous `trustedProxy`.
+- The root JSON Schema and public Rust model expose optional listener `proxyProtocol` with 1..64 trusted non-overbroad CIDRs, a unique v1/v2 set, a finite timeout, a finite total Header ceiling, and an explicit CRC32C policy. Defaults are both versions, 3 seconds, 536 bytes, and CRC ignore. Semantic validation rejects malformed, duplicate, overbroad, or IPv4-universal mapped IPv6 networks and simultaneous `trustedProxy`.
 - The listener obtains process/listener connection capacity before spawning the connection task. That task validates the immediate peer, resolves the bounded preface, and only then constructs the ConnectInfo service and enters the TLS/HTTP acceptor chain. Slow or partial input therefore remains inside the existing connection ceiling and never stalls the accept loop.
-- v1 uses one 107-byte stack line, strict CRLF, exact consumption, canonical decimal ports, and typed IPv4/IPv6 parsing. v2 uses fixed signature/fixed-address buffers, validates declared total length before reading it, and discards bounded remaining bytes with one 256-byte stack scratch buffer.
+- v1 uses one 107-byte stack line, strict CRLF, exact consumption, canonical decimal ports, and typed IPv4/IPv6 parsing. v2 uses fixed signature/fixed-address buffers, validates declared total length before reading it, streams bounded TLVs through fixed scratch memory, and applies the configured duplicate/missing/mismatch CRC32C policy without promoting TLVs to request identity.
 - `DownstreamConnectionInfo` retains both transport and resolved client peers. The handler uses only the resolved client peer for the existing effective-IP path, so canonical upstream XFF, initial IP-hash, and safe retry selection remain consistent.
 - Rejections increment one fixed `proxy_protocol` reason and close before HTTP. No address, Header bytes, TLV data, listener id, or client-controlled value becomes a metric label.
 
 ## Verification Evidence
 
 - `cargo test -p sdkwork-webserver-core --test webserver_config` passes 60 configuration tests, including strict PROXY defaults, bounds, unknown-field rejection, CIDR/version validation, and `trustedProxy` mutual exclusion.
-- `cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol` passes both real-socket integrations. The matrix covers fragmented v1, strict CRLF, canonical ports, v1/v2 IPv4 and IPv6, v1 `UNKNOWN`, v2 `LOCAL`, bounded TLV discard, HTTP/1, TLS ALPN H2, missing/partial timeout, malformed/oversized/unsupported input, untrusted peers, disabled versions, and retained active policy after a Restart-only Watch candidate.
-- The complete standalone gateway suite passes 203 tests: 99 library tests and 104 integration tests across HTTP/HTTPS/H2, WebSocket, DNS/TLS, health, capacity, retry, forwarding identity, PROXY protocol, reload, and shutdown behavior. The separately isolated HTTP/1 semantics test passes 4/4; its earlier long wall time was single-job cold compilation, while execution completed in 0.54 seconds.
+- `cargo test -p sdkwork-api-web-server-standalone-gateway --test proxy_protocol` passes all current real-socket integrations. The matrix covers fragmented v1, strict CRLF, canonical ports, v1/v2 IPv4 and IPv6, v1 `UNKNOWN`, v2 `LOCAL`, bounded TLV processing, all CRC32C modes, HTTP/1, TLS ALPN H2, missing/partial timeout, malformed/oversized/unsupported input, untrusted peers, disabled versions, and retained active policy after a Restart-only Watch candidate.
+- The complete current standalone gateway library and integration suites pass across HTTP/HTTPS/H2, WebSocket, DNS/TLS, health, capacity, retry, forwarding identity, PROXY protocol, reload, and shutdown behavior. The separately isolated HTTP/1 semantics suite also passes.
 - `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all -- --check`, and isolated-target `pnpm.cmd verify` pass. The latter covers all workspace Rust tests, contract tests, API materialization, repository checks, topology, SQLite lifecycle, and cloud gateway validation without additional generated diff.
 - Source-config, agent/workflow, repository docs, apps index, pagination, API operation/envelope, application layering, Rust backend composition, strict component-port, route-collision, SDK consumer import, identity naming, database framework, and `verify-repo` validators pass. Production gateway CORS now fails closed with exact `https://web.sdkwork.com`, derived from the canonical cloud public-host topology.
 - The standalone CLI validates `etc/examples/sdkwork.webserver.config.json` as revision `3c599aba9a77de1120a92146293181c1a4d07a2c214b9063ad72b9ba29f18486`, with one listener, one virtual host, three routes, three resources, and one upstream.
@@ -85,4 +86,4 @@ The wire parser follows HAProxy PROXY protocol v1/v2 framing and the common Ngin
 
 ## Remaining Boundary
 
-This requirement does not implement or claim PROXY v2 TLV semantics or CRC32C verification, AF_UNIX/UDP families, outbound `send-proxy`, optional auto-detection, hostname/dynamic trust discovery, Nginx config import/render, cluster-global identity policy, hard allocator/OOM immunity, 100,000 concurrent connections, or 24-hour soak evidence. Those remain separate commercial release gates.
+This requirement does not implement or claim PROXY v2 authority/SSL TLV trust, TLV forwarding, AF_UNIX/UDP families, outbound `send-proxy`, optional auto-detection, hostname/dynamic trust discovery, Nginx config import/render, cluster-global identity policy, hard allocator/OOM immunity, 100,000 concurrent connections, or 24-hour soak evidence. CRC32C is bounded corruption detection and does not authenticate the sender; immediate-peer CIDR policy remains the trust authority. Those remaining capabilities are separate commercial release gates.

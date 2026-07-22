@@ -16,7 +16,10 @@
     "manifests": [
       "Cargo.toml",
       "specs/component.spec.json",
-      "../../../specs/sdkwork.webserver.config.schema.json"
+      "../../../specs/sdkwork.webserver.config.schema.json",
+      "../../../specs/sdkwork.website-runtime.descriptor.schema.json",
+      "../../../specs/sdkwork.website-runtime-set.snapshot.schema.json",
+      "../../../specs/sdkwork.tls-runtime.snapshot.schema.json"
     ]
   },
   "canonicalSpecs": [
@@ -29,10 +32,15 @@
   ],
   "contracts": {
     "layerRole": "backend-domain",
-    "publicExports": ["crate-root"],
+    "publicExports": ["crate-root", "website_runtime", "tls_runtime"],
     "providedPorts": [
       {"name": "webServerConfigCompiler", "export": "crate-root"},
-      {"name": "webServerConfigRevision", "export": "crate-root"}
+      {"name": "webServerConfigRevision", "export": "crate-root"},
+      {"name": "websiteRuntimeDescriptorCompiler", "export": "website_runtime"},
+      {"name": "websiteRuntimeRouteIndex", "export": "website_runtime"},
+      {"name": "websiteRuntimeSetRegistry", "export": "website_runtime"},
+      {"name": "tlsAssignmentSnapshotCompiler", "export": "tls_runtime"},
+      {"name": "tlsSniAssignmentIndex", "export": "tls_runtime"}
     ],
     "requiredPorts": [],
     "runtimeEntrypoints": [],
@@ -44,7 +52,10 @@
     "dependencyApiSurfaces": [],
     "events": [],
     "configKeys": [
-      "specs/sdkwork.webserver.config.schema.json"
+      "specs/sdkwork.webserver.config.schema.json",
+      "specs/sdkwork.website-runtime.descriptor.schema.json",
+      "specs/sdkwork.website-runtime-set.snapshot.schema.json",
+      "specs/sdkwork.tls-runtime.snapshot.schema.json"
     ]
   },
   "verification": {

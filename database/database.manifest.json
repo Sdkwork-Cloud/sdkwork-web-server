@@ -5,7 +5,10 @@
   "serviceCode": "WEB",
   "displayName": "WEB Database",
   "owner": "web-platform",
-  "engines": ["postgres", "sqlite"],
+  "engines": [
+    "postgres",
+    "sqlite"
+  ],
   "defaultEngine": "postgres",
   "tablePrefix": "web_",
   "baselineAnchorTable": "web_site",
@@ -17,8 +20,13 @@
     "seedOnBoot": false,
     "defaultSeedLocale": "zh-CN",
     "defaultSeedProfile": "standard",
-    "supportedSeedLocales": ["zh-CN", "en-US"],
-    "activeSeedLocales": ["zh-CN"],
+    "supportedSeedLocales": [
+      "zh-CN",
+      "en-US"
+    ],
+    "activeSeedLocales": [
+      "zh-CN"
+    ],
     "driftCheckIntervalSec": 60
   },
   "paths": {

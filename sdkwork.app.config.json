@@ -5,7 +5,7 @@
     "key": "sdkwork-web",
     "name": "SDKWork Web Server",
     "displayName": "SDKWork Web Server",
-    "description": "SDKWork standards-aligned HTTP web server control plane with app-api and backend-api surfaces.",
+    "description": "SDKWork standards-aligned HTTP web server control plane and immutable static-site/Wiki delivery data plane.",
     "vendor": "SDKWork",
     "officialWebsiteUrl": "https://sdkwork.com/apps/sdkwork-web",
     "supportUrl": "https://sdkwork.com/support",

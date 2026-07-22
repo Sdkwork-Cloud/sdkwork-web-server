@@ -1,9 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
-    net::IpAddr,
+    net::{IpAddr, Ipv4Addr},
     path::{Component, Path},
 };
 
+use ipnet::IpNet;
 use url::Url;
 
 use super::{
@@ -165,6 +166,12 @@ impl SemanticValidator {
                             "trusted proxy CIDR is duplicated",
                         );
                     }
+                    if trusted_proxy_network_is_overbroad(cidr) {
+                        self.push(
+                            format!("{path}/trustedProxy/trustedCidrs/{cidr_index}"),
+                            "trusted proxy CIDR is broader than the minimum IPv4 /8 or IPv6 /16 boundary",
+                        );
+                    }
                 }
                 if !(1..=64).contains(&policy.max_hops) {
                     self.push(
@@ -210,6 +217,12 @@ impl SemanticValidator {
                         self.push(
                             format!("{path}/proxyProtocol/trustedSourceCidrs/{cidr_index}"),
                             "PROXY protocol trusted source CIDR is duplicated",
+                        );
+                    }
+                    if trusted_proxy_network_is_overbroad(cidr) {
+                        self.push(
+                            format!("{path}/proxyProtocol/trustedSourceCidrs/{cidr_index}"),
+                            "PROXY protocol trusted source CIDR is broader than the minimum IPv4 /8 or IPv6 /16 boundary",
                         );
                     }
                 }
@@ -1298,6 +1311,17 @@ impl SemanticValidator {
             Err(WebServerConfigError::Validation {
                 diagnostics: self.diagnostics,
             })
+        }
+    }
+}
+
+fn trusted_proxy_network_is_overbroad(network: &IpNet) -> bool {
+    match network {
+        IpNet::V4(network) => network.prefix_len() < 8,
+        IpNet::V6(network) => {
+            network.prefix_len() < 16
+                || (network.contains(&Ipv4Addr::UNSPECIFIED.to_ipv6_mapped())
+                    && network.contains(&Ipv4Addr::BROADCAST.to_ipv6_mapped()))
         }
     }
 }

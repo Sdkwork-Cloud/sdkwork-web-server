@@ -1,0 +1,21 @@
+[package]
+name = "sdkwork-webserver-delivery-runtime"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+futures-util.workspace = true
+sdkwork-utils-rust.workspace = true
+sdkwork-webserver-contract.workspace = true
+sdkwork-webserver-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time = { workspace = true, features = ["parsing"] }
+tokio = { workspace = true, features = ["time"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

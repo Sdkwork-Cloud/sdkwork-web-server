@@ -1,12 +1,13 @@
 export interface CreateServerResponse {
-  id?: string;
-  name?: string;
-  host?: string;
-  sshPort?: number;
+  id: string;
+  name: string;
+  host: string;
+  tenantScopeHash: string;
+  sshPort: number;
   /** 0=offline, 1=online */
-  status?: number;
+  status: number;
   lastHeartbeatAt?: string;
-  createdAt?: string;
+  createdAt: string;
   /** Bootstrap agent credential; returned once at registration. */
   agentToken: string;
 }

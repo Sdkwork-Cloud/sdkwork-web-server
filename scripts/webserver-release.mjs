@@ -41,6 +41,7 @@ const SBOM_TIMEOUT_MS = 3 * 60 * 1000;
 const SUPPORTED_ARCHITECTURES = new Set(['x64', 'arm64']);
 const BINARIES = [
   'sdkwork-api-web-server-standalone-gateway',
+  'sdkwork-web-server-website-delivery-edge-runtime',
   'sdkwork-web-node-daemon',
   'sdkwork-web-agent',
   'sdkwork-webserver-certificate-worker',
@@ -58,6 +59,10 @@ const PACKAGE_ASSETS = [
   {
     source: 'etc/examples/public/index.html',
     target: 'etc/examples/public/index.html',
+  },
+  {
+    source: 'etc/data-plane/website.cloud.config.json',
+    target: 'etc/data-plane/website.cloud.config.json',
   },
   {
     source: 'etc/node-daemon/development.env.example',

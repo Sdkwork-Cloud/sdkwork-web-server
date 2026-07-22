@@ -20,17 +20,24 @@
     {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "DTO and port naming."},
     {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure."},
     {"file": "API_SPEC.md", "path": "../../../sdkwork-specs/API_SPEC.md", "purpose": "Request, response, and problem contracts."},
+    {"file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Generated dependency SDK and service-port boundary."},
+    {"file": "PAGINATION_SPEC.md", "path": "../../../sdkwork-specs/PAGINATION_SPEC.md", "purpose": "Bounded Wiki navigation and search cursors."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Provider context, origin non-disclosure, and typed failures."},
     {"file": "WEB_BACKEND_SPEC.md", "path": "../../../sdkwork-specs/WEB_BACKEND_SPEC.md", "purpose": "Service port direction."},
     {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Contract verification."}
   ],
   "contracts": {
     "layerRole": "backend-domain",
-    "publicExports": ["crate-root"],
+    "publicExports": ["crate-root", "provider"],
     "providedPorts": [
       {"name": "webAppApi", "export": "crate-root"},
       {"name": "webBackendApi", "export": "crate-root"},
       {"name": "webServerDtos", "export": "crate-root"},
-      {"name": "webServiceProblem", "export": "crate-root"}
+      {"name": "webServiceProblem", "export": "crate-root"},
+      {"name": "websiteResourceProvider", "export": "provider"},
+      {"name": "websiteStaticContentProvider", "export": "provider"},
+      {"name": "websiteWikiProvider", "export": "provider"},
+      {"name": "websiteProviderContentStream", "export": "provider"}
     ],
     "requiredPorts": [],
     "runtimeEntrypoints": [],

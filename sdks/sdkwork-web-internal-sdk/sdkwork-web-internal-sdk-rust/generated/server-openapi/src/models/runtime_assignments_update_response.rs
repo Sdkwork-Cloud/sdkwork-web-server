@@ -1,0 +1,13 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct RuntimeAssignmentsUpdateResponse {
+    pub code: i64,
+
+    pub message: String,
+
+    pub data: serde_json::Value,
+
+    #[serde(rename = "traceId")]
+    pub trace_id: String,
+}

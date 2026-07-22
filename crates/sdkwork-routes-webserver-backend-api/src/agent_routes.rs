@@ -2,7 +2,7 @@
 //!
 //! Agent routes (`/backend/v3/api/agent/heartbeat`, `/backend/v3/api/agent/sync`) are
 //! declared with `RouteAuth::AgentToken` in the route manifest. The framework
-//! authenticates `X-SDKWork-Agent-Token` via `AgentTokenResolverDecorator::resolve_api_key`
+//! authenticates the configured agent API key via the shared machine credential resolver
 //! and injects `WebBackendRequestContext` with `tenant_id` and `subject_id` (server UUID).
 //! Handlers retrieve `Arc<WebService>` from `Extension` (applied in `web_bootstrap.rs`).
 

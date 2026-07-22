@@ -21,23 +21,229 @@
   },
   "canonicalSpecs": [
     { "file": "SOUL.md", "path": "../sdkwork-specs/SOUL.md", "purpose": "SDKWork execution soul." },
+    { "file": "COMPONENT_SPEC.md", "path": "../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component identity, ports, and dependency surface contracts." },
+    { "file": "CODE_STYLE_SPEC.md", "path": "../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored source and generated-code boundaries." },
+    { "file": "NAMING_SPEC.md", "path": "../sdkwork-specs/NAMING_SPEC.md", "purpose": "Canonical component and Rust crate naming." },
+    { "file": "RUST_CODE_SPEC.md", "path": "../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure and verification." },
     { "file": "WEB_FRAMEWORK_SPEC.md", "path": "../sdkwork-specs/WEB_FRAMEWORK_SPEC.md", "purpose": "Mandatory sdkwork-web-framework integration." },
     { "file": "WEB_BACKEND_SPEC.md", "path": "../sdkwork-specs/WEB_BACKEND_SPEC.md", "purpose": "Backend route, service, and repository boundaries." },
     { "file": "DATABASE_FRAMEWORK_SPEC.md", "path": "../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md", "purpose": "Database lifecycle and SPI orchestration." },
-    { "file": "API_SPEC.md", "path": "../sdkwork-specs/API_SPEC.md", "purpose": "HTTP/OpenAPI contract rules." }
+    { "file": "API_SPEC.md", "path": "../sdkwork-specs/API_SPEC.md", "purpose": "HTTP/OpenAPI contract rules." },
+    { "file": "SDK_SPEC.md", "path": "../sdkwork-specs/SDK_SPEC.md", "purpose": "Generated dependency SDK boundaries." },
+    { "file": "SDK_WORKSPACE_GENERATION_SPEC.md", "path": "../sdkwork-specs/SDK_WORKSPACE_GENERATION_SPEC.md", "purpose": "Generated SDK family ownership and workspace boundaries." },
+    { "file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Injected Rust dependency SDK composition." },
+    { "file": "CONFIG_SPEC.md", "path": "../sdkwork-specs/CONFIG_SPEC.md", "purpose": "Dependency SDK base URL and bootstrap ownership." },
+    { "file": "SECURITY_SPEC.md", "path": "../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Tenant isolation, credential, and public content safety." },
+    { "file": "TEST_SPEC.md", "path": "../sdkwork-specs/TEST_SPEC.md", "purpose": "Contract and runtime verification requirements." }
   ],
   "contracts": {
     "layerRole": "runtime-gateway",
     "publicExports": [
       "crates/sdkwork-api-web-server-standalone-gateway",
+      "crates/sdkwork-web-server-website-delivery-edge-runtime",
       "crates/sdkwork-routes-webserver-app-api",
-      "crates/sdkwork-routes-webserver-backend-api"
+      "crates/sdkwork-routes-webserver-backend-api",
+      "crates/sdkwork-routes-webserver-internal-api",
+      "crates/sdkwork-webserver-delivery-runtime",
+      "crates/sdkwork-webserver-drive-provider",
+      "crates/sdkwork-webserver-knowledgebase-provider"
+    ],
+    "providedPorts": [
+      {
+        "name": "websiteDeliveryExecutor",
+        "export": "crates/sdkwork-webserver-delivery-runtime"
+      },
+      {
+        "name": "knowledgebaseWebsiteProvider",
+        "export": "crates/sdkwork-webserver-knowledgebase-provider"
+      },
+      {
+        "name": "driveWebsiteProvider",
+        "export": "crates/sdkwork-webserver-drive-provider"
+      },
+      {
+        "name": "websiteDataPlane",
+        "export": "crates/sdkwork-web-server-website-delivery-edge-runtime"
+      }
+    ],
+    "requiredPorts": [
+      {
+        "name": "knowledgebaseInternalWikiSdk",
+        "export": "crates/sdkwork-webserver-knowledgebase-provider",
+        "provider": "sdkwork-knowledgebase-internal-sdk"
+      },
+      {
+        "name": "driveInternalWebsiteSdk",
+        "export": "crates/sdkwork-webserver-drive-provider",
+        "provider": "sdkwork-drive-internal-sdk"
+      },
+      {
+        "name": "webRuntimeAssignmentInternalSdk",
+        "export": "crates/sdkwork-web-server-website-delivery-edge-runtime",
+        "provider": "sdkwork-web-internal-sdk"
+      }
+    ],
+    "sdkDependencies": [
+      {
+        "workspace": "sdkwork-web-internal-sdk",
+        "role": "web-runtime-assignment-consumer",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/internal/v3/api",
+        "apiAuthority": "sdkwork-web-internal-api",
+        "generatedTransportImportPolicy": "generated-rust-client-only",
+        "packageByLanguage": {
+          "rust": "sdkwork-web-internal-sdk"
+        }
+      },
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "role": "knowledgebase-public-wiki-provider",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/internal/v3/api",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "packageByLanguage": {
+          "rust": "sdkwork-knowledgebase-internal-sdk-generated-rust"
+        }
+      },
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "role": "drive-website-root-provider",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/internal/v3/api",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "packageByLanguage": {
+          "rust": "sdkwork-drive-internal-sdk-generated-rust"
+        }
+      }
+    ],
+    "permissionComposition": {},
+    "dependencyApiExports": [
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "sdkFamily": "sdkwork-knowledgebase-internal-sdk",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "exportMode": "service-port",
+        "visibility": "application-internal",
+        "methods": [
+          "wikiPublications.retrieve",
+          "wikiPublications.routes.resolve",
+          "wikiPublications.contents.retrieve",
+          "wikiPublications.navigation.list",
+          "wikiPublications.pages.search"
+        ],
+        "packageExport": "crates/sdkwork-webserver-knowledgebase-provider",
+        "servicePort": "knowledgebaseWebsiteProvider",
+        "runtimeRequired": true
+      },
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "sdkFamily": "sdkwork-drive-internal-sdk",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "exportMode": "service-port",
+        "visibility": "application-internal",
+        "methods": [
+          "websiteRoots.retrieve",
+          "driveResources.resolve",
+          "driveResourceContent.retrieve"
+        ],
+        "packageExport": "crates/sdkwork-webserver-drive-provider",
+        "servicePort": "driveWebsiteProvider",
+        "runtimeRequired": true
+      }
+    ],
+    "dependencyApiSurfaces": [
+      {
+        "workspace": "sdkwork-web-internal-sdk",
+        "sdkFamily": "sdkwork-web-internal-sdk",
+        "apiAuthority": "sdkwork-web-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "runtimeMode": "external-service",
+        "sameOriginAllowed": false,
+        "requiredBaseUrlKey": "SDKWORK_WEB_INTERNAL_API_BASE_URL",
+        "serviceContext": "internal-service",
+        "authMode": "ingress-token",
+        "clientBaseUrlSource": "website delivery edge-runtime bootstrap-created generated SDK client",
+        "coverage": "generated-sdk-loopback-contract-tested",
+        "evidence": "crates/sdkwork-api-web-server-standalone-gateway/src/website_runtime_cloud.rs"
+      },
+      {
+        "workspace": "sdkwork-knowledgebase-internal-sdk",
+        "sdkFamily": "sdkwork-knowledgebase-internal-sdk",
+        "apiAuthority": "sdkwork-knowledgebase-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "runtimeMode": "external-service",
+        "sameOriginAllowed": false,
+        "requiredBaseUrlKey": "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_BASE_URL",
+        "serviceContext": "internal-service",
+        "authMode": "ingress-token",
+        "clientBaseUrlSource": "website delivery edge-runtime bootstrap-created generated SDK client",
+        "coverage": "adapter-and-gateway-contract-tested",
+        "evidence": "crates/sdkwork-api-web-server-standalone-gateway/src/data_plane/website_delivery.rs"
+      },
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "sdkFamily": "sdkwork-drive-internal-sdk",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "runtimeMode": "external-service",
+        "sameOriginAllowed": false,
+        "requiredBaseUrlKey": "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL",
+        "serviceContext": "internal-service",
+        "authMode": "ingress-token",
+        "clientBaseUrlSource": "website delivery edge-runtime bootstrap-created generated SDK client",
+        "coverage": "adapter-and-gateway-contract-tested",
+        "evidence": "crates/sdkwork-api-web-server-standalone-gateway/src/data_plane/website_delivery.rs"
+      }
+    ],
+    "events": [
+      "drive.node.version.committed.v1",
+      "drive.node.path.changed.v1",
+      "drive.node.eligibility.changed.v1",
+      "drive.node.deleted.v1",
+      "knowledgebase.wiki.provider.changed.v1",
+      "knowledgebase.wiki.route.changed.v1",
+      "knowledgebase.wiki.route.revoked.v1",
+      "knowledgebase.wiki.navigation.changed.v1",
+      "knowledgebase.wiki.search.changed.v1"
+    ],
+    "configKeys": [
+      "SDKWORK_WEB_RUNTIME_ASSIGNMENT_SOURCE",
+      "SDKWORK_WEB_INTERNAL_API_BASE_URL",
+      "SDKWORK_WEB_NODE_TOKEN_FILE",
+      "SDKWORK_WEB_NODE_UUID",
+      "SDKWORK_WEB_WEBSITE_RUNTIME_ENVIRONMENT",
+      "SDKWORK_WEB_NODE_VERSION",
+      "SDKWORK_WEB_WEBSITE_RUNTIME_SET_FILE",
+      "SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY",
+      "SDKWORK_WEB_WEBSITE_RUNTIME_SET_POLL_INTERVAL_MS",
+      "SDKWORK_WEB_WEBSITE_TENANT_SCOPE_HASH",
+      "SDKWORK_WEB_WEBSITE_PROVIDER_VALIDATION_CONCURRENCY",
+      "SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE",
+      "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL",
+      "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE",
+      "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_BASE_URL",
+      "SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_INGRESS_TOKEN_FILE"
     ],
     "runtimeEntrypoints": [
       {
         "id": "standalone-gateway",
         "crate": "sdkwork-api-web-server-standalone-gateway",
         "binary": "sdkwork-api-web-server-standalone-gateway"
+      },
+      {
+        "id": "website-data-plane",
+        "crate": "sdkwork-web-server-website-delivery-edge-runtime",
+        "binary": "sdkwork-web-server-website-delivery-edge-runtime"
       }
     ]
   }

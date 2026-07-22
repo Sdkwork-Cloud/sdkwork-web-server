@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sdkwork-web-website-__SDKWORK_WEBSITE_TENANT_FLEET_NAME__-ingress
+  labels:
+    app.kubernetes.io/name: sdkwork-web-server
+    app.kubernetes.io/component: website-data-plane
+    sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sdkwork-web-server
+      app.kubernetes.io/component: website-data-plane
+      sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              sdkwork.com/network-role: public-ingress
+          podSelector:
+            matchLabels:
+              sdkwork.com/network-role: public-ingress
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              sdkwork.com/network-role: provider-event-ingress
+          podSelector:
+            matchLabels:
+              sdkwork.com/network-role: provider-event-ingress
+      ports:
+        - protocol: TCP
+          port: 3811

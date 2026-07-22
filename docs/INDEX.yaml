@@ -8,7 +8,7 @@ entries:
   - id: REQ-2026-0060
     path: docs/product/requirements/REQ-2026-0060-cloud-site-delivery-data-plane.md
     kind: req
-    status: ready
+    status: in-progress
   - id: ADR-20260721-compiled-website-runtime-descriptor
     path: docs/architecture/decisions/ADR-20260721-compiled-website-runtime-descriptor.md
     kind: adr

@@ -11,8 +11,44 @@ use sdkwork_webserver_contract::{
     DomainVerifyResponse, EnvVariablePage, EnvVariableResponse, HealthCheckPage,
     HealthCheckResponse, ListNginxConfigsQuery, ListSitesQuery, NginxConfigPage,
     NginxConfigResponse, NginxReloadResponse, NginxStatusResponse, NginxValidateResponse,
+    RuntimeAssignment, RuntimeAssignmentDelivery, RuntimeObservation, RuntimeObservationState,
     ServerPage, SitePage, SiteResponse, UpdateNginxConfigRequest, UpdateSiteRequest,
 };
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuntimeAssignmentTarget {
+    pub server_id: i64,
+    pub node_uuid: String,
+    pub tenant_id: i64,
+    pub tenant_scope_hash: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct RuntimeAssignmentWrite {
+    pub tenant_id: i64,
+    pub server_id: i64,
+    pub node_uuid: String,
+    pub environment: String,
+    pub generation: u64,
+    pub snapshot_uuid: String,
+    pub snapshot_sha256: String,
+    pub runtime_set_json: String,
+    pub runtime_set_bytes: usize,
+    pub assigned_by_subject: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct RuntimeObservationWrite {
+    pub tenant_id: i64,
+    pub node_uuid: String,
+    pub snapshot_uuid: String,
+    pub generation: u64,
+    pub snapshot_sha256: String,
+    pub state: RuntimeObservationState,
+    pub node_version: Option<String>,
+    pub reason_code: Option<String>,
+    pub detail: Option<String>,
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct AuditLogWrite<'a> {
@@ -285,6 +321,32 @@ pub trait WebRepositoryPort: Send + Sync {
     ) -> WebServiceResult<CreateServerResponse>;
 
     async fn authenticate_agent_token(&self, token: &str) -> WebServiceResult<(String, i64)>;
+
+    async fn resolve_runtime_assignment_target(
+        &self,
+        requester_tenant_id: i64,
+        can_cross_tenant: bool,
+        node_uuid: &str,
+    ) -> WebServiceResult<RuntimeAssignmentTarget>;
+
+    async fn publish_runtime_assignment(
+        &self,
+        write: RuntimeAssignmentWrite,
+    ) -> WebServiceResult<RuntimeAssignment>;
+
+    async fn retrieve_current_runtime_assignment(
+        &self,
+        tenant_id: i64,
+        node_uuid: &str,
+        environment: &str,
+        if_generation: Option<&str>,
+        if_snapshot_sha256: Option<&str>,
+    ) -> WebServiceResult<RuntimeAssignmentDelivery>;
+
+    async fn create_runtime_observation(
+        &self,
+        write: RuntimeObservationWrite,
+    ) -> WebServiceResult<RuntimeObservation>;
 
     async fn record_agent_heartbeat(
         &self,

@@ -1,60 +1,72 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: sdkwork-api-web-server-standalone-gateway
+  name: sdkwork-web-node-__SDKWORK_WEBSITE_TENANT_FLEET_NAME__-__SDKWORK_WEBSITE_NODE_NAME__
   labels:
     app.kubernetes.io/name: sdkwork-web-server
-    app.kubernetes.io/component: standalone-gateway
+    app.kubernetes.io/component: website-data-plane
     app.kubernetes.io/part-of: sdkwork-web-server
+    sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+    sdkwork.com/web-node: __SDKWORK_WEBSITE_NODE_NAME__
 spec:
-  serviceName: sdkwork-api-web-server-standalone-gateway-headless
-  replicas: 2
-  podManagementPolicy: Parallel
+  serviceName: sdkwork-web-website-__SDKWORK_WEBSITE_TENANT_FLEET_NAME__-headless
+  replicas: 1
+  podManagementPolicy: OrderedReady
   minReadySeconds: 10
   updateStrategy:
     type: RollingUpdate
-    rollingUpdate:
-      partition: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: sdkwork-web-server
-      app.kubernetes.io/component: standalone-gateway
+      app.kubernetes.io/component: website-data-plane
+      sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+      sdkwork.com/web-node: __SDKWORK_WEBSITE_NODE_NAME__
   template:
     metadata:
       labels:
         app.kubernetes.io/name: sdkwork-web-server
-        app.kubernetes.io/component: standalone-gateway
+        app.kubernetes.io/component: website-data-plane
         app.kubernetes.io/part-of: sdkwork-web-server
+        sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+        sdkwork.com/web-node: __SDKWORK_WEBSITE_NODE_NAME__
     spec:
       automountServiceAccountToken: false
+      enableServiceLinks: false
       terminationGracePeriodSeconds: 60
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: sdkwork-web-server
+              app.kubernetes.io/component: website-data-plane
+              sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: sdkwork-web-server
+              app.kubernetes.io/component: website-data-plane
+              sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: standalone-gateway
+        - name: website-data-plane
           image: registry.sdkwork.com/apps/sdkwork-web@sha256:__SDKWORK_IMAGE_DIGEST__
           imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-ec"]
-          args:
-            - |
-              node_id="${HOSTNAME##*-}"
-              case "${node_id}" in
-                ''|*[!0-9]*) echo "StatefulSet pod ordinal is not numeric" >&2; exit 64 ;;
-              esac
-              if [ "${node_id}" -gt 1023 ]; then
-                echo "StatefulSet pod ordinal exceeds the supported node-id range" >&2
-                exit 64
-              fi
-              export SDKWORK_WEB_SNOWFLAKE_NODE_ID="${node_id}"
-              exec /app/bin/sdkwork-api-web-server-standalone-gateway serve-management
+          command:
+            - /app/bin/sdkwork-web-server-website-delivery-edge-runtime
           ports:
-            - name: http
-              containerPort: 3800
+            - name: website-http
+              containerPort: 8080
               protocol: TCP
           env:
             - name: SDKWORK_WEB_APP_ROOT
@@ -67,65 +79,84 @@ spec:
               value: cloud
             - name: SDKWORK_WEB_PROFILE_ID
               value: cloud.production
+            - name: SDKWORK_WEB_RUNTIME_TARGET
+              value: container
             - name: SDKWORK_WEB_SERVICE_LAYOUT
-              value: unified-process
-            - name: SDKWORK_WEB_APPLICATION_PUBLIC_INGRESS_BIND
-              value: "0.0.0.0:3800"
-            - name: SDKWORK_WEB_DATABASE_AUTO_MIGRATE
-              value: "false"
-            - name: SDKWORK_WEB_DATABASE_URL
+              value: website-data-plane
+            - name: SDKWORK_WEB_SERVER_CONFIG_FILE
+              value: /etc/sdkwork/web/sdkwork.webserver.config.json
+            - name: SDKWORK_WEB_RUNTIME_ASSIGNMENT_SOURCE
+              value: cloud
+            - name: SDKWORK_WEB_INTERNAL_API_BASE_URL
+              value: https://web.sdkwork.com
+            - name: SDKWORK_WEB_NODE_UUID
               valueFrom:
                 secretKeyRef:
-                  name: sdkwork-web-server-runtime
-                  key: database-url
-            - name: SDKWORK_IAM_DATABASE_URL
+                  name: __SDKWORK_WEBSITE_NODE_SECRET_NAME__
+                  key: node-uuid
+            - name: SDKWORK_WEB_NODE_TOKEN_FILE
+              value: /run/secrets/sdkwork-web-node/node-token
+            - name: SDKWORK_WEB_WEBSITE_RUNTIME_ENVIRONMENT
+              value: production
+            - name: SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY
+              value: /var/lib/sdkwork/web/website-runtime-recovery
+            - name: SDKWORK_WEB_WEBSITE_RUNTIME_SET_POLL_INTERVAL_MS
+              value: "2000"
+            - name: SDKWORK_WEB_WEBSITE_TENANT_SCOPE_HASH
               valueFrom:
                 secretKeyRef:
-                  name: sdkwork-web-server-runtime
-                  key: iam-database-url
-            - name: SDKWORK_WEB_SECRET_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: sdkwork-web-server-runtime
-                  key: secret-encryption-key
-            - name: SDKWORK_WEB_CERT_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: sdkwork-web-server-runtime
-                  key: certificate-encryption-key
-            - name: SDKWORK_WEB_ACME_CONTACT_EMAIL
-              valueFrom:
-                secretKeyRef:
-                  name: sdkwork-web-server-runtime
-                  key: acme-contact-email
+                  name: __SDKWORK_WEBSITE_NODE_SECRET_NAME__
+                  key: tenant-scope-hash
+            - name: SDKWORK_WEB_WEBSITE_PROVIDER_VALIDATION_CONCURRENCY
+              value: "16"
+            - name: SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE
+              value: /run/secrets/sdkwork-web-node/website-provider-events.json
+            - name: SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL
+              value: https://drive-internal.sdkwork.com
+            - name: SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE
+              value: /run/secrets/sdkwork-web-node/drive-ingress-token
+            - name: SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_BASE_URL
+              value: https://knowledgebase.sdkwork.com
+            - name: SDKWORK_WEBSERVER_KNOWLEDGEBASE_INTERNAL_API_INGRESS_TOKEN_FILE
+              value: /run/secrets/sdkwork-web-node/knowledgebase-ingress-token
+            - name: SDKWORK_WEB_DATA_PLANE_OPERATIONS_BIND
+              value: 127.0.0.1:3901
           startupProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            failureThreshold: 30
+            exec:
+              command:
+                - /app/bin/sdkwork-web-server-website-delivery-edge-runtime
+                - probe
+                - /healthz
+            failureThreshold: 60
             periodSeconds: 2
-            timeoutSeconds: 1
+            timeoutSeconds: 4
           readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
+            exec:
+              command:
+                - /app/bin/sdkwork-web-server-website-delivery-edge-runtime
+                - probe
+                - /readyz
             failureThreshold: 3
             periodSeconds: 10
-            timeoutSeconds: 2
+            timeoutSeconds: 4
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
+            exec:
+              command:
+                - /app/bin/sdkwork-web-server-website-delivery-edge-runtime
+                - probe
+                - /livez
             failureThreshold: 3
             periodSeconds: 20
-            timeoutSeconds: 2
+            timeoutSeconds: 4
           resources:
             requests:
-              cpu: 250m
+              cpu: 500m
               memory: 512Mi
+              ephemeral-storage: 128Mi
             limits:
               cpu: "2"
               memory: 1Gi
+              ephemeral-storage: 256Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -133,23 +164,104 @@ spec:
               drop:
                 - ALL
           volumeMounts:
+            - name: host-config
+              mountPath: /etc/sdkwork/web
+              readOnly: true
+            - name: node-secrets
+              mountPath: /run/secrets/sdkwork-web-node
+              readOnly: true
+            - name: recovery
+              mountPath: /var/lib/sdkwork/web
             - name: temporary
               mountPath: /tmp
+        - name: provider-event-relay
+          image: registry.sdkwork.com/apps/sdkwork-web@sha256:__SDKWORK_IMAGE_DIGEST__
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/bin/sdkwork-web-server-website-delivery-edge-runtime
+            - relay-provider-events
+          ports:
+            - name: provider-events
+              containerPort: 3811
+              protocol: TCP
+          env:
+            - name: SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_RELAY_BIND
+              value: 0.0.0.0:3811
+            - name: SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_RELAY_TARGET
+              value: 127.0.0.1:3810
+          startupProbe:
+            tcpSocket:
+              port: provider-events
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 1
+          readinessProbe:
+            tcpSocket:
+              port: provider-events
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: provider-events
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+              ephemeral-storage: 16Mi
+            limits:
+              cpu: 250m
+              memory: 64Mi
+              ephemeral-storage: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
       volumes:
+        - name: host-config
+          configMap:
+            name: __SDKWORK_WEBSITE_CONFIG_MAP_NAME__
+            items:
+              - key: sdkwork.webserver.config.json
+                path: sdkwork.webserver.config.json
+        - name: node-secrets
+          secret:
+            secretName: __SDKWORK_WEBSITE_NODE_SECRET_NAME__
+            defaultMode: 0440
         - name: temporary
           emptyDir:
             sizeLimit: 64Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: recovery
+        labels:
+          app.kubernetes.io/name: sdkwork-web-server
+          app.kubernetes.io/component: website-data-plane
+          sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: sdkwork-api-web-server-standalone-gateway
+  name: sdkwork-web-website-__SDKWORK_WEBSITE_TENANT_FLEET_NAME__
   labels:
     app.kubernetes.io/name: sdkwork-web-server
-    app.kubernetes.io/component: standalone-gateway
+    app.kubernetes.io/component: website-data-plane
+    sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__
 spec:
-  minAvailable: 1
+  maxUnavailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: sdkwork-web-server
-      app.kubernetes.io/component: standalone-gateway
+      app.kubernetes.io/component: website-data-plane
+      sdkwork.com/tenant-fleet: __SDKWORK_WEBSITE_TENANT_FLEET_NAME__

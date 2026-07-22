@@ -7,8 +7,12 @@ pub mod certificate_ops;
 pub mod certificate_renewal_ops;
 pub mod nginx_ops;
 pub mod repository;
+pub mod runtime_assignment_ops;
 
-pub use repository::{AuditLogWrite, WebRepositoryPort};
+pub use repository::{
+    AuditLogWrite, RuntimeAssignmentTarget, RuntimeAssignmentWrite, RuntimeObservationWrite,
+    WebRepositoryPort,
+};
 
 use std::sync::Arc;
 

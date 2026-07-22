@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-webserver-drive-provider",
+    "displayName": "SDKWork Web Server Drive Provider",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-web-server/crates/sdkwork-webserver-drive-provider",
+    "domain": "platform",
+    "capability": "drive-website-provider",
+    "surface": "backend-provider",
+    "languages": ["rust"],
+    "generated": false,
+    "status": "active",
+    "manifests": ["Cargo.toml", "specs/README.md", "specs/component.spec.json"]
+  },
+  "canonicalSpecs": [
+    {"file": "COMPONENT_SPEC.md", "path": "../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component identity, ports, and dependency surface contracts."},
+    {"file": "CODE_STYLE_SPEC.md", "path": "../../../sdkwork-specs/CODE_STYLE_SPEC.md", "purpose": "Authored adapter boundaries."},
+    {"file": "NAMING_SPEC.md", "path": "../../../sdkwork-specs/NAMING_SPEC.md", "purpose": "Provider and SDK adapter naming."},
+    {"file": "RUST_CODE_SPEC.md", "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md", "purpose": "Rust crate structure."},
+    {"file": "SDK_SPEC.md", "path": "../../../sdkwork-specs/SDK_SPEC.md", "purpose": "Generated dependency SDK consumption."},
+    {"file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "Injected Rust SDK client boundary."},
+    {"file": "SECURITY_SPEC.md", "path": "../../../sdkwork-specs/SECURITY_SPEC.md", "purpose": "Tenant scope, origin non-disclosure, conditions, and bounded content."},
+    {"file": "TEST_SPEC.md", "path": "../../../sdkwork-specs/TEST_SPEC.md", "purpose": "Adapter contract verification."}
+  ],
+  "contracts": {
+    "layerRole": "backend-provider",
+    "publicExports": ["crate-root"],
+    "providedPorts": [
+      {"name": "driveWebsiteResourceProvider", "export": "crate-root"},
+      {"name": "driveWebsiteStaticContentProvider", "export": "crate-root"}
+    ],
+    "requiredPorts": [
+      {"name": "websiteResourceProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "websiteStaticContentProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
+      {"name": "driveInternalWebsiteSdk", "export": "crate-root", "provider": "sdkwork-drive-internal-sdk"}
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkDependencies": [
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "role": "drive-website-root-provider",
+        "required": true,
+        "dependencyMode": "consumer-sdk",
+        "apiPrefix": "/internal/v3/api",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "generatedTransportImportPolicy": "generated-rust-client-only",
+        "packageByLanguage": {"rust": "sdkwork-drive-internal-sdk-generated-rust"}
+      }
+    ],
+    "permissionComposition": {},
+    "dependencyApiExports": [
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "sdkFamily": "sdkwork-drive-internal-sdk",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "exportMode": "service-port",
+        "visibility": "application-internal",
+        "methods": [
+          "websiteRoots.retrieve",
+          "driveResources.resolve",
+          "driveResourceContent.retrieve"
+        ],
+        "packageExport": "crate-root",
+        "servicePort": "driveWebsiteStaticContentProvider",
+        "runtimeRequired": true
+      }
+    ],
+    "dependencyApiSurfaces": [
+      {
+        "workspace": "sdkwork-drive-internal-sdk",
+        "sdkFamily": "sdkwork-drive-internal-sdk",
+        "apiAuthority": "sdkwork-drive-internal-api",
+        "surface": "internal-api",
+        "apiPrefix": "/internal/v3/api",
+        "runtimeMode": "external-service",
+        "sameOriginAllowed": false,
+        "requiredBaseUrlKey": "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL",
+        "clientBaseUrlSource": "bootstrap-injected DriveWebsiteSdkClientResolver",
+        "coverage": "adapter-contract-tested",
+        "evidence": "tests/drive_website_provider.rs"
+      }
+    ],
+    "events": [],
+    "configKeys": [
+      "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL",
+      "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE"
+    ]
+  },
+  "verification": {
+    "commands": ["cargo test -p sdkwork-webserver-drive-provider"]
+  }
+}

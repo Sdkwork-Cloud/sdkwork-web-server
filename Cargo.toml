@@ -6,6 +6,9 @@ members = [
   "crates/sdkwork-routes-webserver-common",
   "crates/sdkwork-webserver-contract",
   "crates/sdkwork-webserver-core",
+  "crates/sdkwork-webserver-delivery-runtime",
+  "crates/sdkwork-webserver-drive-provider",
+  "crates/sdkwork-webserver-knowledgebase-provider",
   "crates/sdkwork-webserver-acme-service",
   "crates/sdkwork-webserver-edge-runtime",
   "crates/sdkwork-web-agent",
@@ -14,10 +17,13 @@ members = [
   "crates/sdkwork-intelligence-webserver-repository-sqlx",
   "crates/sdkwork-routes-webserver-app-api",
   "crates/sdkwork-routes-webserver-backend-api",
+  "crates/sdkwork-routes-webserver-internal-api",
   "crates/sdkwork-api-web-server-standalone-gateway",
+  "crates/sdkwork-web-server-website-delivery-edge-runtime",
 ]
 exclude = [
   "sdks/sdkwork-web-backend-sdk/sdkwork-web-backend-sdk-rust/generated/server-openapi",
+  "sdks/sdkwork-web-internal-sdk/sdkwork-web-internal-sdk-rust/generated/server-openapi",
 ]
 
 [workspace.package]
@@ -71,8 +77,10 @@ instant-acme = { version = "0.8", features = ["rcgen"] }
 rcgen = "0.13"
 x509-parser = "0.16"
 time = "0.3"
+zeroize = "1"
 tokio-rustls = "0.26"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
+woothee = "0.13"
 
 sdkwork-webserver-acme-service = { path = "crates/sdkwork-webserver-acme-service" }
 sdkwork-webserver-edge-runtime = { path = "crates/sdkwork-webserver-edge-runtime" }
@@ -80,15 +88,21 @@ sdkwork-web-agent = { path = "crates/sdkwork-web-agent" }
 sdkwork-webserver-certificate-worker = { path = "crates/sdkwork-webserver-certificate-worker" }
 sdkwork-webserver-contract = { path = "crates/sdkwork-webserver-contract" }
 sdkwork-webserver-core = { path = "crates/sdkwork-webserver-core" }
+sdkwork-webserver-delivery-runtime = { path = "crates/sdkwork-webserver-delivery-runtime" }
+sdkwork-webserver-drive-provider = { path = "crates/sdkwork-webserver-drive-provider" }
+sdkwork-webserver-knowledgebase-provider = { path = "crates/sdkwork-webserver-knowledgebase-provider" }
 sdkwork-webserver-database-host = { path = "crates/sdkwork-webserver-database-host" }
 sdkwork-intelligence-webserver-service = { path = "crates/sdkwork-intelligence-webserver-service" }
 sdkwork-intelligence-webserver-repository-sqlx = { path = "crates/sdkwork-intelligence-webserver-repository-sqlx" }
 sdkwork-routes-webserver-app-api = { path = "crates/sdkwork-routes-webserver-app-api" }
 sdkwork-routes-webserver-backend-api = { path = "crates/sdkwork-routes-webserver-backend-api" }
+sdkwork-routes-webserver-internal-api = { path = "crates/sdkwork-routes-webserver-internal-api" }
 sdkwork-routes-webserver-common = { path = "crates/sdkwork-routes-webserver-common" }
 sdkwork-api-web-server-assembly = { path = "crates/sdkwork-api-web-server-assembly" }
-sdkwork-api-web-server-standalone-gateway = { path = "crates/sdkwork-api-web-server-standalone-gateway" }
+sdkwork-api-web-server-standalone-gateway = { path = "crates/sdkwork-api-web-server-standalone-gateway", default-features = false }
+sdkwork-web-server-website-delivery-edge-runtime = { path = "crates/sdkwork-web-server-website-delivery-edge-runtime" }
 sdkwork-web-backend-sdk = { path = "sdks/sdkwork-web-backend-sdk/sdkwork-web-backend-sdk-rust/generated/server-openapi" }
+sdkwork-web-internal-sdk = { path = "sdks/sdkwork-web-internal-sdk/sdkwork-web-internal-sdk-rust/generated/server-openapi" }
 
 sdkwork-iam-web-adapter = { path = "../sdkwork-iam/crates/sdkwork-iam-web-adapter" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
@@ -101,3 +115,5 @@ sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi
 sdkwork-database-sqlx = { path = "../sdkwork-database/crates/sdkwork-database-sqlx", package = "sdkwork-database-sqlx" }
 sdkwork-database-id = { path = "../sdkwork-database/crates/sdkwork-database-id", package = "sdkwork-database-id" }
 sdkwork-utils-rust = { path = "../sdkwork-utils/packages/sdkwork-utils-rust" }
+sdkwork-drive-internal-sdk = { path = "../sdkwork-drive/sdks/sdkwork-drive-internal-sdk/sdkwork-drive-internal-sdk-rust/generated/server-openapi", package = "sdkwork-drive-internal-sdk-generated-rust" }
+sdkwork-knowledgebase-internal-sdk = { path = "../sdkwork-knowledgebase/sdks/sdkwork-knowledgebase-internal-sdk/sdkwork-knowledgebase-internal-sdk-rust/generated/server-openapi", package = "sdkwork-knowledgebase-internal-sdk-generated-rust" }

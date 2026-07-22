@@ -14,5 +14,7 @@ axum.workspace = true
 tokio.workspace = true
 sdkwork-intelligence-webserver-repository-sqlx.workspace = true
 sdkwork-intelligence-webserver-service.workspace = true
+sdkwork-webserver-contract.workspace = true
 sdkwork-routes-webserver-app-api.workspace = true
 sdkwork-routes-webserver-backend-api.workspace = true
+sdkwork-routes-webserver-internal-api.workspace = true

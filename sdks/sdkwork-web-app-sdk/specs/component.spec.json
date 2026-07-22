@@ -5,6 +5,7 @@
   "domain": "web",
   "apiAuthority": "sdkwork-web.app",
   "apiPrefix": "/app/v3/api",
+  "sdkSurface": "app",
   "sdkType": "app",
   "languages": [
     "typescript",
@@ -23,6 +24,7 @@
   "generator": {
     "package": "@sdkwork/sdk-generator",
     "entrypoint": "../sdkwork-sdk-generator/bin/sdkgen.js",
+    "type": "app",
     "standardProfile": "sdkwork-v3"
   },
   "contracts": {
@@ -52,7 +54,7 @@
   "requestContextFramework": {
     "apiSurface": "app-api",
     "contextType": "WebRequestContext",
-    "resolver": "WebRequestContextResolver + AgentTokenResolverDecorator",
+    "resolver": "WebRequestContextResolver",
     "standardInterceptors": [
       "request_identity",
       "surface_classification",

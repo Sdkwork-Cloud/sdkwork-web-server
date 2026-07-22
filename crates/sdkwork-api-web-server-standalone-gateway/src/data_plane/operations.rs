@@ -8,6 +8,7 @@ use hyper_util::{
 };
 use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
 use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
     sync::{watch, Semaphore},
     task::JoinSet,
@@ -26,6 +27,8 @@ const OPERATIONS_HEADER_TIMEOUT: Duration = Duration::from_secs(5);
 const OPERATIONS_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const OPERATIONS_CONNECTION_LIFETIME: Duration = Duration::from_secs(60);
 const OPERATIONS_DRAIN_TIMEOUT: Duration = Duration::from_secs(1);
+const OPERATIONS_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+const OPERATIONS_PROBE_MAX_RESPONSE_BYTES: u64 = 16 * 1024;
 
 #[derive(Clone, Debug)]
 pub struct DataPlaneOperationsConfig {
@@ -68,6 +71,55 @@ impl DataPlaneOperationsConfig {
             dimensions: CanonicalMetricDimensions::from_env()?,
         }))
     }
+}
+
+pub async fn probe_data_plane_operations_from_env(path: &str) -> Result<(), String> {
+    if !matches!(path, "/healthz" | "/readyz" | "/livez") {
+        return Err("operations probe path must be /healthz, /readyz, or /livez".to_owned());
+    }
+    let config = DataPlaneOperationsConfig::from_env()?
+        .ok_or_else(|| format!("{OPERATIONS_BIND_ENV} is required for operations probes"))?;
+    timeout(
+        OPERATIONS_PROBE_TIMEOUT,
+        probe_operations(config.bind, path),
+    )
+    .await
+    .map_err(|_| "operations probe timed out".to_owned())?
+}
+
+async fn probe_operations(bind: SocketAddr, path: &str) -> Result<(), String> {
+    let mut stream = tokio::net::TcpStream::connect(bind)
+        .await
+        .map_err(|error| format!("operations probe connection failed: {error}"))?;
+    let request = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .await
+        .map_err(|error| format!("operations probe write failed: {error}"))?;
+    stream
+        .shutdown()
+        .await
+        .map_err(|error| format!("operations probe request shutdown failed: {error}"))?;
+
+    let mut response = Vec::new();
+    stream
+        .take(OPERATIONS_PROBE_MAX_RESPONSE_BYTES + 1)
+        .read_to_end(&mut response)
+        .await
+        .map_err(|error| format!("operations probe read failed: {error}"))?;
+    if response.len() as u64 > OPERATIONS_PROBE_MAX_RESPONSE_BYTES {
+        return Err("operations probe response exceeds the bounded limit".to_owned());
+    }
+    let status_line_end = response
+        .windows(2)
+        .position(|window| window == b"\r\n")
+        .ok_or_else(|| "operations probe response has no HTTP status line".to_owned())?;
+    let status_line = std::str::from_utf8(&response[..status_line_end])
+        .map_err(|_| "operations probe response status is not UTF-8".to_owned())?;
+    if !matches!(status_line, "HTTP/1.0 200 OK" | "HTTP/1.1 200 OK") {
+        return Err("operations probe did not return HTTP 200".to_owned());
+    }
+    Ok(())
 }
 
 pub(crate) struct PreparedOperationsListener {
@@ -251,5 +303,13 @@ mod tests {
             "server"
         )
         .is_ok());
+    }
+
+    #[tokio::test]
+    async fn operations_probe_rejects_unreserved_paths_before_network_io() {
+        let error = super::probe_data_plane_operations_from_env("/metrics")
+            .await
+            .expect_err("metrics must not be a health probe target");
+        assert!(error.contains("probe path"));
     }
 }

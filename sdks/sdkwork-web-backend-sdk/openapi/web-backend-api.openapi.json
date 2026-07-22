@@ -1307,6 +1307,7 @@
         "required": [
           "name",
           "host",
+          "tenantScopeHash",
           "sshPort"
         ],
         "properties": {
@@ -1318,25 +1319,30 @@
             "type": "string",
             "maxLength": 255
           },
+          "tenantScopeHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Irreversible tenant scope bound to runtime-set delivery for this node."
+          },
           "sshPort": {
             "type": "integer",
             "default": 22
-          },
-          "sshUser": {
-            "type": "string",
-            "default": "root"
-          },
-          "sshKeyPath": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 500
           }
         }
       },
       "ServerResponse": {
         "type": "object",
+        "required": [
+          "id",
+          "name",
+          "host",
+          "tenantScopeHash",
+          "sshPort",
+          "status",
+          "createdAt"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1347,6 +1353,12 @@
           },
           "host": {
             "type": "string"
+          },
+          "tenantScopeHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
           },
           "sshPort": {
             "type": "integer"

@@ -28,6 +28,7 @@ use hyper_util::{
 use sdkwork_webserver_core::{
     CompiledWebServerApp, ListenerConfig, ListenerProtocol, ProxyProtocolConfig, WebServerLimits,
 };
+use sdkwork_webserver_delivery_runtime::WebsiteDeliveryExecutor;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpListener, TcpStream},
@@ -85,7 +86,45 @@ where
         }
         None => DataPlaneRuntime::build(app)?,
     };
-    let result = run_data_plane_runtime_until(runtime.clone(), operations, shutdown).await;
+    let result = run_data_plane_runtime_until(runtime.clone(), operations, None, shutdown).await;
+    let health_result = runtime.stop_active_health().await;
+    let resource_result = runtime.stop_resource_pressure().await;
+    result.and(health_result).and(resource_result)
+}
+
+pub async fn run_website_data_plane_until<F>(
+    app: CompiledWebServerApp,
+    website_delivery: Arc<WebsiteDeliveryExecutor>,
+    shutdown: F,
+) -> Result<(), DataPlaneError>
+where
+    F: Future<Output = ()> + Send,
+{
+    run_website_data_plane_with_operations_until(app, website_delivery, None, shutdown).await
+}
+
+pub async fn run_website_data_plane_with_operations_until<F>(
+    app: CompiledWebServerApp,
+    website_delivery: Arc<WebsiteDeliveryExecutor>,
+    operations: Option<DataPlaneOperationsConfig>,
+    shutdown: F,
+) -> Result<(), DataPlaneError>
+where
+    F: Future<Output = ()> + Send,
+{
+    let runtime = match operations.as_ref() {
+        Some(config) => {
+            DataPlaneRuntime::build_with_metric_dimensions(app, config.dimensions.clone())?
+        }
+        None => DataPlaneRuntime::build(app)?,
+    };
+    let result = run_data_plane_runtime_until(
+        runtime.clone(),
+        operations,
+        Some(website_delivery),
+        shutdown,
+    )
+    .await;
     let health_result = runtime.stop_active_health().await;
     let resource_result = runtime.stop_resource_pressure().await;
     result.and(health_result).and(resource_result)
@@ -94,6 +133,7 @@ where
 pub(crate) async fn run_data_plane_runtime_until<F>(
     runtime: Arc<DataPlaneRuntime>,
     operations: Option<DataPlaneOperationsConfig>,
+    website_delivery: Option<Arc<WebsiteDeliveryExecutor>>,
     shutdown: F,
 ) -> Result<(), DataPlaneError>
 where
@@ -126,6 +166,7 @@ where
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         shutdown_senders.push(shutdown_tx);
         let runtime = runtime.clone();
+        let website_delivery = website_delivery.clone();
         let listener_id = listener.config.id.clone();
         tracing::info!(
             listener_id = %listener_id,
@@ -134,7 +175,14 @@ where
             "data-plane listener prepared"
         );
         tasks.spawn(async move {
-            let result = serve_listener(runtime, listener, shutdown_rx, drain_timeout).await;
+            let result = serve_listener(
+                runtime,
+                website_delivery,
+                listener,
+                shutdown_rx,
+                drain_timeout,
+            )
+            .await;
             (listener_id, result)
         });
     }
@@ -239,6 +287,7 @@ async fn prepare_listener(
 
 async fn serve_listener(
     runtime: Arc<DataPlaneRuntime>,
+    website_delivery: Option<Arc<WebsiteDeliveryExecutor>>,
     listener: PreparedListener,
     shutdown: watch::Receiver<bool>,
     drain_timeout: Duration,
@@ -253,6 +302,7 @@ async fn serve_listener(
     drop(initial);
     let state = ListenerState {
         runtime: runtime.clone(),
+        website_delivery,
         listener_id: listener_id.clone(),
         is_tls: listener.tls.is_some(),
     };

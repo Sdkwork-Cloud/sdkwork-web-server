@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+arc-swap.workspace = true
 sdkwork-utils-rust.workspace = true
 ipnet.workspace = true
 jsonschema.workspace = true

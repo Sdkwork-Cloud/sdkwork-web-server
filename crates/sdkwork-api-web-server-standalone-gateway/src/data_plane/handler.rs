@@ -15,6 +15,7 @@ use futures_util::StreamExt;
 use sdkwork_webserver_core::{normalize_authority_host, ResourceConfig, RoutePathType};
 
 use super::{
+    forwarded_scheme::resolve_request_scheme,
     metrics::RequestRejection,
     proxy::{proxy_request, request_body_timeout_response, text_response},
     proxy_body::RequestBodyFailure,
@@ -25,6 +26,7 @@ use super::{
     request_gate::RequestAdmissionRejection,
     request_uri::{validate_request_uri, RequestUriError},
     static_files::serve_static,
+    website_delivery::serve_website_request,
     ListenerState,
 };
 
@@ -34,7 +36,7 @@ pub async fn route_request(
     request: Request<Body>,
 ) -> Response<Body> {
     let peer = connection.client_peer;
-    let _transport_peer = connection.transport_peer;
+    let transport_peer = connection.transport_peer;
     let _proxy_protocol = connection.proxy_protocol;
     let version = request.version();
     let mut admitted = match state.runtime.request_gate.try_begin() {
@@ -63,12 +65,14 @@ pub async fn route_request(
             .limits
             .response_body_idle_timeout_ms,
     );
-    let response = route_admitted_request(peer, state, request, &mut admitted).await;
+    let response =
+        route_admitted_request(peer, transport_peer, state, request, &mut admitted).await;
     hold_request_permit(response, admitted, response_body_idle_timeout)
 }
 
 async fn route_admitted_request(
     peer: SocketAddr,
+    transport_peer: SocketAddr,
     state: ListenerState,
     request: Request<Body>,
     admitted: &mut super::request_gate::RequestAdmissionPermit,
@@ -97,6 +101,20 @@ async fn route_admitted_request(
                 return response;
             }
             return invalid_forwarded_identity_response(request.version());
+        }
+    };
+    let scheme = match resolve_request_scheme(
+        transport_peer.ip(),
+        request.headers(),
+        listener.trusted_proxy.as_ref(),
+        state.is_tls,
+    ) {
+        Ok(scheme) => scheme,
+        Err(_) => {
+            if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+                return response;
+            }
+            return invalid_forwarded_scheme_response(request.version());
         }
     };
     let normalized_path = match validate_request_uri(request.uri(), &generation.app.config().limits)
@@ -129,6 +147,57 @@ async fn route_admitted_request(
     };
     let method = request.method().as_str().to_owned();
     let path = normalized_path;
+    if let Some(executor) = state.website_delivery.clone() {
+        if let Some(response) = classify_request(&state, admitted, false, request.version()) {
+            return response;
+        }
+        let request_failure = RequestBodyFailure::default();
+        let (parts, body) = request.into_parts();
+        let limits = &generation.app.config().limits;
+        let body = RequestBodyTimeout::new_observed(
+            body,
+            Duration::from_millis(limits.request_body_start_timeout_ms),
+            Duration::from_millis(limits.request_body_idle_timeout_ms),
+            request_failure.clone(),
+            state.runtime.metrics.clone(),
+        );
+        let request = Request::from_parts(parts, Body::new(body));
+        let request = match drain_bounded_request_body(
+            request,
+            limits.max_request_body_bytes,
+            &request_failure,
+        )
+        .await
+        {
+            Ok(request) => request,
+            Err(response) => return response,
+        };
+        let query = request.uri().query().map(str::to_owned);
+        let delivery_method = request.method().clone();
+        let delivery_headers = request.headers().clone();
+        let response = serve_website_request(
+            executor,
+            scheme.website_delivery_scheme(),
+            authority,
+            path,
+            query,
+            delivery_method,
+            delivery_headers,
+        )
+        .await;
+        if generation.app.config().observability.access_log {
+            tracing::info!(
+                config_generation = generation.id,
+                config_revision = %generation.revision,
+                listener_id = %state.listener_id,
+                scheme = scheme.as_str(),
+                method = %method,
+                status = response.status().as_u16(),
+                "website request served"
+            );
+        }
+        return response;
+    }
     let Some(selected) =
         generation
             .app
@@ -225,7 +294,6 @@ async fn route_admitted_request(
             strip_prefix,
             ..
         } => {
-            let scheme = if state.is_tls { "https" } else { "http" };
             proxy_request(
                 super::proxy::ProxyRequestContext {
                     generation: &generation,
@@ -233,7 +301,7 @@ async fn route_admitted_request(
                     strip_prefix: *strip_prefix,
                     route: selected.route,
                     client_ip,
-                    external_scheme: scheme,
+                    external_scheme: scheme.as_str(),
                     external_authority: &authority,
                     normalized_path: &path,
                     request_failure,
@@ -251,6 +319,7 @@ async fn route_admitted_request(
             config_generation = generation.id,
             config_revision = %generation.revision,
             listener_id = %state.listener_id,
+            scheme = scheme.as_str(),
             virtual_host_id = %virtual_host_id,
             route_id = %route_id,
             method = %method,
@@ -265,6 +334,19 @@ fn invalid_forwarded_identity_response(version: Version) -> Response<Body> {
     let mut response = text_response(
         StatusCode::BAD_REQUEST,
         "forwarded client identity is invalid\n",
+    );
+    if version != Version::HTTP_2 {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+fn invalid_forwarded_scheme_response(version: Version) -> Response<Body> {
+    let mut response = text_response(
+        StatusCode::BAD_REQUEST,
+        "forwarded request metadata is invalid\n",
     );
     if version != Version::HTTP_2 {
         response

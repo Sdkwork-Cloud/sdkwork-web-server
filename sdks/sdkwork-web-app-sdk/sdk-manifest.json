@@ -187,5 +187,7 @@
       "family": "sdkwork-iam-app-sdk",
       "reason": "IAM login/session and tenant request context for protected app-api routes."
     }
-  ]
+  ],
+  "sdkSurface": "app",
+  "sdkType": "app"
 }
