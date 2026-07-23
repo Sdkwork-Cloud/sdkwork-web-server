@@ -870,7 +870,7 @@ fn segment_prefix_matches(prefix: &str, path: &str) -> bool {
 }
 
 fn wildcard_matches(suffix: &str, hostname: &str) -> bool {
-    hostname
-        .strip_suffix(suffix)
-        .is_some_and(|prefix| prefix.ends_with('.') && prefix.len() > 1)
+    hostname.strip_suffix(suffix).is_some_and(|prefix| {
+        prefix.ends_with('.') && prefix.len() > 1 && !prefix[..prefix.len() - 1].contains('.')
+    })
 }

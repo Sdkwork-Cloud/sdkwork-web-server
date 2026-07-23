@@ -1,9 +1,14 @@
 use std::{fs, net::TcpListener, sync::Arc, time::Duration};
 
 use sdkwork_api_web_server_standalone_gateway::{
-    run_data_plane_with_operations_until, DataPlaneOperationsConfig,
+    run_data_plane_with_operations_until, run_website_data_plane_with_operations_until,
+    DataPlaneOperationsConfig,
 };
-use sdkwork_webserver_core::load_and_compile_webserver_config;
+use sdkwork_webserver_core::{
+    load_and_compile_webserver_config,
+    website_runtime::{WebsiteRuntimeEnvironment, WebsiteRuntimeRegistry},
+};
+use sdkwork_webserver_delivery_runtime::{WebsiteDeliveryExecutor, WebsiteProviderRegistry};
 use serde_json::json;
 use tempfile::TempDir;
 use tokio::{
@@ -377,4 +382,71 @@ async fn isolated_operations_listener_reports_real_stream_lifetimes() {
         .expect("data-plane task joins")
         .expect("data plane shuts down cleanly");
     upstream_task.await.expect("upstream task joins");
+}
+
+#[tokio::test]
+async fn website_operations_listener_exports_executor_cache_metrics() {
+    let directory = TempDir::new().expect("temporary config directory");
+    let data_port = available_port();
+    let operations_port = available_port();
+    let unused_upstream_port = available_port();
+    let config_path = write_proxy_config(&directory, data_port, unused_upstream_port);
+    let compiled = load_and_compile_webserver_config(&config_path).expect("compile config");
+    let operations = DataPlaneOperationsConfig::loopback(
+        format!("127.0.0.1:{operations_port}")
+            .parse()
+            .expect("operations address"),
+        "test",
+        "standalone",
+        "server",
+    )
+    .expect("valid operations config");
+    let executor = Arc::new(
+        WebsiteDeliveryExecutor::with_provider_runtime_limits(
+            Arc::new(WebsiteRuntimeRegistry::new(
+                "node-1",
+                WebsiteRuntimeEnvironment::Test,
+            )),
+            Arc::new(WebsiteProviderRegistry::new()),
+            1024,
+            7,
+        )
+        .expect("website executor"),
+    );
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    let data_plane = tokio::spawn(async move {
+        run_website_data_plane_with_operations_until(
+            compiled,
+            executor,
+            Some(operations),
+            async move {
+                let _ = shutdown_rx.await;
+            },
+        )
+        .await
+    });
+
+    let client = reqwest::Client::builder()
+        .pool_max_idle_per_host(0)
+        .build()
+        .expect("HTTP client");
+    let common = "service=\"sdkwork-api-web-server-standalone-gateway\",environment=\"test\",deployment_profile=\"standalone\",runtime_target=\"server\"";
+    let metrics = wait_for_metric(
+        &client,
+        &format!("http://127.0.0.1:{operations_port}/metrics"),
+        &format!("sdkwork_web_data_plane_provider_resolution_cache_capacity_entries{{{common}}} 7"),
+    )
+    .await;
+    assert!(metrics.contains(&format!(
+        "sdkwork_web_data_plane_provider_resolution_cache_entries{{{common}}} 0"
+    )));
+    assert!(metrics.contains(&format!(
+        "sdkwork_web_data_plane_provider_resolution_cache_lookups_total{{{common},result=\"miss\"}} 0"
+    )));
+
+    shutdown_tx.send(()).expect("stop data plane");
+    data_plane
+        .await
+        .expect("data-plane task joins")
+        .expect("data plane shuts down cleanly");
 }

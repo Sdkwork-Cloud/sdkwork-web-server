@@ -515,8 +515,9 @@ pub fn normalize_authority_host(authority: &str) -> Option<String> {
 }
 
 fn wildcard_matches(suffix: &str, host: &str) -> bool {
-    host.strip_suffix(suffix)
-        .is_some_and(|prefix| prefix.ends_with('.') && !prefix.is_empty())
+    host.strip_suffix(suffix).is_some_and(|prefix| {
+        prefix.ends_with('.') && prefix.len() > 1 && !prefix[..prefix.len() - 1].contains('.')
+    })
 }
 
 fn route_matches_method(route: &RouteConfig, method: &str) -> bool {

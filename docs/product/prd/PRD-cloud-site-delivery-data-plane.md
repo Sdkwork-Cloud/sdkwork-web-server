@@ -39,7 +39,7 @@ reload, Deploy Release, or SiteRevision.
 
 ## 3. Goals
 
-- Deterministically route exact/wildcard hosts, longest Binding prefixes, client Variants, and
+- Deterministically route exact and standards-compliant single-label wildcard hosts, longest Binding prefixes, client Variants, and
   longest Mount prefixes from an in-memory immutable snapshot.
 - Deliver STATIC, SPA, and WIKI handlers with Nginx-compatible supported root/alias/index behavior.
 - Treat Drive `SPACE_ROOT`/`FOLDER` selection as provider-owned WebsiteRoot metadata and keep it
@@ -93,7 +93,7 @@ Receiving a message, writing a file, or updating a database row is not success e
 1. Apply listener, connection, protocol, header, URI, and admission bounds.
 2. Normalize SNI, Host, scheme, port, and path using one canonical policy.
 3. Serve an active, exact ACME HTTP-01 token before ordinary Site routing.
-4. Match exact host before approved wildcard and longest segment-aware Binding path.
+4. Match exact host before an approved single-label wildcard and longest segment-aware Binding path.
 5. Reject absent, ambiguous, paused, unverified, or incompatible bindings without tenant disclosure.
 
 ### 6.2 Variant And Mount

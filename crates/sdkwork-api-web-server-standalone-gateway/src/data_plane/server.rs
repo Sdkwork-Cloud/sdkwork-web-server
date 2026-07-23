@@ -248,8 +248,15 @@ where
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         shutdown_senders.push(shutdown_tx);
         let runtime = runtime.clone();
+        let website_delivery = website_delivery.clone();
         tasks.spawn(async move {
-            let result = serve_operations_listener(prepared_operations, runtime, shutdown_rx).await;
+            let result = serve_operations_listener(
+                prepared_operations,
+                runtime,
+                website_delivery,
+                shutdown_rx,
+            )
+            .await;
             ("host-operations".to_owned(), result)
         });
     }

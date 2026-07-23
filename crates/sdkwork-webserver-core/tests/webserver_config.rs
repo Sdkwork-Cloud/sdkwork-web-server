@@ -158,9 +158,12 @@ fn exact_route_precedes_prefix_and_methods_are_enforced() {
     assert_eq!(post.route.id, "prefix-route");
 
     let wildcard = compiled
-        .select_route("http", "api.eu.example.net:18080", "/", "GET")
+        .select_route("http", "api.example.net:18080", "/", "GET")
         .expect("select wildcard host");
     assert_eq!(wildcard.virtual_host.id, "wildcard-host");
+    assert!(compiled
+        .select_route("http", "api.eu.example.net:18080", "/", "GET")
+        .is_none());
 }
 
 #[test]

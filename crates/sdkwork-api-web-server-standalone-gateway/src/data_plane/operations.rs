@@ -7,6 +7,7 @@ use hyper_util::{
     service::TowerToHyperService,
 };
 use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
+use sdkwork_webserver_delivery_runtime::WebsiteDeliveryExecutor;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -148,6 +149,7 @@ pub(crate) async fn prepare_operations_listener(
 pub(crate) async fn serve_operations_listener(
     prepared: PreparedOperationsListener,
     runtime: Arc<DataPlaneRuntime>,
+    website_delivery: Option<Arc<WebsiteDeliveryExecutor>>,
     shutdown: watch::Receiver<bool>,
 ) -> Result<(), DataPlaneError> {
     let metrics_runtime = runtime.clone();
@@ -155,14 +157,21 @@ pub(crate) async fn serve_operations_listener(
         "/metrics",
         get(move || {
             let runtime = metrics_runtime.clone();
+            let website_delivery = website_delivery.clone();
             async move {
+                let provider_resolution_cache = match website_delivery.as_ref() {
+                    Some(executor) => Some(executor.provider_resolution_cache_snapshot().await),
+                    None => None,
+                };
                 (
                     StatusCode::OK,
                     [(
                         axum::http::header::CONTENT_TYPE,
                         "text/plain; version=0.0.4; charset=utf-8",
                     )],
-                    runtime.metrics.render_prometheus(&runtime),
+                    runtime
+                        .metrics
+                        .render_prometheus(&runtime, provider_resolution_cache.as_ref()),
                 )
                     .into_response()
             }

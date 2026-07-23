@@ -48,8 +48,8 @@ loader, canonical hash verification, semantic validation, and immutable request-
 `specs/sdkwork.website-runtime.descriptor.schema.json`; the descriptor carries Site-local IDs,
 opaque provider references, structured policies, and hard-bounded counts only.
 
-The compiled selector performs canonical Host/path normalization, exact before wildcard Host,
-longest segment-aware Binding and Mount selection, forced/preference/path/client/default Variant
+The compiled selector performs canonical Host/path normalization, exact before standards-compliant
+single-label wildcard Host, longest segment-aware Binding and Mount selection, forced/preference/path/client/default Variant
 precedence, Binding-relative routing, `ROOT`/`ALIAS` translation, structured redirects, and
 fail-closed denied-path handling. It performs no SQL, HTTP, SDK, filesystem, object-store, or secret
 lookup. Provider resolution remains a separate injected port. The node-scoped
@@ -440,6 +440,9 @@ type. The event ingress receives the exact invalidator owned by the delivery exe
 
 The cache exports bounded process-local counters for entries, in-flight requests, fresh/stale/negative
 hits, misses, writes, evictions, coalesced requests, bypasses, revalidations, and invalidations.
+The loopback operations listener materializes them under the fixed-cardinality
+`sdkwork_web_data_plane_provider_resolution_cache_*` Prometheus family; no tenant, Site, domain,
+route, or Provider resource identifier becomes a metric label.
 Shared/edge caches, response-body caching, fleet-wide cache coordination, and production load/soak
 evidence remain separate release work.
 

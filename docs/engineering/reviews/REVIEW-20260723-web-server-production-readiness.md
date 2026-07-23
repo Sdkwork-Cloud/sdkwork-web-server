@@ -107,7 +107,7 @@ activation. Each lifecycle has its own A/B last-known-good restart recovery.
 | Generated SDK boundary | compliant | Drive and Knowledgebase calls use owner-generated Internal Rust SDK APIs; no raw HTTP or manual authorization header is introduced. |
 | Provider buffered-content admission | implemented and verified | A process-wide weighted semaphore reserves the compiled route's `maximumObjectBytes` before content open, never queues on saturation, and holds the permit through response completion/error/cancellation. Default and Kubernetes value are 256 MiB. This bounds concurrent `Vec<u8>` retention even when metadata is wrong, but is not true streaming. |
 | End-to-end provider streaming | blocked | Generated content methods return `Vec<u8>` and the current stream adapters yield that complete buffer once. A generated SDK/OpenAPI response-stream contract is required. |
-| Provider resolution cache | implemented and verified | A bounded node-local LRU caches public static/Wiki resolution metadata, redirects, and non-disclosing negatives using descriptor TTLs. It provides bounded same-key single-flight, positive-only stale-while-revalidate, exact/Provider/type event invalidation, in-flight epoch fencing, and process counters. Body bytes, credentials, conditional requests, and activation probes are not cached. Shared/edge caching and production load evidence remain open. |
+| Provider resolution cache | implemented and verified | A bounded node-local O(1) LRU caches public static/Wiki resolution metadata, redirects, and non-disclosing negatives using descriptor TTLs. It provides bounded same-key single-flight, positive-only stale-while-revalidate, exact/Provider/type event invalidation, in-flight epoch fencing, and fixed-cardinality Prometheus metrics. Body bytes, credentials, conditional requests, and activation probes are not cached. Shared/edge caching and production load evidence remain open. |
 | Provider events | implemented baseline | Loopback ingress authenticates provider/tenant/channel-bound events, enforces canonical Node-qualified Drive callbacks with wrong/missing-Node rejection, validates replay windows and HMAC, keeps bounded concurrency, persists dual-slot checkpoints, handles gap/uncertainty, and invokes reconciliation/invalidation ports. Deploy registers/renews Drive channels but event payloads flow directly from Drive to Web. |
 | Website atomic activation | implemented and verified | Node/environment/tenant/hash checks, complete candidate compilation, provider validation, last-known-good retention, stale/conflict rejection, and restart recovery are covered. |
 | Static TLS | implemented and verified | PEM size/count, SAN, validity, key match, SNI exact/wildcard, TLS 1.2/1.3 range, ALPN, and handshake behavior are validated. |
@@ -116,7 +116,7 @@ activation. Each lifecycle has its own A/B last-known-good restart recovery.
 | Kubernetes external TLS | template complete, release unproven | The current template runs non-root with read-only root filesystem, dropped capabilities, probes, resources, immutable digest placeholder, per-Node secret/PVC, topology spread, PDB, and NetworkPolicy. Public TLS terminates at reviewed ingress. |
 | Kubernetes native TLS | not deployment-complete | No assignment source or authorized certificate material mount, TLS Service port, TLS readiness state, fingerprint probe, convergence drill, or rollback drill is present in the authored baseline. |
 | Linux packages | contract and smoke baseline only | Packaging, bounded archive, SBOM generation, x64/arm64 runtime smoke contracts exist. Manifest packages remain disabled and no publish evidence exists. |
-| Commercial operations | not ready | Capacity, alerts/dashboards, support bundle, cache behavior, multi-Node drills, 100k connections, and 24-hour soak remain release blockers. |
+| Commercial operations | not ready | Capacity, alerts/dashboards, support bundle, cache load/eviction/event-storm evidence, multi-Node drills, 100k connections, and 24-hour soak remain release blockers. |
 
 ## 5. Configuration Model
 
@@ -292,7 +292,8 @@ ordering controls, DNS/SSRF policy, TLS hostname and key validation, non-root Ku
 read-only root filesystem, dropped Linux capabilities, probes, resource limits, and NetworkPolicy.
 
 Residual security work includes authorized KMS/Vault/CSI private-key delivery, credential hot
-rotation, revocation convergence, cache invalidation disclosure tests after caching exists,
+rotation, revocation convergence, disclosure tests for the implemented metadata cache's
+revocation/invalidation paths,
 multi-tenant credential brokering if shared fleets are introduced, vulnerability/license evidence,
 image signing, provenance, public multi-vantage TLS verification, and production controls for
 untrusted writers, hard links, and mount changes. Static roots remain immutable and read-only as
@@ -306,9 +307,10 @@ admission held through response completion or cancellation. The 256 MiB default 
 concurrent maximum-size Drive responses from scaling retained generated-SDK buffers solely with
 request concurrency; it does not remove each response's full-buffer allocation.
 
-Residual performance work includes true provider response streaming, provider-aware cache and
-single-flight, load and soak tests, per-instance capacity publication, autoscaling evidence,
-multi-Node failure-domain tests, and the product targets for 100,000 connections and 24-hour soak.
+Residual performance work includes true provider response streaming, production cache
+capacity/eviction/event-storm tuning, optional shared/edge body caching, load and soak tests,
+per-instance capacity publication, autoscaling evidence, multi-Node failure-domain tests, and the
+product targets for 100,000 connections and 24-hour soak.
 
 ## 10. Verification Evidence
 
@@ -363,9 +365,9 @@ The remaining work must follow ownership and review boundaries:
    TLS as the production default until this evidence passes.
 4. Extend owner Drive and Knowledgebase OpenAPI/sdkgen contracts with a supported streaming
    response abstraction, regenerate SDKs, and update provider adapters without raw HTTP.
-5. Implement a bounded tenant/provider/generation-qualified cache with negative cache,
-   single-flight, invalidation, uncertainty purge, stampede protection, metrics, and stale
-   disclosure tests.
+5. Certify the implemented bounded tenant/provider/generation-qualified resolution metadata cache
+   with production-shaped capacity, event-storm, eviction, stale/revocation, and multi-Node tests;
+   evaluate shared/edge response-body caching as an independent later capability.
 6. Bring all application Deploy manifests to v2 and validate every declared profile. Missing
    application-specific domains, resource UUIDs, publication choices, artifacts, and approvals must
    be supplied by their owners rather than guessed centrally.
@@ -386,7 +388,7 @@ workstation.
 | --- | --- | --- |
 | Ready | passed | Scope, authorities, standards, non-goals, and blockers are explicit. |
 | Merge | pending human review | Current code and docs have verification evidence; TLS/config/security changes are high risk. |
-| Release | blocked | TLS control plane, provider streaming/cache, artifact publication, fleet evidence, and workspace deployment coverage are incomplete. |
+| Release | blocked | TLS control plane, provider streaming, production cache/load evidence, artifact publication, fleet evidence, and workspace deployment coverage are incomplete. |
 | Exception | none | No standard, security, migration, or release exception is approved. |
 
 This review supersedes any informal statement that the entire Web Server, native TLS deployment,

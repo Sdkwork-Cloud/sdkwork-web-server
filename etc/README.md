@@ -76,7 +76,9 @@ probes. Descriptor TTLs control positive, negative, and positive-only stale wind
 single-flight coalesces identical misses, LRU bounds retained entries, and capacity saturation
 bypasses the cache without creating an origin waiter queue. Provider events invalidate this same
 cache by exact path, Provider resource, or Provider type, with an epoch fence preventing stale
-in-flight reinsertion.
+in-flight reinsertion. The loopback operations listener exports capacity, entries, in-flight work,
+lookup outcomes, writes, evictions, revalidations, and invalidations through the fixed-cardinality
+`sdkwork_web_data_plane_provider_resolution_cache_*` Prometheus family.
 `SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY` owns a dedicated node-local A/B slot
 directory containing only complete, hash-verified `sdkwork.website-runtime-set.v1` snapshots.
 Staging and production require this directory. Bootstrap selects the highest valid generation from

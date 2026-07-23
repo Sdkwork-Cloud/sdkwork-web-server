@@ -14,6 +14,7 @@ use std::{
 use axum::{body::Body, http::Response};
 use bytes::Bytes;
 use http_body::{Body as HttpBody, Frame, SizeHint};
+use sdkwork_webserver_delivery_runtime::WebsiteProviderResolutionCacheSnapshot;
 use sync_wrapper::SyncWrapper;
 
 use crate::metric_dimensions::CanonicalMetricDimensions;
@@ -85,6 +86,14 @@ const DNS_RESULTS: [&str; 8] = [
 ];
 const CAPACITY_STATES: [&str; 3] = ["configured", "in_use", "available"];
 const TUNNEL_BYTE_DIRECTIONS: [&str; 2] = ["downstream_to_upstream", "upstream_to_downstream"];
+const PROVIDER_RESOLUTION_CACHE_LOOKUP_RESULTS: [&str; 6] = [
+    "hit",
+    "stale_hit",
+    "negative_hit",
+    "miss",
+    "coalesced",
+    "bypass",
+];
 
 pub(super) struct DataPlaneMetrics {
     dimensions: CanonicalMetricDimensions,
@@ -366,7 +375,11 @@ impl DataPlaneMetrics {
         load(&self.tunnel_bytes_total[direction])
     }
 
-    pub(super) fn render_prometheus(&self, runtime: &DataPlaneRuntime) -> String {
+    pub(super) fn render_prometheus(
+        &self,
+        runtime: &DataPlaneRuntime,
+        provider_resolution_cache: Option<&WebsiteProviderResolutionCacheSnapshot>,
+    ) -> String {
         let common = format!(
             "service=\"sdkwork-api-web-server-standalone-gateway\",environment=\"{}\",deployment_profile=\"{}\",runtime_target=\"{}\"",
             self.dimensions.environment,
@@ -827,8 +840,106 @@ impl DataPlaneMetrics {
             &TUNNEL_BYTE_DIRECTIONS,
             &self.tunnel_bytes_total,
         );
+        if let Some(snapshot) = provider_resolution_cache {
+            append_provider_resolution_cache_metrics(&mut output, &common, snapshot);
+        }
         output
     }
+}
+
+fn append_provider_resolution_cache_metrics(
+    output: &mut String,
+    common: &str,
+    snapshot: &WebsiteProviderResolutionCacheSnapshot,
+) {
+    metric_header(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_capacity_entries",
+        "Configured maximum Provider resolution cache entries and in-flight slots.",
+        "gauge",
+    );
+    metric(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_capacity_entries",
+        common,
+        usize_metric(snapshot.maximum_entries),
+    );
+    metric_header(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_entries",
+        "Provider resolution metadata entries currently retained.",
+        "gauge",
+    );
+    metric(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_entries",
+        common,
+        usize_metric(snapshot.entries),
+    );
+    metric_header(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_in_flight",
+        "Provider resolution single-flight operations currently active.",
+        "gauge",
+    );
+    metric(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_in_flight",
+        common,
+        usize_metric(snapshot.in_flight),
+    );
+    metric_header(
+        output,
+        "sdkwork_web_data_plane_provider_resolution_cache_lookups_total",
+        "Provider resolution cache lookup outcomes.",
+        "counter",
+    );
+    for (result, value) in PROVIDER_RESOLUTION_CACHE_LOOKUP_RESULTS.iter().zip([
+        snapshot.hits,
+        snapshot.stale_hits,
+        snapshot.negative_hits,
+        snapshot.misses,
+        snapshot.coalesced,
+        snapshot.bypasses,
+    ]) {
+        metric_with_label(
+            output,
+            "sdkwork_web_data_plane_provider_resolution_cache_lookups_total",
+            common,
+            "result",
+            result,
+            value,
+        );
+    }
+    for (name, help, value) in [
+        (
+            "sdkwork_web_data_plane_provider_resolution_cache_writes_total",
+            "Provider resolution metadata and negative entries written.",
+            snapshot.writes,
+        ),
+        (
+            "sdkwork_web_data_plane_provider_resolution_cache_evictions_total",
+            "Provider resolution entries evicted by the LRU capacity bound.",
+            snapshot.evictions,
+        ),
+        (
+            "sdkwork_web_data_plane_provider_resolution_cache_revalidations_total",
+            "Positive stale Provider resolutions revalidated in the background.",
+            snapshot.revalidations,
+        ),
+        (
+            "sdkwork_web_data_plane_provider_resolution_cache_invalidations_total",
+            "Provider resolution entries or scopes processed by event invalidation.",
+            snapshot.invalidations,
+        ),
+    ] {
+        metric_header(output, name, help, "counter");
+        metric(output, name, common, value);
+    }
+}
+
+fn usize_metric(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 pub(super) struct ConnectionMetricLease {
@@ -1110,12 +1221,56 @@ mod tests {
     use bytes::Bytes;
     use http_body::Frame;
     use http_body_util::{channel::Channel, BodyExt};
+    use sdkwork_webserver_delivery_runtime::WebsiteProviderResolutionCacheSnapshot;
 
     use super::{
-        DataPlaneMetrics, ProtocolErrorKind, ReloadResult, RequestRejection, UpstreamRejection,
-        UpstreamResult, UpstreamRetryReason,
+        append_provider_resolution_cache_metrics, DataPlaneMetrics, ProtocolErrorKind,
+        ReloadResult, RequestRejection, UpstreamRejection, UpstreamResult, UpstreamRetryReason,
+        PROVIDER_RESOLUTION_CACHE_LOOKUP_RESULTS,
     };
     use crate::metric_dimensions::CanonicalMetricDimensions;
+
+    #[test]
+    fn provider_resolution_cache_metrics_have_fixed_labels_and_complete_counters() {
+        let mut output = String::new();
+        append_provider_resolution_cache_metrics(
+            &mut output,
+            "service=\"test\"",
+            &WebsiteProviderResolutionCacheSnapshot {
+                maximum_entries: 16_384,
+                entries: 12,
+                in_flight: 2,
+                hits: 11,
+                stale_hits: 3,
+                negative_hits: 5,
+                misses: 7,
+                writes: 9,
+                evictions: 1,
+                coalesced: 4,
+                bypasses: 2,
+                revalidations: 3,
+                invalidations: 6,
+            },
+        );
+
+        assert!(output.contains(
+            "sdkwork_web_data_plane_provider_resolution_cache_capacity_entries{service=\"test\"} 16384"
+        ));
+        assert!(output.contains(
+            "sdkwork_web_data_plane_provider_resolution_cache_lookups_total{service=\"test\",result=\"negative_hit\"} 5"
+        ));
+        assert!(output.contains(
+            "sdkwork_web_data_plane_provider_resolution_cache_invalidations_total{service=\"test\"} 6"
+        ));
+        assert_eq!(
+            output
+                .lines()
+                .filter(|line| line
+                    .starts_with("sdkwork_web_data_plane_provider_resolution_cache_lookups_total{"))
+                .count(),
+            PROVIDER_RESOLUTION_CACHE_LOOKUP_RESULTS.len()
+        );
+    }
 
     #[test]
     fn request_and_rejection_storage_has_fixed_atomic_cardinality() {

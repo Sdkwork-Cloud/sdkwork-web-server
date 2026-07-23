@@ -455,8 +455,9 @@ fn matcher_path_length(matcher: &WebsiteVariantRuleMatcher) -> usize {
 }
 
 pub(super) fn wildcard_matches(suffix: &str, host: &str) -> bool {
-    host.strip_suffix(suffix)
-        .is_some_and(|prefix| prefix.ends_with('.') && prefix.len() > 1)
+    host.strip_suffix(suffix).is_some_and(|prefix| {
+        prefix.ends_with('.') && prefix.len() > 1 && !prefix[..prefix.len() - 1].contains('.')
+    })
 }
 
 pub(super) fn normalize_request_hostname(authority: &str) -> Option<String> {

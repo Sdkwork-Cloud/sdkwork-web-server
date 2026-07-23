@@ -341,6 +341,15 @@ fn exact_hosts_are_isolated_from_wildcards_and_wildcard_redirects_are_structured
     assert_eq!(selected.path, "/from-subdomain/guide/start");
     assert_eq!(selected.status_code, 308);
     assert!(selected.preserve_query);
+
+    assert!(compiled
+        .select_route(
+            "nested.preview.example.com",
+            "/guide/start",
+            WebsiteRequestRoutingContext::default(),
+        )
+        .unwrap()
+        .is_none());
 }
 
 #[test]
