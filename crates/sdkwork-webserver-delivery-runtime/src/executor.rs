@@ -5,8 +5,8 @@ use sdkwork_webserver_contract::provider::{
     ResolveWebsiteWikiRouteRequest, ResolvedWebsiteContent, ResolvedWebsiteWikiContent,
     WebsiteByteRange, WebsiteContentMetadata, WebsiteContentRange, WebsiteContentResolution,
     WebsiteProviderError, WebsiteProviderErrorKind, WebsiteProviderPurpose, WebsiteProviderResult,
-    WebsiteProviderRuntimeContext, WebsiteStaticContentProvider, WebsiteWikiProvider,
-    WebsiteWikiRouteResolution,
+    WebsiteProviderRuntimeContext, WebsiteRequestConditions, WebsiteStaticContentProvider,
+    WebsiteWikiProvider, WebsiteWikiRouteResolution,
 };
 use sdkwork_webserver_core::website_runtime::{
     SelectedWebsiteRoute, WebsiteHandler, WebsiteMountMode, WebsiteRequestRoutingContext,
@@ -18,22 +18,29 @@ use tokio::{
 };
 
 use crate::{
+    resolution_cache::{
+        ResolutionCacheKey, ResolutionCachePolicy, WebsiteProviderResolutionCache,
+    },
     stream::{AdmittedProviderContentStream, BoundedProviderContentStream},
     WebsiteDeliveryContent, WebsiteDeliveryContentKind, WebsiteDeliveryError,
     WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
     WebsiteDeliveryRedirect, WebsiteDeliveryRequest, WebsiteDeliveryRouteIdentity,
-    WebsiteDeliveryScheme, WebsiteProviderRegistry,
+    WebsiteDeliveryScheme, WebsiteProviderEventInvalidator, WebsiteProviderRegistry,
+    WebsiteProviderResolutionCacheSnapshot,
 };
 
 const MAXIMUM_REQUEST_ID_BYTES: usize = 256;
 const MAXIMUM_TRACE_ID_BYTES: usize = 256;
 pub const DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES: usize = 256 * 1024 * 1024;
+pub const DEFAULT_PROVIDER_RESOLUTION_CACHE_ENTRIES: usize = 16 * 1024;
+pub const MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES: usize = 1024 * 1024;
 const PROVIDER_BUFFER_RETRY_AFTER_MS: u64 = 100;
 
 pub struct WebsiteDeliveryExecutor {
     runtime_registry: Arc<WebsiteRuntimeRegistry>,
     provider_registry: Arc<WebsiteProviderRegistry>,
     buffered_content_admission: Arc<Semaphore>,
+    resolution_cache: Arc<WebsiteProviderResolutionCache>,
 }
 
 impl WebsiteDeliveryExecutor {
@@ -54,10 +61,26 @@ impl WebsiteDeliveryExecutor {
         provider_registry: Arc<WebsiteProviderRegistry>,
         maximum_bytes: usize,
     ) -> Result<Self, WebsiteDeliveryExecutorConfigError> {
-        if maximum_bytes == 0 || maximum_bytes > u32::MAX as usize {
+        Self::with_provider_runtime_limits(
+            runtime_registry,
+            provider_registry,
+            maximum_bytes,
+            DEFAULT_PROVIDER_RESOLUTION_CACHE_ENTRIES,
+        )
+    }
+
+    pub fn with_provider_runtime_limits(
+        runtime_registry: Arc<WebsiteRuntimeRegistry>,
+        provider_registry: Arc<WebsiteProviderRegistry>,
+        maximum_buffered_content_bytes: usize,
+        maximum_resolution_cache_entries: usize,
+    ) -> Result<Self, WebsiteDeliveryExecutorConfigError> {
+        if maximum_buffered_content_bytes == 0
+            || maximum_buffered_content_bytes > u32::MAX as usize
+        {
             return Err(
                 WebsiteDeliveryExecutorConfigError::InvalidBufferedContentBudget {
-                    configured_bytes: maximum_bytes,
+                    configured_bytes: maximum_buffered_content_bytes,
                     maximum_bytes: u32::MAX as usize,
                 },
             );
@@ -65,8 +88,24 @@ impl WebsiteDeliveryExecutor {
         Ok(Self {
             runtime_registry,
             provider_registry,
-            buffered_content_admission: Arc::new(Semaphore::new(maximum_bytes)),
+            buffered_content_admission: Arc::new(Semaphore::new(
+                maximum_buffered_content_bytes,
+            )),
+            resolution_cache: Arc::new(WebsiteProviderResolutionCache::new(
+                maximum_resolution_cache_entries,
+                MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES,
+            )?),
         })
+    }
+
+    pub fn provider_event_invalidator(&self) -> Arc<dyn WebsiteProviderEventInvalidator> {
+        Arc::clone(&self.resolution_cache) as Arc<dyn WebsiteProviderEventInvalidator>
+    }
+
+    pub async fn provider_resolution_cache_snapshot(
+        &self,
+    ) -> WebsiteProviderResolutionCacheSnapshot {
+        self.resolution_cache.snapshot().await
     }
 
     pub async fn execute(
@@ -166,10 +205,28 @@ impl WebsiteDeliveryExecutor {
             locale: request.locale.clone(),
             conditions: request.conditions.clone(),
         };
-        let resolution = match deadline
-            .call(provider.resolve_wiki_route(&resolve_request))
-            .await
+        let resolution_result = if purpose == WebsiteProviderPurpose::Request
+            && request_conditions_are_cacheable(&request.conditions)
         {
+            self.resolution_cache
+                .resolve_wiki(
+                    ResolutionCacheKey::wiki_route(
+                        &route.identity,
+                        &route.identity.provider_relative_path,
+                        request.locale.as_deref(),
+                    ),
+                    route.resolution_cache_policy(),
+                    Arc::clone(&provider),
+                    resolve_request,
+                    deadline.remaining_ms()?,
+                )
+                .await
+        } else {
+            deadline
+                .call(provider.resolve_wiki_route(&resolve_request))
+                .await
+        };
+        let resolution = match resolution_result {
             Ok(resolution) => resolution,
             Err(error) => return provider_error_outcome(error),
         };
@@ -282,9 +339,23 @@ impl WebsiteDeliveryExecutor {
                 provider_relative_path: candidate.clone(),
                 conditions: request.conditions.clone(),
             };
-            let resolution = deadline
-                .call(provider.resolve_static_path(&resolve_request))
-                .await;
+            let resolution = if purpose == WebsiteProviderPurpose::Request
+                && request_conditions_are_cacheable(&request.conditions)
+            {
+                self.resolution_cache
+                    .resolve_static(
+                        ResolutionCacheKey::static_path(&route.identity, &candidate),
+                        route.resolution_cache_policy(),
+                        Arc::clone(&provider),
+                        resolve_request,
+                        deadline.remaining_ms()?,
+                    )
+                    .await
+            } else {
+                deadline
+                    .call(provider.resolve_static_path(&resolve_request))
+                    .await
+            };
             let content = match resolution {
                 Ok(WebsiteContentResolution::Found(content)) => content,
                 Ok(WebsiteContentResolution::NotModified) => {
@@ -390,6 +461,9 @@ struct OwnedSelectedRoute {
     normalized_request_path: String,
     force_https: bool,
     provider_timeout_ms: u64,
+    metadata_cache_ttl_seconds: u32,
+    negative_cache_ttl_seconds: u32,
+    stale_while_revalidate_seconds: u32,
     maximum_object_bytes: u64,
 }
 
@@ -427,6 +501,9 @@ impl OwnedSelectedRoute {
             normalized_request_path: selected.normalized_request_path,
             force_https: selected.force_https,
             provider_timeout_ms: selected.provider_timeout_ms,
+            metadata_cache_ttl_seconds: selected.metadata_cache_ttl_seconds,
+            negative_cache_ttl_seconds: selected.negative_cache_ttl_seconds,
+            stale_while_revalidate_seconds: selected.stale_while_revalidate_seconds,
             maximum_object_bytes: selected.maximum_object_bytes,
         }
     }
@@ -466,6 +543,14 @@ impl OwnedSelectedRoute {
             &self.binding_path_prefix,
             &binding_relative,
         ))
+    }
+
+    fn resolution_cache_policy(&self) -> ResolutionCachePolicy {
+        ResolutionCachePolicy::from_seconds(
+            self.metadata_cache_ttl_seconds,
+            self.negative_cache_ttl_seconds,
+            self.stale_while_revalidate_seconds,
+        )
     }
 }
 
@@ -638,6 +723,14 @@ fn valid_bounded_identity(value: &str, maximum_bytes: usize) -> bool {
     !value.is_empty()
         && value.len() <= maximum_bytes
         && !value.bytes().any(|byte| byte.is_ascii_control())
+}
+
+fn request_conditions_are_cacheable(conditions: &WebsiteRequestConditions) -> bool {
+    conditions.if_match.is_none()
+        && conditions.if_none_match.is_none()
+        && conditions.if_modified_since.is_none()
+        && conditions.if_unmodified_since.is_none()
+        && conditions.if_range.is_none()
 }
 
 fn provider_error_is_not_found(error: &WebsiteProviderError) -> bool {

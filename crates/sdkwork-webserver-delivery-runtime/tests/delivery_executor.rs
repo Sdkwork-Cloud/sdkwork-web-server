@@ -413,12 +413,7 @@ async fn static_index_and_spa_fallback_are_provider_relative_and_explicit() {
     assert_eq!(navigation.route.provider_relative_path, "/web/index.html");
     assert_eq!(
         static_provider.resolve_paths.lock().unwrap().as_slice(),
-        [
-            "/web/index.html",
-            "/web/missing",
-            "/web/missing",
-            "/web/index.html"
-        ]
+        ["/web/index.html", "/web/missing"]
     );
 }
 
