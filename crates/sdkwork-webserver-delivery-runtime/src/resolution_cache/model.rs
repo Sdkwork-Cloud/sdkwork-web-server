@@ -108,9 +108,7 @@ impl ResolutionCachePolicy {
         Self {
             metadata_ttl: Duration::from_secs(u64::from(metadata_ttl_seconds)),
             negative_ttl: Duration::from_secs(u64::from(negative_ttl_seconds)),
-            stale_while_revalidate: Duration::from_secs(u64::from(
-                stale_while_revalidate_seconds,
-            )),
+            stale_while_revalidate: Duration::from_secs(u64::from(stale_while_revalidate_seconds)),
         }
     }
 }
@@ -161,10 +159,7 @@ impl ResolutionOrigin {
         self
     }
 
-    pub(super) async fn call(
-        self,
-        deadline_ms: u64,
-    ) -> WebsiteProviderResult<CachedResolution> {
+    pub(super) async fn call(self, deadline_ms: u64) -> WebsiteProviderResult<CachedResolution> {
         if deadline_ms == 0 {
             return Err(deadline_exceeded());
         }
@@ -197,7 +192,10 @@ pub(super) fn normalize_origin_result(
                 WebsiteProviderErrorKind::NotFound
                     | WebsiteProviderErrorKind::NotPublic
                     | WebsiteProviderErrorKind::Revoked
-            ) => Ok(CachedResolution::Negative),
+            ) =>
+        {
+            Ok(CachedResolution::Negative)
+        }
         other => other,
     }
 }

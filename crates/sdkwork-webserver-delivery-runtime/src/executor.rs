@@ -18,9 +18,7 @@ use tokio::{
 };
 
 use crate::{
-    resolution_cache::{
-        ResolutionCacheKey, ResolutionCachePolicy, WebsiteProviderResolutionCache,
-    },
+    resolution_cache::{ResolutionCacheKey, ResolutionCachePolicy, WebsiteProviderResolutionCache},
     stream::{AdmittedProviderContentStream, BoundedProviderContentStream},
     WebsiteDeliveryContent, WebsiteDeliveryContentKind, WebsiteDeliveryError,
     WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
@@ -75,8 +73,7 @@ impl WebsiteDeliveryExecutor {
         maximum_buffered_content_bytes: usize,
         maximum_resolution_cache_entries: usize,
     ) -> Result<Self, WebsiteDeliveryExecutorConfigError> {
-        if maximum_buffered_content_bytes == 0
-            || maximum_buffered_content_bytes > u32::MAX as usize
+        if maximum_buffered_content_bytes == 0 || maximum_buffered_content_bytes > u32::MAX as usize
         {
             return Err(
                 WebsiteDeliveryExecutorConfigError::InvalidBufferedContentBudget {
@@ -88,9 +85,7 @@ impl WebsiteDeliveryExecutor {
         Ok(Self {
             runtime_registry,
             provider_registry,
-            buffered_content_admission: Arc::new(Semaphore::new(
-                maximum_buffered_content_bytes,
-            )),
+            buffered_content_admission: Arc::new(Semaphore::new(maximum_buffered_content_bytes)),
             resolution_cache: Arc::new(WebsiteProviderResolutionCache::new(
                 maximum_resolution_cache_entries,
                 MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES,

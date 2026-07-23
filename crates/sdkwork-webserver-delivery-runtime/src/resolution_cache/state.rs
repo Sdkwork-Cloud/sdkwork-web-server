@@ -2,10 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use sdkwork_webserver_contract::provider::WebsiteProviderResult;
 use sdkwork_webserver_core::website_runtime::WebsiteProviderType;
-use tokio::{
-    sync::watch,
-    time::Instant,
-};
+use tokio::{sync::watch, time::Instant};
 
 use crate::{
     WebsiteProviderEventInvalidation, WebsiteProviderEventInvalidationKind,
@@ -103,11 +100,7 @@ impl CacheState {
         })
     }
 
-    pub(super) fn provider_epoch_matches(
-        &self,
-        key: &ResolutionCacheKey,
-        expected: u64,
-    ) -> bool {
+    pub(super) fn provider_epoch_matches(&self, key: &ResolutionCacheKey, expected: u64) -> bool {
         self.provider_epochs
             .get(key.provider())
             .copied()
@@ -137,9 +130,7 @@ impl CacheState {
         if ttl.is_zero() {
             return false;
         }
-        let evicted = if self.entries.len() >= maximum_entries
-            && !self.entries.contains_key(&key)
-        {
+        let evicted = if self.entries.len() >= maximum_entries && !self.entries.contains_key(&key) {
             self.evict_oldest()
         } else {
             false

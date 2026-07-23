@@ -3,8 +3,8 @@ mod error;
 mod executor;
 mod model;
 mod provider_event;
-mod resolution_cache;
 mod registry;
+mod resolution_cache;
 mod stream;
 
 pub use activation_probe::{
@@ -21,5 +21,5 @@ pub use executor::{
 };
 pub use model::*;
 pub use provider_event::*;
-pub use resolution_cache::WebsiteProviderResolutionCacheSnapshot;
 pub use registry::{WebsiteProviderRegistry, WebsiteRuntimeProviderValidationReport};
+pub use resolution_cache::WebsiteProviderResolutionCacheSnapshot;

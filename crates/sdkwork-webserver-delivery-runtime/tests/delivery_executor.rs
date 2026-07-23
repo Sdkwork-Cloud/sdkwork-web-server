@@ -26,8 +26,8 @@ use sdkwork_webserver_delivery_runtime::{
     WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
     WebsiteDeliveryRequest, WebsiteDeliveryRoutingContext, WebsiteDeliveryScheme,
     WebsiteProviderEventInvalidation, WebsiteProviderEventInvalidationKind,
-    WebsiteProviderEventInvalidationPriority, WebsiteProviderRegistry,
-    WebsiteProviderRegistryError,
+    WebsiteProviderEventInvalidationPriority, WebsiteProviderEventScope,
+    WebsiteProviderEventSource, WebsiteProviderRegistry, WebsiteProviderRegistryError,
 };
 use serde_json::{json, Value};
 
@@ -888,6 +888,193 @@ async fn coalesces_concurrent_resolution_misses_without_an_origin_waiter_queue()
     assert!(outcomes
         .into_iter()
         .all(|outcome| matches!(outcome, Ok(WebsiteDeliveryOutcome::Content(_)))));
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn serves_bounded_stale_metadata_once_while_revalidating_in_the_background() {
+    let mut descriptor = descriptor_fixture(FixtureHandler::Wiki);
+    descriptor["deliveryPolicy"]["metadataCacheTtlSeconds"] = json!(1);
+    descriptor["deliveryPolicy"]["negativeCacheTtlSeconds"] = json!(1);
+    descriptor["deliveryPolicy"]["staleWhileRevalidateSeconds"] = json!(30);
+    let runtime = active_runtime_from_descriptor(descriptor, 2_500);
+    let wiki = Arc::new(FakeWikiProvider::new(
+        [
+            Ok(wiki_content_resolution(4, false)),
+            Ok(wiki_content_resolution(5, false)),
+        ],
+        Vec::new(),
+    ));
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = WebsiteDeliveryExecutor::new(runtime, Arc::new(providers));
+
+    let first = executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    let WebsiteDeliveryOutcome::Content(first) = first else {
+        panic!("expected initial Wiki content")
+    };
+    assert_eq!(first.metadata.content_length, 4);
+
+    tokio::time::advance(Duration::from_secs(2)).await;
+    let stale = executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    let WebsiteDeliveryOutcome::Content(stale) = stale else {
+        panic!("expected bounded stale Wiki content")
+    };
+    assert_eq!(stale.metadata.content_length, 4);
+
+    for _ in 0..10 {
+        if wiki.resolve_requests.lock().unwrap().len() == 2 {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 2);
+    let refreshed = executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    let WebsiteDeliveryOutcome::Content(refreshed) = refreshed else {
+        panic!("expected revalidated Wiki content")
+    };
+    assert_eq!(refreshed.metadata.content_length, 5);
+    let snapshot = executor.provider_resolution_cache_snapshot().await;
+    assert_eq!(snapshot.stale_hits, 1);
+    assert_eq!(snapshot.revalidations, 1);
+}
+
+#[tokio::test]
+async fn bounds_resolution_cache_entries_and_evicts_the_least_recently_used_entry() {
+    let runtime = active_runtime(FixtureHandler::Wiki);
+    let wiki = Arc::new(FakeWikiProvider::new(
+        [
+            Ok(wiki_content_resolution_at("/guide", 4, false)),
+            Ok(wiki_content_resolution_at("/other", 5, false)),
+            Ok(wiki_content_resolution_at("/guide", 6, false)),
+        ],
+        Vec::new(),
+    ));
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = WebsiteDeliveryExecutor::with_provider_runtime_limits(
+        runtime,
+        Arc::new(providers),
+        1024,
+        1,
+    )
+    .unwrap();
+
+    for path in ["/guide", "/other", "/guide"] {
+        let outcome = executor
+            .execute(delivery_request(path, WebsiteDeliveryMethod::Head))
+            .await
+            .unwrap();
+        assert!(matches!(outcome, WebsiteDeliveryOutcome::Content(_)));
+    }
+    let snapshot = executor.provider_resolution_cache_snapshot().await;
+    assert_eq!(snapshot.entries, 1);
+    assert_eq!(snapshot.evictions, 2);
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn an_uncertain_event_stream_clears_all_cached_entries_for_the_provider_type() {
+    let runtime = active_runtime(FixtureHandler::Wiki);
+    let wiki = Arc::new(FakeWikiProvider::new(
+        [
+            Ok(wiki_content_resolution(4, false)),
+            Ok(wiki_content_resolution(5, false)),
+        ],
+        Vec::new(),
+    ));
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = WebsiteDeliveryExecutor::new(runtime, Arc::new(providers));
+
+    executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    executor
+        .provider_event_invalidator()
+        .mark_uncertain(&WebsiteProviderEventScope {
+            source: WebsiteProviderEventSource::Knowledgebase,
+            tenant_id: "tenant-1".to_owned(),
+            organization_id: Some("organization-1".to_owned()),
+            stream_id: "knowledgebase:tenant-1:organization-1".to_owned(),
+        })
+        .await
+        .unwrap();
+    let refreshed = executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    let WebsiteDeliveryOutcome::Content(refreshed) = refreshed else {
+        panic!("expected refreshed Wiki content")
+    };
+    assert_eq!(refreshed.metadata.content_length, 5);
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn event_invalidation_fences_an_in_flight_stale_origin_result() {
+    let runtime = active_runtime(FixtureHandler::Wiki);
+    let wiki = Arc::new(
+        FakeWikiProvider::new([Ok(wiki_content_resolution(4, false))], Vec::new())
+            .with_resolve_delay(Duration::from_secs(1)),
+    );
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = Arc::new(WebsiteDeliveryExecutor::new(runtime, Arc::new(providers)));
+    let request_executor = Arc::clone(&executor);
+    let request = tokio::spawn(async move {
+        request_executor
+            .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+            .await
+    });
+    tokio::task::yield_now().await;
+    tokio::time::advance(Duration::from_millis(500)).await;
+
+    executor
+        .provider_event_invalidator()
+        .invalidate(&[WebsiteProviderEventInvalidation {
+            provider_type: WebsiteProviderType::Knowledgebase,
+            provider_resource_uuid: "publication-0001".to_owned(),
+            kind: WebsiteProviderEventInvalidationKind::Route {
+                path: "/guide".to_owned(),
+            },
+            priority: WebsiteProviderEventInvalidationPriority::Revocation,
+            provider_generation: Some("8".to_owned()),
+            public_generation: Some("12".to_owned()),
+        }])
+        .await
+        .unwrap();
+    tokio::time::advance(Duration::from_secs(1)).await;
+    let result = request.await.unwrap();
+
+    assert!(matches!(
+        result,
+        Err(WebsiteDeliveryError::Provider(WebsiteProviderError {
+            kind: WebsiteProviderErrorKind::Unavailable,
+            ..
+        }))
+    ));
+    let snapshot = executor.provider_resolution_cache_snapshot().await;
+    assert_eq!(snapshot.entries, 0);
+    assert_eq!(snapshot.in_flight, 0);
     assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 1);
 }
 

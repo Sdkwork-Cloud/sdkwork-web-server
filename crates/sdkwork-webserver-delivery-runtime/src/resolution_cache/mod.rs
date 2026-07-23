@@ -27,11 +27,11 @@ use crate::{
     WebsiteProviderEventInvalidator, WebsiteProviderEventScope,
 };
 
-pub(crate) use model::{ResolutionCacheKey, ResolutionCachePolicy};
 use model::{
     contract_mismatch, deadline_exceeded, normalize_origin_result, unavailable, CachedResolution,
     ResolutionOrigin,
 };
+pub(crate) use model::{ResolutionCacheKey, ResolutionCachePolicy};
 use state::{CacheLookup, CacheState, FlightResult, FlightStart};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,7 +111,9 @@ impl WebsiteProviderResolutionCache {
             CachedResolution::Static(resolution) => Ok(resolution),
             CachedResolution::Negative => {
                 self.metrics.negative_hits.fetch_add(1, Ordering::Relaxed);
-                Err(WebsiteProviderError::new(WebsiteProviderErrorKind::NotFound))
+                Err(WebsiteProviderError::new(
+                    WebsiteProviderErrorKind::NotFound,
+                ))
             }
             CachedResolution::Wiki(_) => Err(contract_mismatch()),
         }
@@ -137,7 +139,9 @@ impl WebsiteProviderResolutionCache {
             CachedResolution::Wiki(resolution) => Ok(resolution),
             CachedResolution::Negative => {
                 self.metrics.negative_hits.fetch_add(1, Ordering::Relaxed);
-                Err(WebsiteProviderError::new(WebsiteProviderErrorKind::NotFound))
+                Err(WebsiteProviderError::new(
+                    WebsiteProviderErrorKind::NotFound,
+                ))
             }
             CachedResolution::Static(_) => Err(contract_mismatch()),
         }
@@ -153,11 +157,11 @@ impl WebsiteProviderResolutionCache {
         if deadline_ms == 0 {
             return Err(deadline_exceeded());
         }
-        let lookup = self
-            .state
-            .lock()
-            .await
-            .lookup_or_start(&key, self.maximum_entries, Instant::now());
+        let lookup =
+            self.state
+                .lock()
+                .await
+                .lookup_or_start(&key, self.maximum_entries, Instant::now());
         match lookup {
             CacheLookup::Fresh(value) => {
                 self.metrics.hits.fetch_add(1, Ordering::Relaxed);
@@ -166,16 +170,8 @@ impl WebsiteProviderResolutionCache {
             CacheLookup::Stale { value, refresh } => {
                 self.metrics.stale_hits.fetch_add(1, Ordering::Relaxed);
                 if let Some(refresh) = refresh {
-                    self.metrics
-                        .revalidations
-                        .fetch_add(1, Ordering::Relaxed);
-                    self.spawn_origin(
-                        key,
-                        policy,
-                        origin.revalidation(),
-                        deadline_ms,
-                        refresh,
-                    );
+                    self.metrics.revalidations.fetch_add(1, Ordering::Relaxed);
+                    self.spawn_origin(key, policy, origin.revalidation(), deadline_ms, refresh);
                 }
                 Ok(value)
             }
