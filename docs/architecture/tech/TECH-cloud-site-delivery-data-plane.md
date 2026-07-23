@@ -374,8 +374,8 @@ through the generated Web Internal SDK, Web performs provider validation plus an
 activation probe, Web exposes the latest authenticated observation, and Deploy persists immutable
 evidence and applies strict all-frozen-target `ACTIVE` quorum before advancing the Site current
 revision. Detached source attestation where required, external public-domain multi-vantage probes,
- production drift dashboards/alerts, service-credential hot rotation, and shared/edge content-cache
- integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
+production drift dashboards/alerts, service-credential hot rotation, and shared/edge content-cache
+integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
 data-plane state: neither writes Web business authority nor substitutes for Deploy's durable rollout
 evidence. A node-local activation probe does not establish public DNS, TLS, CDN, or Internet
 reachability.
