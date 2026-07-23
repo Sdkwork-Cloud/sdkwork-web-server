@@ -52,6 +52,7 @@ hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "
 hyper-rustls = { version = "0.27", default-features = false, features = ["aws-lc-rs", "http1", "http2", "tls12", "webpki-roots"] }
 ipnet = { version = "2", features = ["serde"] }
 futures-util = "0.3"
+hashlink = "0.10"
 mime_guess = "2"
 percent-encoding = "2"
 reqwest = { version = "0.12", default-features = false, features = ["http2", "rustls-tls", "stream"] }

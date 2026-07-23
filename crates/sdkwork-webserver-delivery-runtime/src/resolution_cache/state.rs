@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use hashlink::LinkedHashMap;
 use sdkwork_webserver_contract::provider::WebsiteProviderResult;
 use sdkwork_webserver_core::website_runtime::WebsiteProviderType;
 use tokio::{sync::watch, time::Instant};
@@ -36,15 +37,13 @@ struct CacheEntry {
     value: CachedResolution,
     fresh_until: Instant,
     stale_until: Instant,
-    access_sequence: u64,
 }
 
 #[derive(Default)]
 pub(super) struct CacheState {
-    entries: HashMap<ResolutionCacheKey, CacheEntry>,
+    entries: LinkedHashMap<ResolutionCacheKey, CacheEntry>,
     in_flight: HashMap<ResolutionCacheKey, watch::Receiver<Option<FlightResult>>>,
     provider_epochs: HashMap<ProviderCacheIdentity, u64>,
-    access_sequence: u64,
 }
 
 impl CacheState {
@@ -54,10 +53,7 @@ impl CacheState {
         maximum_entries: usize,
         now: Instant,
     ) -> CacheLookup {
-        self.access_sequence = self.access_sequence.wrapping_add(1);
-        let access_sequence = self.access_sequence;
-        if let Some(entry) = self.entries.get_mut(key) {
-            entry.access_sequence = access_sequence;
+        if let Some(entry) = self.entries.to_back(key) {
             if now < entry.fresh_until {
                 return CacheLookup::Fresh(entry.value.clone());
             }
@@ -131,11 +127,10 @@ impl CacheState {
             return false;
         }
         let evicted = if self.entries.len() >= maximum_entries && !self.entries.contains_key(&key) {
-            self.evict_oldest()
+            self.entries.pop_front().is_some()
         } else {
             false
         };
-        self.access_sequence = self.access_sequence.wrapping_add(1);
         let fresh_until = now + ttl;
         self.entries.insert(
             key,
@@ -143,23 +138,9 @@ impl CacheState {
                 value,
                 fresh_until,
                 stale_until: fresh_until + stale,
-                access_sequence: self.access_sequence,
             },
         );
         evicted
-    }
-
-    fn evict_oldest(&mut self) -> bool {
-        let Some(key) = self
-            .entries
-            .iter()
-            .min_by_key(|(_, entry)| entry.access_sequence)
-            .map(|(key, _)| key.clone())
-        else {
-            return false;
-        };
-        self.entries.remove(&key);
-        true
     }
 
     pub(super) fn invalidate(

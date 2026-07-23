@@ -827,6 +827,10 @@ async fn caches_positive_and_negative_resolutions_until_exact_event_invalidation
         assert!(matches!(outcome, WebsiteDeliveryOutcome::NotFound));
     }
     assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 2);
+    let snapshot = executor.provider_resolution_cache_snapshot().await;
+    assert_eq!(snapshot.misses, 2);
+    assert_eq!(snapshot.hits, 1);
+    assert_eq!(snapshot.negative_hits, 1);
 
     executor
         .provider_event_invalidator()

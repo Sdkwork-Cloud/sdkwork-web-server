@@ -109,12 +109,9 @@ impl WebsiteProviderResolutionCache {
             .await?;
         match value {
             CachedResolution::Static(resolution) => Ok(resolution),
-            CachedResolution::Negative => {
-                self.metrics.negative_hits.fetch_add(1, Ordering::Relaxed);
-                Err(WebsiteProviderError::new(
-                    WebsiteProviderErrorKind::NotFound,
-                ))
-            }
+            CachedResolution::Negative => Err(WebsiteProviderError::new(
+                WebsiteProviderErrorKind::NotFound,
+            )),
             CachedResolution::Wiki(_) => Err(contract_mismatch()),
         }
     }
@@ -137,12 +134,9 @@ impl WebsiteProviderResolutionCache {
             .await?;
         match value {
             CachedResolution::Wiki(resolution) => Ok(resolution),
-            CachedResolution::Negative => {
-                self.metrics.negative_hits.fetch_add(1, Ordering::Relaxed);
-                Err(WebsiteProviderError::new(
-                    WebsiteProviderErrorKind::NotFound,
-                ))
-            }
+            CachedResolution::Negative => Err(WebsiteProviderError::new(
+                WebsiteProviderErrorKind::NotFound,
+            )),
             CachedResolution::Static(_) => Err(contract_mismatch()),
         }
     }
@@ -164,7 +158,11 @@ impl WebsiteProviderResolutionCache {
                 .lookup_or_start(&key, self.maximum_entries, Instant::now());
         match lookup {
             CacheLookup::Fresh(value) => {
-                self.metrics.hits.fetch_add(1, Ordering::Relaxed);
+                if matches!(value, CachedResolution::Negative) {
+                    self.metrics.negative_hits.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    self.metrics.hits.fetch_add(1, Ordering::Relaxed);
+                }
                 Ok(value)
             }
             CacheLookup::Stale { value, refresh } => {
