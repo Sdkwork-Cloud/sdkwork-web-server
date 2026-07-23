@@ -23,10 +23,11 @@ use sdkwork_webserver_core::{
     WebServerConfigError,
 };
 use sdkwork_webserver_delivery_runtime::{
-    probe_website_runtime_set_activation, CachelessWebsiteProviderEventInvalidator,
-    WebsiteDeliveryExecutor, WebsiteProviderRegistry, WebsiteProviderRegistryError,
-    WebsiteRuntimeActivationProbeError, WebsiteRuntimeProviderValidationError,
-    WebsiteRuntimeSetProviderEventReconciler, DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES,
+    probe_website_runtime_set_activation, WebsiteDeliveryExecutor, WebsiteProviderEventInvalidator,
+    WebsiteProviderRegistry, WebsiteProviderRegistryError, WebsiteRuntimeActivationProbeError,
+    WebsiteRuntimeProviderValidationError, WebsiteRuntimeSetProviderEventReconciler,
+    DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES, DEFAULT_PROVIDER_RESOLUTION_CACHE_ENTRIES,
+    MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES,
 };
 use sdkwork_webserver_drive_provider::{
     DriveWebsiteProvider, FixedDriveWebsiteSdkClientResolver, MAXIMUM_DRIVE_CONTENT_BYTES,
@@ -71,6 +72,8 @@ pub const WEBSITE_PROVIDER_VALIDATION_CONCURRENCY_ENV: &str =
     "SDKWORK_WEB_WEBSITE_PROVIDER_VALIDATION_CONCURRENCY";
 pub const WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV: &str =
     "SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES";
+pub const WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES_ENV: &str =
+    "SDKWORK_WEB_WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES";
 pub const WEBSITE_PROVIDER_EVENT_CONFIG_FILE_ENV: &str =
     "SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE";
 pub const KNOWLEDGEBASE_INTERNAL_API_BASE_URL_ENV: &str =
@@ -188,6 +191,7 @@ struct ProviderEventIngressBootstrapContext<'a> {
     runtime_registry: Arc<WebsiteRuntimeRegistry>,
     providers: Arc<WebsiteProviderRegistry>,
     validation_concurrency: usize,
+    invalidator: Arc<dyn WebsiteProviderEventInvalidator>,
 }
 
 enum ConfiguredRuntimeSetSource {
@@ -377,6 +381,17 @@ where
         .await?;
     }
 
+    let buffered_content_bytes = provider_buffered_content_bytes()?;
+    let resolution_cache_entries = provider_resolution_cache_entries()?;
+    let executor = Arc::new(
+        WebsiteDeliveryExecutor::with_provider_runtime_limits(
+            Arc::clone(&runtime_registry),
+            Arc::clone(&providers),
+            buffered_content_bytes,
+            resolution_cache_entries,
+        )
+        .map_err(|error| WebsiteDataPlaneBootstrapError::ProviderConfig(error.to_string()))?,
+    );
     let provider_event_ingress =
         build_provider_event_ingress(ProviderEventIngressBootstrapContext {
             environment,
@@ -387,18 +402,9 @@ where
             runtime_registry: Arc::clone(&runtime_registry),
             providers: Arc::clone(&providers),
             validation_concurrency,
+            invalidator: executor.provider_event_invalidator(),
         })
         .await?;
-
-    let buffered_content_bytes = provider_buffered_content_bytes()?;
-    let executor = Arc::new(
-        WebsiteDeliveryExecutor::with_buffered_content_budget(
-            Arc::clone(&runtime_registry),
-            Arc::clone(&providers),
-            buffered_content_bytes,
-        )
-        .map_err(|error| WebsiteDataPlaneBootstrapError::ProviderConfig(error.to_string()))?,
-    );
     let poll_interval = runtime_set_poll_interval()?;
     let (stop_tx, stop_rx) = watch::channel(false);
     let watcher = match configured_source {
@@ -864,14 +870,13 @@ async fn build_provider_event_ingress(
         context.providers,
         context.validation_concurrency,
     ));
-    let invalidator = Arc::new(CachelessWebsiteProviderEventInvalidator);
     WebsiteProviderEventIngress::bind_from_file(
         &config_path,
         context.tenant_scope_hash,
         context.node_uuid,
         context.require_drive,
         context.require_knowledgebase,
-        invalidator,
+        context.invalidator,
         reconciler,
     )
     .await
@@ -1161,6 +1166,35 @@ fn parse_provider_buffered_content_bytes(
     {
         return Err(WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
             "{WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV} must be between {MINIMUM_PROVIDER_BUFFERED_CONTENT_BYTES} and {MAXIMUM_PROVIDER_BUFFERED_CONTENT_BYTES} bytes"
+        )));
+    }
+    Ok(value)
+}
+
+fn provider_resolution_cache_entries() -> Result<usize, WebsiteDataPlaneBootstrapError> {
+    match env::var(WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES_ENV) {
+        Ok(value) => parse_provider_resolution_cache_entries(Some(&value)),
+        Err(env::VarError::NotPresent) => parse_provider_resolution_cache_entries(None),
+        Err(env::VarError::NotUnicode(_)) => Err(WebsiteDataPlaneBootstrapError::ProviderConfig(
+            format!("{WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES_ENV} must be UTF-8"),
+        )),
+    }
+}
+
+fn parse_provider_resolution_cache_entries(
+    value: Option<&str>,
+) -> Result<usize, WebsiteDataPlaneBootstrapError> {
+    let value = match value {
+        Some(value) => value.trim().parse::<usize>().map_err(|_| {
+            WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
+                "{WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES_ENV} must be an integer"
+            ))
+        })?,
+        None => DEFAULT_PROVIDER_RESOLUTION_CACHE_ENTRIES,
+    };
+    if !(1..=MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES).contains(&value) {
+        return Err(WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
+            "{WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES_ENV} must be between 1 and {MAXIMUM_PROVIDER_RESOLUTION_CACHE_ENTRIES} entries"
         )));
     }
     Ok(value)
@@ -1707,6 +1741,21 @@ mod tests {
         );
         for value in ["", "not-a-number", "16777215", "2147483649"] {
             assert!(parse_provider_buffered_content_bytes(Some(value)).is_err());
+        }
+    }
+
+    #[test]
+    fn provider_resolution_cache_capacity_is_bounded_and_has_a_safe_default() {
+        assert_eq!(
+            parse_provider_resolution_cache_entries(None).unwrap(),
+            DEFAULT_PROVIDER_RESOLUTION_CACHE_ENTRIES
+        );
+        assert_eq!(
+            parse_provider_resolution_cache_entries(Some("16384")).unwrap(),
+            16_384
+        );
+        for value in ["", "not-a-number", "0", "1048577"] {
+            assert!(parse_provider_resolution_cache_entries(Some(value)).is_err());
         }
     }
 

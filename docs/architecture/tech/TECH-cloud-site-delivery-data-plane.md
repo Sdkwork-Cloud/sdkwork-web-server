@@ -374,8 +374,8 @@ through the generated Web Internal SDK, Web performs provider validation plus an
 activation probe, Web exposes the latest authenticated observation, and Deploy persists immutable
 evidence and applies strict all-frozen-target `ACTIVE` quorum before advancing the Site current
 revision. Detached source attestation where required, external public-domain multi-vantage probes,
-production drift dashboards/alerts, service-credential hot rotation, and provider-aware cache
-integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
+ production drift dashboards/alerts, service-credential hot rotation, and shared/edge content-cache
+ integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
 data-plane state: neither writes Web business authority nor substitutes for Deploy's durable rollout
 evidence. A node-local activation probe does not establish public DNS, TLS, CDN, or Internet
 reachability.
@@ -413,31 +413,35 @@ Knowledgebase operations into its own SDK family.
 
 ## 7. Cache Architecture
 
-The current website data plane has no content or metadata cache and injects
-`CachelessWebsiteProviderEventInvalidator`; every request therefore resolves through its Provider,
-and an event cannot leave stale Web Server bytes behind. This is a correct cacheless baseline, not
-evidence that provider-aware cache behavior, negative caching, single-flight, or stampede control is
-implemented. Before any cache is enabled, layers may include request-local metadata, process memory,
-node disk, and approved shared/edge cache.
-Every layer uses this complete identity:
+The delivery executor owns one bounded process-local Provider resolution metadata cache. It does not
+cache response body bytes, credentials, raw generated-SDK responses, activation probes, conditional
+responses, or private/draft content. Cacheable values are public static resolution metadata, public
+Wiki content metadata, Wiki redirects, and a non-disclosing sentinel for not-found/not-public/revoked
+outcomes. The maximum entry count defaults to 16384, is configured by
+`SDKWORK_WEB_WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES`, is hard-bounded at 1048576, and uses LRU
+eviction. Descriptor delivery policy owns metadata TTL, short negative TTL, and positive-only
+stale-while-revalidate duration.
+
+Every entry and in-flight key uses this complete identity:
 
 ```text
-siteRevisionPolicyGeneration
-+ tenantScopeHash
-+ bindingUuid + variantUuid + mountUuid
-+ resourceUuid + providerGeneration
-+ normalizedProviderPathOrWikiRoute
-+ pagePublicVersionOrStaticContentVersion
-+ renderer/template/locale/encoding representation
+runtimeSetGeneration + revisionUuid + tenantScopeHash
++ siteUuid + bindingUuid + variantUuid + mountUuid + resourceUuid
++ providerType + providerResourceUuid + providerContractVersion
++ normalizedProviderPathOrWikiRoute + locale + resolutionKind
 ```
 
-Raw Host/path alone is not a cross-tenant key. Entries record public eligibility evidence and
-expiry. Public-to-private/revoked/delete events evict with highest priority; uncertain state is
-revalidated before serving. Stale-while-revalidate never converts unknown/private content to public.
+Raw Host/path alone is never a cross-tenant key. Same-key misses coalesce through a bounded in-flight
+map. When that map is saturated, the request bypasses the cache and calls its Provider directly; no
+unbounded origin queue is formed. Provider epochs fence every in-flight request so an invalidated
+pre-event result cannot be reinserted. Route events remove exact paths, Provider/navigation/search
+events remove the Provider resource, and stream uncertainty removes all entries for that Provider
+type. The event ingress receives the exact invalidator owned by the delivery executor.
 
-Single-flight keys and permits are bounded without unbounded waiters. Admission, maximum entry/body
-size, total bytes, TTL, negative TTL, eviction, disk cleanup, corruption recovery, and shutdown
-behavior are typed configuration.
+The cache exports bounded process-local counters for entries, in-flight requests, fresh/stale/negative
+hits, misses, writes, evictions, coalesced requests, bypasses, revalidations, and invalidations.
+Shared/edge caches, response-body caching, fleet-wide cache coordination, and production load/soak
+evidence remain separate release work.
 
 ## 8. Provider Event Processing
 
@@ -476,10 +480,11 @@ file and stream limits, and corrupt-latest-slot fallback. A corrupt stream with 
 closed. Stable bounded stream shards preserve same-stream ordering while allowing unrelated streams
 and checkpoint files to progress concurrently.
 
-Private/revoked/delete events carry revocation priority. The current cacheless invalidator records no
-cache state because no content cache exists; the reconciliation and checkpoint path is implemented,
-while concrete route/provider cache eviction, negative-cache behavior, and freshness SLO evidence
-remain release-blocking. Events improve freshness; Provider validation remains the correctness
+Private/revoked/delete events carry revocation priority. The node-local invalidator evicts exact
+route or Provider scope, clears a Provider type on uncertainty, and advances Provider epochs before
+an in-flight origin result can be inserted. Negative-cache and positive metadata entries therefore
+share the same event-driven freshness boundary. Production freshness SLO, multi-Node convergence,
+and invalidation-storm evidence remain release-blocking. Provider validation remains the correctness
 backstop and ordinary content changes never activate a website descriptor.
 
 ## 9. TLS Runtime Separation
@@ -606,9 +611,10 @@ remain schedulable when distinct workers exist. The fleet-scoped PodDisruptionBu
 voluntary disruption to one Node.
 
 High availability therefore requires one owner event subscription and exact internal callback
-route `/nodes/{nodeUuid}/provider-events/drive-website-events` per Web Node. If a provider cannot maintain independent Node subscriptions, a formally owned
-durable fleet fan-out service is required before event-driven caching can be enabled; a Kubernetes
-Service is not a broadcast mechanism.
+route `/nodes/{nodeUuid}/provider-events/drive-website-events` per Web Node. If a provider cannot
+maintain independent Node subscriptions, a formally owned durable fleet fan-out service is required
+before that fleet can claim event-driven cache convergence; a Kubernetes Service is not a broadcast
+mechanism.
 
 A shared multi-tenant edge fleet is a separate target architecture, not a hidden mode of the fixed
 client resolvers. It cannot be enabled until owner contracts define tenant-aware runtime

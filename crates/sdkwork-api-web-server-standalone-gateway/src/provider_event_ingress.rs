@@ -629,9 +629,13 @@ mod tests {
         body::Body,
         http::{HeaderValue, Request},
     };
+    use sdkwork_webserver_core::website_runtime::{
+        WebsiteRuntimeEnvironment, WebsiteRuntimeRegistry,
+    };
     use sdkwork_webserver_delivery_runtime::{
         CachelessWebsiteProviderEventInvalidator, FileWebsiteProviderEventCheckpointStore,
-        WebsiteProviderEvent, WebsiteProviderEventProcessor, WebsiteProviderEventReconciler,
+        WebsiteDeliveryExecutor, WebsiteProviderEvent, WebsiteProviderEventProcessor,
+        WebsiteProviderEventReconciler, WebsiteProviderRegistry,
     };
     use serde_json::{json, Value};
     use tower::ServiceExt;
@@ -730,13 +734,20 @@ mod tests {
     #[tokio::test]
     async fn signed_knowledgebase_delivery_is_accepted_and_tampering_is_rejected() {
         let root = tempfile::tempdir().unwrap();
+        let executor = Arc::new(WebsiteDeliveryExecutor::new(
+            Arc::new(WebsiteRuntimeRegistry::new(
+                "node-1",
+                WebsiteRuntimeEnvironment::Development,
+            )),
+            Arc::new(WebsiteProviderRegistry::new()),
+        ));
         let checkpoints = Arc::new(
             FileWebsiteProviderEventCheckpointStore::open(root.path().join("checkpoints"), 8)
                 .unwrap(),
         );
         let processor = Arc::new(WebsiteProviderEventProcessor::new(
             checkpoints,
-            Arc::new(CachelessWebsiteProviderEventInvalidator),
+            executor.provider_event_invalidator(),
             Arc::new(SuccessfulReconciler),
         ));
         let secret = b"test-only-provider-event-secret-32-bytes";
@@ -762,10 +773,25 @@ mod tests {
             app.clone().oneshot(request).await.unwrap().status(),
             StatusCode::NO_CONTENT
         );
+        assert_eq!(
+            executor
+                .provider_resolution_cache_snapshot()
+                .await
+                .invalidations,
+            1
+        );
         let request = signed_knowledgebase_request(&body, secret, "knowledgebase-main");
         assert_eq!(
             app.clone().oneshot(request).await.unwrap().status(),
             StatusCode::NO_CONTENT
+        );
+        assert_eq!(
+            executor
+                .provider_resolution_cache_snapshot()
+                .await
+                .invalidations,
+            1,
+            "a replayed delivery must not invalidate the cache twice"
         );
 
         let mut request = signed_knowledgebase_request(&body, secret, "knowledgebase-main");

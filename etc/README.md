@@ -68,6 +68,15 @@ immediately with a retryable unavailable result and
 does not create a memory waiter queue. The permit remains owned by the HTTP response stream and is
 released on completion, stream failure, or cancellation. This is a process memory-amplification
 guard for the current generated `Vec<u8>` transports, not a claim of end-to-end provider streaming.
+`SDKWORK_WEB_WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES` bounds the node-local Provider resolution
+metadata cache. It is a strict integer from 1 through 1048576 and defaults to 16384. The cache stores
+only public static/Wiki resolution metadata, Wiki redirects, and non-disclosing negatives; it never
+stores response bytes, credentials, private/draft content, conditional responses, or activation
+probes. Descriptor TTLs control positive, negative, and positive-only stale windows. Bounded
+single-flight coalesces identical misses, LRU bounds retained entries, and capacity saturation
+bypasses the cache without creating an origin waiter queue. Provider events invalidate this same
+cache by exact path, Provider resource, or Provider type, with an epoch fence preventing stale
+in-flight reinsertion.
 `SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY` owns a dedicated node-local A/B slot
 directory containing only complete, hash-verified `sdkwork.website-runtime-set.v1` snapshots.
 Staging and production require this directory. Bootstrap selects the highest valid generation from

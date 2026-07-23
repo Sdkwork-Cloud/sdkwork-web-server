@@ -29,16 +29,13 @@ cross-system capabilities that cannot be truthfully closed inside this repositor
 2. Drive and Knowledgebase generated Internal SDK methods return complete `Vec<u8>` payloads. The
    provider adapters enforce object ceilings but cannot provide end-to-end response streaming
    without an owner SDK/OpenAPI change.
-3. The Website request path has no bounded provider-aware metadata/content/negative cache,
-   single-flight miss collapse, or stampede control. Provider events are authenticated and
-   checkpointed, but the current invalidator intentionally targets a cacheless implementation.
-4. Linux release artifacts and immutable OCI images are not published, signed, or accompanied by
+3. Linux release artifacts and immutable OCI images are not published, signed, or accompanied by
    complete provenance. The application manifest remains `BETA`; all four Linux packages are
    disabled with `releaseBuildDeferred: true`.
-5. The `sdkwork-space` application estate is not Deploy-complete: only 7 of 27 present Deploy
+4. The `sdkwork-space` application estate is not Deploy-complete: only 7 of 27 present Deploy
    manifests pass the current validator, and 37 repositories with PC and/or H5 roots have no
    Deploy manifest.
-6. Production capacity, multi-Node convergence, failure-domain loss, rolling upgrade, rollback,
+5. Production capacity, multi-Node convergence, failure-domain loss, rolling upgrade, rollback,
    Internet/DNS probes, and sustained load/soak evidence remain incomplete.
 No exception is granted for these blockers. Production or customer-impacting release still
 requires human owner approval under `QUALITY_GATE_SPEC.md`.
@@ -110,7 +107,7 @@ activation. Each lifecycle has its own A/B last-known-good restart recovery.
 | Generated SDK boundary | compliant | Drive and Knowledgebase calls use owner-generated Internal Rust SDK APIs; no raw HTTP or manual authorization header is introduced. |
 | Provider buffered-content admission | implemented and verified | A process-wide weighted semaphore reserves the compiled route's `maximumObjectBytes` before content open, never queues on saturation, and holds the permit through response completion/error/cancellation. Default and Kubernetes value are 256 MiB. This bounds concurrent `Vec<u8>` retention even when metadata is wrong, but is not true streaming. |
 | End-to-end provider streaming | blocked | Generated content methods return `Vec<u8>` and the current stream adapters yield that complete buffer once. A generated SDK/OpenAPI response-stream contract is required. |
-| Provider cache | not implemented | The delivery policy schema declares TTLs, but the request path remains cacheless. This prevents stale-cache disclosure today but does not meet performance and outage goals. |
+| Provider resolution cache | implemented and verified | A bounded node-local LRU caches public static/Wiki resolution metadata, redirects, and non-disclosing negatives using descriptor TTLs. It provides bounded same-key single-flight, positive-only stale-while-revalidate, exact/Provider/type event invalidation, in-flight epoch fencing, and process counters. Body bytes, credentials, conditional requests, and activation probes are not cached. Shared/edge caching and production load evidence remain open. |
 | Provider events | implemented baseline | Loopback ingress authenticates provider/tenant/channel-bound events, enforces canonical Node-qualified Drive callbacks with wrong/missing-Node rejection, validates replay windows and HMAC, keeps bounded concurrency, persists dual-slot checkpoints, handles gap/uncertainty, and invokes reconciliation/invalidation ports. Deploy registers/renews Drive channels but event payloads flow directly from Drive to Web. |
 | Website atomic activation | implemented and verified | Node/environment/tenant/hash checks, complete candidate compilation, provider validation, last-known-good retention, stale/conflict rejection, and restart recovery are covered. |
 | Static TLS | implemented and verified | PEM size/count, SAN, validity, key match, SNI exact/wildcard, TLS 1.2/1.3 range, ALPN, and handshake behavior are validated. |
@@ -199,6 +196,7 @@ ownership belong to Deploy/KMS/secret infrastructure.
 | `SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY` | Website A/B recovery. | Required for staging/production. |
 | `SDKWORK_WEB_WEBSITE_TENANT_SCOPE_HASH` | Dedicated fleet tenant scope. | Secret-backed and must match every descriptor. |
 | `SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES` | Process-wide admission budget for retained generated-SDK content buffers. | Integer 16 MiB..2 GiB; default/template 256 MiB; capacity evidence required before raising. |
+| `SDKWORK_WEB_WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES` | Maximum node-local Provider resolution metadata entries and in-flight slots. | Integer 1..1048576; default/template 16384; capacity evidence required before raising. |
 | `SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE` | Provider-event subscriptions and secret-file references. | Required when active resources use Drive/Knowledgebase in staging/production. |
 | `SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL` | Generated Drive Internal SDK origin. | Protected HTTPS. |
 | `SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE` | Drive provider credential. | Secret file only. |

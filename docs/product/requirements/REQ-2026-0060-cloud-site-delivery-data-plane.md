@@ -187,9 +187,14 @@ compiled route's `maximumObjectBytes` so metadata drift and Range fallback canno
 queues saturated requests, and is held until response
 completion, failure, or cancellation. This bounds concurrent generated-SDK buffer retention but
 does not remove the owner SDK's per-response full-buffer allocation.
-The current website request path is cacheless, so its event invalidator cannot leave stale cached
-bytes but does not satisfy the cache, negative-cache, single-flight, stampede, or invalidation-storm
-acceptance criteria.
+The website request path uses a bounded node-local resolution metadata cache. It caches only public
+static/Wiki resolutions, redirects, and a non-disclosing negative sentinel; it does not cache body
+bytes, credentials, conditional responses, activation probes, or private/draft content. Descriptor
+TTLs control positive, negative, and positive-only stale-while-revalidate windows. Same-key misses
+coalesce through a bounded in-flight map; capacity saturation bypasses caching instead of creating
+an origin waiter queue. Exact and Provider-scoped events invalidate the same cache instance used by
+delivery, uncertainty clears the affected Provider type, and Provider epochs fence stale in-flight
+reinsertion. Shared/edge body caching and production invalidation-storm/load evidence remain open.
 
 Local filesystem delivery opens one capability handle for the configured root, validates request
 and fallback paths, opens every directory component and final regular file with no-follow

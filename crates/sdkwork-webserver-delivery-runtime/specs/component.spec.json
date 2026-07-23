@@ -32,14 +32,15 @@
       {"name": "websiteProviderRegistry", "export": "crate-root"},
       {"name": "websiteRuntimeProviderValidator", "export": "crate-root"},
       {"name": "websiteProviderEventProcessor", "export": "crate-root"},
+      {"name": "websiteProviderEventInvalidator", "export": "crate-root"},
+      {"name": "websiteProviderResolutionCache", "export": "crate-root"},
       {"name": "websiteProviderEventCheckpointStore", "export": "crate-root"},
       {"name": "websiteProviderEventReconciler", "export": "crate-root"}
     ],
     "requiredPorts": [
       {"name": "websiteRuntimeSetRegistry", "export": "crate-root", "provider": "sdkwork-webserver-core"},
       {"name": "websiteStaticContentProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
-      {"name": "websiteWikiProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"},
-      {"name": "websiteProviderEventInvalidator", "export": "crate-root", "provider": "sdkwork-api-web-server-standalone-gateway"}
+      {"name": "websiteWikiProvider", "export": "crate-root", "provider": "sdkwork-webserver-contract"}
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,
@@ -61,7 +62,8 @@
       "knowledgebase.wiki.search.changed.v1"
     ],
     "configKeys": [
-      "SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES"
+      "SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES",
+      "SDKWORK_WEB_WEBSITE_PROVIDER_RESOLUTION_CACHE_ENTRIES"
     ]
   },
   "verification": {

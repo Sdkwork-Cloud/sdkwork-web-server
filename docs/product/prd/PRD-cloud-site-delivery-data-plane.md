@@ -163,9 +163,13 @@ types on a separate loopback listener. Subscription identity is bound to provide
 tenant, organization and Drive channel as applicable; owner-specific HMAC signatures and replay
 windows are verified before strict event parsing. Per-stream dual-slot checkpoints, bounded
 deduplication, Drive contiguous-gap detection, Knowledgebase monotonic ordering, and generated-SDK
-Provider reconciliation make event restart/replay behavior durable on each Web Node. The current
-website path has no content cache, so event invalidation is deliberately cacheless until the bounded
-cache described in section 7 exists.
+Provider reconciliation make event restart/replay behavior durable on each Web Node. The delivery
+executor owns a bounded node-local resolution metadata cache with positive and short negative TTLs,
+positive-only stale-while-revalidate, bounded same-key single-flight, and LRU eviction. The same
+cache instance is injected into the event processor: route events evict exact Provider paths,
+provider/navigation/search changes evict that Provider resource, and an uncertain stream clears the
+affected Provider type. Provider epochs prevent an in-flight pre-invalidation result from being
+reinserted. Response body bytes remain uncached.
 
 Cloud runtime integration uses owner-generated `sdkwork-drive-internal-sdk` and
 `sdkwork-knowledgebase-internal-sdk` through injected clients and
