@@ -13,6 +13,13 @@ pub enum WebsiteDeliveryExecutorConfigError {
         configured_bytes: usize,
         maximum_bytes: usize,
     },
+    #[error(
+        "provider resolution cache capacity {configured_entries} is outside 1..={maximum_entries} entries"
+    )]
+    InvalidProviderResolutionCacheCapacity {
+        configured_entries: usize,
+        maximum_entries: usize,
+    },
 }
 
 #[derive(Debug, Error)]

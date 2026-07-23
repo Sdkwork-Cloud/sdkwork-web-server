@@ -63,6 +63,9 @@ pub struct SelectedWebsiteRoute<'a> {
     pub binding_relative_path: String,
     pub provider_relative_path: String,
     pub provider_timeout_ms: u64,
+    pub metadata_cache_ttl_seconds: u32,
+    pub negative_cache_ttl_seconds: u32,
+    pub stale_while_revalidate_seconds: u32,
     pub maximum_object_bytes: u64,
     pub force_https: bool,
     pub variant_reason: WebsiteVariantSelectionReason,
@@ -289,6 +292,18 @@ impl CompiledWebsiteRuntimeDescriptor {
                     binding_relative_path,
                     provider_relative_path,
                     provider_timeout_ms: self.descriptor.delivery_policy.provider_timeout_ms,
+                    metadata_cache_ttl_seconds: self
+                        .descriptor
+                        .delivery_policy
+                        .metadata_cache_ttl_seconds,
+                    negative_cache_ttl_seconds: self
+                        .descriptor
+                        .delivery_policy
+                        .negative_cache_ttl_seconds,
+                    stale_while_revalidate_seconds: self
+                        .descriptor
+                        .delivery_policy
+                        .stale_while_revalidate_seconds,
                     maximum_object_bytes: self.descriptor.delivery_policy.maximum_object_bytes,
                     force_https: self.descriptor.security_policy.force_https,
                     variant_reason,

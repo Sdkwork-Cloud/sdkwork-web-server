@@ -25,7 +25,9 @@ use sdkwork_webserver_delivery_runtime::{
     WebsiteDeliveryContentKind, WebsiteDeliveryError, WebsiteDeliveryExecutor,
     WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
     WebsiteDeliveryRequest, WebsiteDeliveryRoutingContext, WebsiteDeliveryScheme,
-    WebsiteProviderRegistry, WebsiteProviderRegistryError,
+    WebsiteProviderEventInvalidation, WebsiteProviderEventInvalidationKind,
+    WebsiteProviderEventInvalidationPriority, WebsiteProviderRegistry,
+    WebsiteProviderRegistryError,
 };
 use serde_json::{json, Value};
 
@@ -796,6 +798,102 @@ async fn maps_provider_canonical_routes_back_through_binding_and_alias_mounts() 
             ..
         })
     ));
+}
+
+#[tokio::test]
+async fn caches_positive_and_negative_resolutions_until_exact_event_invalidation() {
+    let runtime = active_runtime(FixtureHandler::Wiki);
+    let wiki = Arc::new(FakeWikiProvider::new(
+        [
+            Ok(wiki_content_resolution(4, false)),
+            Err(provider_error(WebsiteProviderErrorKind::NotPublic)),
+            Ok(wiki_content_resolution_at("/private", 4, false)),
+        ],
+        vec![b"wiki".to_vec()],
+    ));
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = WebsiteDeliveryExecutor::new(runtime, Arc::new(providers));
+
+    for _ in 0..2 {
+        let outcome = executor
+            .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+            .await
+            .unwrap();
+        assert!(matches!(outcome, WebsiteDeliveryOutcome::Content(_)));
+    }
+    for _ in 0..2 {
+        let outcome = executor
+            .execute(delivery_request("/private", WebsiteDeliveryMethod::Head))
+            .await
+            .unwrap();
+        assert!(matches!(outcome, WebsiteDeliveryOutcome::NotFound));
+    }
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 2);
+
+    executor
+        .provider_event_invalidator()
+        .invalidate(&[WebsiteProviderEventInvalidation {
+            provider_type: WebsiteProviderType::Knowledgebase,
+            provider_resource_uuid: "publication-0001".to_owned(),
+            kind: WebsiteProviderEventInvalidationKind::Route {
+                path: "/private".to_owned(),
+            },
+            priority: WebsiteProviderEventInvalidationPriority::Revocation,
+            provider_generation: Some("8".to_owned()),
+            public_generation: Some("12".to_owned()),
+        }])
+        .await
+        .unwrap();
+
+    let refreshed = executor
+        .execute(delivery_request("/private", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    assert!(matches!(refreshed, WebsiteDeliveryOutcome::Content(_)));
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 3);
+
+    let still_cached = executor
+        .execute(delivery_request("/guide", WebsiteDeliveryMethod::Head))
+        .await
+        .unwrap();
+    assert!(matches!(still_cached, WebsiteDeliveryOutcome::Content(_)));
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn coalesces_concurrent_resolution_misses_without_an_origin_waiter_queue() {
+    let runtime = active_runtime(FixtureHandler::Wiki);
+    let wiki = Arc::new(
+        FakeWikiProvider::new(
+            [Ok(wiki_content_resolution(4, false))],
+            vec![b"wiki".to_vec()],
+        )
+        .with_resolve_delay(Duration::from_millis(25)),
+    );
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_wiki(WebsiteProviderType::Knowledgebase, wiki.clone())
+        .unwrap();
+    let executor = Arc::new(WebsiteDeliveryExecutor::new(runtime, Arc::new(providers)));
+
+    let requests = (0..16).map(|index| {
+        let executor = Arc::clone(&executor);
+        async move {
+            let mut request = delivery_request("/guide", WebsiteDeliveryMethod::Head);
+            request.request_id = format!("request-{index:04}");
+            request.trace_id = format!("trace-{index:04}");
+            executor.execute(request).await
+        }
+    });
+    let outcomes = futures_util::future::join_all(requests).await;
+
+    assert!(outcomes
+        .into_iter()
+        .all(|outcome| matches!(outcome, Ok(WebsiteDeliveryOutcome::Content(_)))));
+    assert_eq!(wiki.resolve_requests.lock().unwrap().len(), 1);
 }
 
 fn active_runtime(handler: FixtureHandler) -> Arc<WebsiteRuntimeRegistry> {
