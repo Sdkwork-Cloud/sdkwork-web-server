@@ -1,6 +1,6 @@
 pub mod base;
-pub mod paths;
 pub mod nginx;
+pub mod paths;
 pub use nginx::NginxApi;
 pub mod server;
 pub use server::ServerApi;

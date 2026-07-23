@@ -459,6 +459,9 @@
         "tlsPolicyRef": {
           "$ref": "#/$defs/id"
         },
+        "tlsRuntime": {
+          "enum": ["assignment"]
+        },
         "defaultVirtualHostRef": {
           "$ref": "#/$defs/id"
         },

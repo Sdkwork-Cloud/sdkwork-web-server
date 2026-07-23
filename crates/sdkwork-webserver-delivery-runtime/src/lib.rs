@@ -11,9 +11,10 @@ pub use activation_probe::{
     WebsiteRuntimeActivationProbeReport,
 };
 pub use error::{
-    WebsiteDeliveryError, WebsiteProviderRegistryError, WebsiteRuntimeProviderValidationError,
+    WebsiteDeliveryError, WebsiteDeliveryExecutorConfigError, WebsiteProviderRegistryError,
+    WebsiteRuntimeProviderValidationError,
 };
-pub use executor::WebsiteDeliveryExecutor;
+pub use executor::{WebsiteDeliveryExecutor, DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES};
 pub use model::*;
 pub use provider_event::*;
 pub use registry::{WebsiteProviderRegistry, WebsiteRuntimeProviderValidationReport};

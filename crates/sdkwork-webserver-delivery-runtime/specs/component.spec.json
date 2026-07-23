@@ -60,7 +60,9 @@
       "knowledgebase.wiki.navigation.changed.v1",
       "knowledgebase.wiki.search.changed.v1"
     ],
-    "configKeys": []
+    "configKeys": [
+      "SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES"
+    ]
   },
   "verification": {
     "commands": [

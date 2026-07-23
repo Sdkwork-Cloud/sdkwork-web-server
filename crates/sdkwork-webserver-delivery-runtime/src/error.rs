@@ -4,6 +4,17 @@ use sdkwork_webserver_core::website_runtime::{
 };
 use thiserror::Error;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Error)]
+pub enum WebsiteDeliveryExecutorConfigError {
+    #[error(
+        "provider buffered-content budget {configured_bytes} is outside 1..={maximum_bytes} bytes"
+    )]
+    InvalidBufferedContentBudget {
+        configured_bytes: usize,
+        maximum_bytes: usize,
+    },
+}
+
 #[derive(Debug, Error)]
 pub enum WebsiteDeliveryError {
     #[error("website runtime set is unavailable")]

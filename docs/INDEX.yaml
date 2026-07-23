@@ -5,6 +5,10 @@ canon:
   prd: docs/product/prd/PRD.md
   techArchitecture: docs/architecture/tech/TECH_ARCHITECTURE.md
 entries:
+  - id: REVIEW-20260723-web-server-production-readiness
+    path: docs/engineering/reviews/REVIEW-20260723-web-server-production-readiness.md
+    kind: review
+    status: changes-requested
   - id: REQ-2026-0060
     path: docs/product/requirements/REQ-2026-0060-cloud-site-delivery-data-plane.md
     kind: req

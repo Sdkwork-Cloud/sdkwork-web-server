@@ -10,6 +10,7 @@ use super::{
 const MAX_DIAGNOSTICS: usize = 128;
 const HARD_MAX_ASSIGNMENTS: usize = 10_000;
 const HARD_MAX_SERVER_NAMES_PER_ASSIGNMENT: usize = 100;
+const HARD_MAX_GENERATION: u64 = 9_007_199_254_740_991;
 
 pub(crate) fn validate_tls_assignment_snapshot(
     snapshot: &TlsAssignmentSnapshot,
@@ -37,6 +38,12 @@ impl TlsRuntimeValidator {
         }
         self.validate_id("/snapshotUuid", &snapshot.snapshot_uuid);
         self.validate_id("/nodeUuid", &snapshot.node_uuid);
+        if snapshot.generation == 0 || snapshot.generation > HARD_MAX_GENERATION {
+            self.push(
+                "/generation",
+                format!("must be between 1 and JSON-safe ceiling {HARD_MAX_GENERATION}"),
+            );
+        }
         self.validate_timestamp("/generatedAt", &snapshot.generated_at);
         if snapshot.compiler_version.is_empty()
             || snapshot.compiler_version.len() > 128

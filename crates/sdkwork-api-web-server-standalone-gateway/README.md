@@ -23,7 +23,7 @@ This runtime does not consume generated HTTP SDKs. It mounts repository-owned ma
 
 Management mode uses SDKWork typed server/database environment configuration. `validate` and `data-plane` accept an explicit config argument or `SDKWORK_WEB_SERVER_CONFIG_FILE`.
 
-`data-plane` honors `deployment.reload`: `disabled` keeps the startup generation; `watch` publishes verified same-topology generations through a lock-free request-path pointer. Listener, TLS, connection-admission, timeout, drain, or Watch-policy changes require restart.
+`data-plane` honors `deployment.reload`: `disabled` keeps the startup generation; `watch` publishes verified same-topology generations through a lock-free request-path pointer. Listener topology, static TLS policy, connection-admission, timeout, drain, or Watch-policy changes require restart. A listener declared with `tlsRuntime: assignment` uses the independent TLS runtime to validate and atomically activate certificate-material rotations without replacing the listener; staging and production retain a separate A/B TLS snapshot recovery state.
 
 `SDKWORK_WEB_DATA_PLANE_OPERATIONS_BIND` optionally enables a separate loopback-only listener with `/healthz`, `/livez`, `/readyz`, and `/metrics`. It is disabled by default and rejects port zero, wildcard, private-LAN, and public binds. The listener is host policy, never an application virtual-host route. It uses canonical `SDKWORK_WEB_ENVIRONMENT`, `SDKWORK_WEB_DEPLOYMENT_PROFILE`, and `SDKWORK_WEB_RUNTIME_TARGET` dimensions and fails startup on unknown aliases.
 
@@ -58,7 +58,11 @@ This executable is the standalone server gateway. Its data-plane-only operation 
 - Fixed, Chunked, proxy, non-proxy, and HTTP/2 bodies without Content-Length are stream-counted against the application Body limit; no Body-sized collection is introduced.
 - Reverse-proxy request and response bodies preserve Data and Trailer frames. Trailer declarations and actual frames share finite count/byte limits and forbidden-field checks; only canonical `TE: trailers` is regenerated toward upstreams.
 - HTTP/1 enables write-side half-close, accepts only HTTP/1.1 `Expect: 100-continue`, returns early `413` without `100` for known fixed-length overflow, rejects unsupported expectations with `417`, and removes `Expect` before proxying upstream. HTTP/1.0 default-host, Keep-Alive, ordered Pipeline, finite Pipeline read-ahead, and Transfer-Encoding rejection are raw-socket tested.
-- Static traversal/symlink escape checks run before `tower-http` file service.
+- Static files are opened capability-relative from one configured root. Every directory component
+  and the final file use no-follow semantics, and the response streams from the already-open file
+  handle, so path replacement cannot redirect an active response. Directory index, SPA fallback,
+  conditional requests, single-range requests, HEAD, MIME, and bounded streaming are preserved;
+  immutable/read-only production roots remain defense in depth.
 - Proxy bodies are streamed with a counted hard limit; redirects and protocol upgrades are not followed silently.
 - Classic HTTP/1.1 WebSocket proxying requires GET, exact Connection/Upgrade tokens, and no Body framing. Hop-by-hop fields are sanitized and canonical upgrade fields regenerated; upstream non-101 responses remain bounded streaming proxy responses, while malformed upstream 101 metadata becomes a generic local `502` and closes the downstream connection.
 - Successful WebSocket/WSS tunnels are owned by one runtime supervisor after Hyper releases the upgraded sockets. Each task holds upstream request admission, physical connection capacity, and its immutable Watch generation; uses fixed 16 KiB directional buffers; observes `maxConnectionAgeMs` and runtime shutdown; and consumes only the remaining shared drain budget. Directional byte totals use Tokio's authoritative successful copy result; partial bytes after copy error are not reported because the API does not expose them. HTTP/2 extended CONNECT, frame parsing, heartbeat, and exact Nginx WebSocket timeout directives are not claimed.

@@ -2,7 +2,7 @@
 
 Status: in-progress
 Owner: SDKWork Web Server maintainers
-Updated: 2026-07-22
+Updated: 2026-07-23
 Requirement: REQ-2026-0060
 Decision: ADR-20260721-compiled-website-runtime-descriptor
 Specs: ARCHITECTURE_DECISION_SPEC.md, API_SPEC.md, SDK_SPEC.md,
@@ -62,9 +62,17 @@ replay after rollback.
 
 `crates/sdkwork-webserver-core/src/tls_runtime/` independently implements the node-scoped
 `sdkwork.tls-runtime.v1` assignment contract, canonical hash verification, bounded TLS/ALPN policy,
-raw key-material rejection, and immutable exact/wildcard SNI indexes. It deliberately stops before
-secret-provider authorization, material decryption, certificate/key/chain validation, probing, and
-atomic rustls context activation.
+strictly increasing JSON-safe generation fencing, raw key-material rejection, and immutable
+exact/wildcard SNI indexes. The standalone gateway now
+consumes this contract for a listener explicitly marked `tlsRuntime: assignment`. Its initial
+file-provider adapter accepts only `file:<opaque-version-id>`, confines canonical material paths to
+a protected root, parses bounded full-chain/key PEM, and validates leaf SAN, current and declared
+validity, expected SHA-256, and key match. It builds a complete Rustls SNI context off the accept
+path, enforces the snapshot TLS version range and listener ALPN compatibility, then atomically
+reloads new handshakes while existing connections retain the prior context. Invalid updates retain
+last-known-good, and staging/production native TLS uses independent A/B snapshot recovery. KMS,
+Vault, and CSI adapters can implement the same material-provider boundary without changing the
+snapshot or request path; their authorization/decryption contracts remain deployment work.
 
 ## 2. Snapshot Model
 
@@ -101,14 +109,15 @@ stable identifier; meaningful ordered arrays such as index-file preference retai
 
 ### 2.2 TLS Snapshot
 
-The TLS loader validates node assignment, secret authorization, encrypted transport, complete
+The target TLS loader validates node assignment, secret authorization, encrypted transport, complete
 certificate/key bundle, key match, chain, names, validity, algorithm, TLS policy, and snapshot
 version. SNI maps are immutable and swapped independently from website routing maps.
 
-The implemented first stage validates node-scoped assignment metadata, opaque material references,
+The implemented consumer validates node-scoped assignment metadata, opaque material references,
 expected fingerprints, canonical SNI ownership, validity metadata, TLS version/ALPN policy, schema,
-hash, and bounds. Material and hot-activation checks in the preceding paragraph remain the next
-runtime-adapter stage.
+hash, bounds, protected file-provider authorization, certificate/key evidence, and atomic Rustls
+activation. Encrypted control-plane transport, non-file secret providers, Deploy distribution and
+served observations remain outside this node-local adapter.
 
 ### 2.3 Activation
 
@@ -140,7 +149,8 @@ Web Internal SDK, persists immutable per-target evidence, and transactionally ad
 `deploy_site.current_revision_id` only after every frozen target reports the exact assignment as
 `ACTIVE`; partial, stale, mismatched, or `REJECTED` evidence cannot advance it. Detached source
 attestation where required, external public-domain multi-vantage probes, production drift
-dashboards/alerts, and TLS material hot activation remain independent release work. The node-local
+dashboards/alerts, Deploy TLS assignment distribution/observation, and public served-fingerprint
+convergence remain independent release work. The node-local
 probe proves candidate route/provider resolvability on one Node; it is not public DNS, TLS, CDN, or
 Internet reachability evidence.
 
@@ -175,8 +185,10 @@ sequenceDiagram
 
 The production Kubernetes baseline currently terminates public TLS at the reviewed load
 balancer/CDN and forwards HTTP/1 to the private `8080` Service assigned to exactly one tenant
-fleet; the node-scoped TLS runtime shown above is the target hot-activation path and remains
-release-blocking. The ingress maps every platform/custom domain to that domain's tenant fleet
+fleet. Native node-scoped Rustls hot activation is implemented and available through the separate
+native TLS config profile, but the authored Kubernetes baseline does not enable it until Deploy
+publishes TLS assignments, mounts authorized versioned material, and records served-fingerprint
+convergence. The ingress maps every platform/custom domain to that domain's tenant fleet
 Service before the runtime performs Host, Binding, device Variant, Mount, and resource selection.
 For the external-termination baseline, deployment rendering requires the direct ingress peer
 CIDRs, inserts them into an immutable per-Node listener ConfigMap, and runs the real config compiler
@@ -307,7 +319,13 @@ immutable provider registry. Its transport-neutral executor preserves runtime-se
 revision plus tenant/Site/Binding/Variant/Mount/Resource identity, executes STATIC/explicit SPA
 fallback/WIKI provider calls, handles binding and Wiki redirects, HEAD and conditional outcomes,
 checks Range capability, and wraps provider streams with a second declared-length/runtime-limit
-guard. It reverse-maps provider canonical routes through Binding prefixes, Mount `ROOT`/`ALIAS`
+guard. Before a non-HEAD content open, it atomically reserves the compiled route's
+`maximumObjectBytes` from a shared process byte semaphore. The reservation is deliberately
+non-queueing and remains attached
+to the response stream until completion, failure, or cancellation; saturation returns a bounded
+retryable unavailable outcome without calling the owner SDK. This conservative ceiling prevents
+under-reported metadata and `If-Range` fallback from weakening admission. It reverse-maps provider canonical routes
+through Binding prefixes, Mount `ROOT`/`ALIAS`
 translation, and resource subpaths; routes outside the compiled resource root fail closed. Focused
 tests cover routing scope, non-public collapse, explicit SPA fallback, missing runtime/provider
 failure, duplicate registration, exact Range evidence, force-HTTPS redirect, provider/chunk
@@ -365,7 +383,10 @@ Axum streams provider chunks without response buffering, but the current generat
 retrieve each content object as a bounded `Vec<u8>` before the adapters create their streams.
 Activation therefore enforces the concrete 16 MiB Knowledgebase or 256 MiB Drive adapter ceiling
 even though the transport-neutral descriptor schema permits a future true-streaming Provider up to
-1 TiB. Raw HTTP, manually assembled credentials, direct provider storage access, and false
+1 TiB. `SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES` adds a 16 MiB..2 GiB process admission
+bound, defaulting to 256 MiB, over concurrent retained provider buffers. It reduces concurrent
+memory amplification but cannot eliminate the generated SDK's single-response allocation or copy.
+Raw HTTP, manually assembled credentials, direct provider storage access, and false
 same-origin fallback remain forbidden.
 
 ## 6. SDK Integration Boundary
@@ -437,6 +458,14 @@ its outbox secret and `sha256=` signatures. Both sign `delivery-time + "." + exa
 in constant time. Moves carry old/new WebsiteRoot paths. Drive `KNOWLEDGEBASE_RAW` scopes remain a
 Knowledgebase concern and never become direct Web Server invalidations.
 
+Drive callback routing is Node-qualified before authentication:
+`/nodes/{nodeUuid}/provider-events/drive-website-events` must match the configured active Node and
+canonical subscription ID. Missing Node, wrong Node, or another subscription ID returns not found.
+The unqualified `/provider-events/{subscriptionId}` route accepts Knowledgebase only. Deploy owns
+Drive WebsiteRoot channel registration and bounded renewal through the generated Drive Internal
+SDK, while Drive sends event payloads directly to the exact Node; Deploy is not in the delivery or
+acknowledgement path.
+
 Drive sequence numbers are contiguous; Knowledgebase publication sequences are strictly monotonic
 but may jump. Initial observation, checkpoint loss, a Drive gap, an incompatible duplicate ID or
 sequence, or persisted uncertainty first writes an uncertain checkpoint, validates the current
@@ -492,6 +521,14 @@ Separate admission pools apply to connections, handshakes, descriptor load, TLS 
 metadata, origin streams, Wiki render/search, cache writes, invalidation, usage spool, and probes.
 Slow provider work cannot consume all request executor capacity. Deadlines propagate and
 cancellation releases permits and streams.
+
+While provider SDK content methods return complete byte vectors, a weighted process semaphore also
+bounds admitted content bytes. It uses the compiled route's maximum object bytes, performs
+`try_acquire` without
+waiters, and transfers the owned permit to the response stream. This is intentionally independent
+of request-count admission because many small requests and a few maximum-size objects have
+different memory risk. The Kubernetes baseline selects 256 MiB under a 1 GiB container limit;
+capacity tests must justify any environment override.
 
 Descriptor limits cover assigned Sites/node, hosts, Bindings, Variants, rules, Mounts, resources,
 policies, headers, bytes, and retained revisions. TLS limits cover names, SANs, versions, material
@@ -551,7 +588,9 @@ preserves exact request bytes, and exposes only that Node's provider-event Servi
 Service, headless Service, Pod selectors, NetworkPolicy, and PodDisruptionBudget all include
 `sdkwork.com/tenant-fleet`. Each provider-event Service additionally selects one
 `sdkwork.com/web-node`; it must not load-balance a signed subscription callback across the fleet
-because subscription IDs, HMAC secrets, and checkpoints are Node-bound. This prevents Website
+because Drive channels, HMAC secrets, and checkpoints are Node-bound. The Drive subscription ID is
+the shared canonical `drive-website-events`, while the path Node and channel identify the exact
+consumer. This prevents Website
 traffic from reaching another tenant scope and callbacks from reaching another Node. NetworkPolicy
 separates website and callback ingress with matching namespace and Pod labels. Rendering requires
 reviewed direct-ingress CIDRs, compiles the resulting policy, and mounts it through one
@@ -567,7 +606,7 @@ remain schedulable when distinct workers exist. The fleet-scoped PodDisruptionBu
 voluntary disruption to one Node.
 
 High availability therefore requires one owner event subscription and exact internal callback
-route per Web Node. If a provider cannot maintain independent Node subscriptions, a formally owned
+route `/nodes/{nodeUuid}/provider-events/drive-website-events` per Web Node. If a provider cannot maintain independent Node subscriptions, a formally owned
 durable fleet fan-out service is required before event-driven caching can be enabled; a Kubernetes
 Service is not a broadcast mechanism.
 

@@ -122,7 +122,11 @@ HTTP/1 connection handling enables Hyper write-side half-close so EOF after a co
 - Default weighted round-robin uses one generation-local standard Mutex protecting boxed signed-current-weight and recovery-marker arrays sized to the fixed target vector. One short linearized transaction adds effective weights, selects by greatest current weight with stable ties, and subtracts the eligible total; it never allocates, performs I/O, or crosses `.await`. Health transitions reset the corresponding phase under the same lock, retry exclusion only skips, primary/backup phases remain independent, and a half-open race performs at most one fallback scan. Optional least-connections remains independent, adding one generation-local shared atomic active-request counter per target and overflow-safe integer ratio comparison. Neither strategy stores an expanded schedule or request-level collection; activity ownership continues through HTTP response or WebSocket tunnel lifetime.
 - Optional health-recovery slow start adds one immutable duration and one atomic generation-relative start offset per target. Round-robin and least-connections lazily derive the same monotonic effective integer weight without a timer task, queue, request allocation, wall clock, or stale compare-exchange reset.
 - Non-proxy request bodies are stream-discarded and counted before action execution; fixed, Chunked, and HTTP/2 no-length bodies share one application Body budget without Body-sized collection.
-- Static files use the established async service and its bounded OS/file behavior.
+- Static files are opened from one capability handle for the configured root. Request, index, and
+  SPA fallback paths are validated; every directory component uses capability-relative no-follow
+  opening; the final regular file is opened no-follow; and the response streams only from that
+  already-open handle. Path replacement therefore cannot redirect an active response. Immutable
+  read-only roots remain defense in depth against untrusted writers, hard links, and mount changes.
 - Connection, body, header, timeout, route, host, upstream, target, and config byte limits are validated before serving.
 - HTTP/2 concurrent decoded-header, encoded-header, and send-buffer products are each capped at 64 MiB per connection. The Wire Guard holds constant parser state and no payload or per-Stream collection; protocol-limit changes are Restart-only and cannot partially replace a live listener generation.
 - Active HTTP/2 decoded Header List and send-buffer products and the connection-level encoded Header Block product are each capped at 1 GiB globally. Optional RSS/Working Set, finite cgroup v2, FD/HANDLE, and event-loop-lag admission adds measured process headroom; it does not replace hard container limits or load/soak evidence.
@@ -153,7 +157,7 @@ The foundation establishes bounded behavior but does not yet satisfy the parent 
 | Machine configuration schema | Implemented and verified for the declared foundation profile |
 | Core config model/compiler | Implemented; strict validation and immutable host/route indexes verified |
 | HTTP listener and fixed/redirect routes | Implemented and real-socket tested |
-| Static and streaming proxy routes | Implemented and real-socket tested; proxy bodies are not fully collected |
+| Static and streaming proxy routes | Implemented and real-socket tested; proxy bodies are not fully collected. Static delivery uses capability-relative per-component no-follow opening and streams from the stable open handle. Windows and Linux tests cover path replacement, final/intermediate symlink rejection, directory index/redirect, SPA fallback, conditional requests, Range, HEAD, and MIME behavior. |
 | HTTPS listener | Implemented and tested with Rustls TLS, HTTP/2 ALPN, immutable multi-certificate Exact/Wildcard SNI selection, leaf SAN/time/key activation checks, and fail-closed unknown/no-SNI behavior |
 | Connection admission and graceful drain | Implemented and tested under connection saturation |
 | Same-topology local configuration reload | Implemented with SHA-256 revisions, `ArcSwap`, failed-candidate retention, and concurrent real-socket tests |
@@ -192,7 +196,8 @@ The foundation establishes bounded behavior but does not yet satisfy the parent 
 | Data-plane RED and capacity metrics | Implemented with fixed seconds histograms through response Body/upstream Header lifecycle, streaming Body and successful tunnel byte counters, fixed protocol/DNS outcomes, cancellation-safe DNS active ownership, and current-generation request/physical-connection capacity snapshots |
 | Bounded safe upstream retries | Implemented as opt-in sequential distinct-target failover for Body-end-of-stream idempotent methods, with exact supported Nginx condition tokens, one retained request permit, fixed stack attempted-target state, finite attempt/total deadlines, passive-health accounting, cancellation-safe probe ownership, and fixed retry metrics |
 | Full repository verification | `pnpm verify` and strict full-workspace Clippy pass |
-| Persisted rollback, TLS/listener hot handoff, executable upgrade, complete Nginx profile, cache, cluster rollout | Not implemented; later requirements |
+| Dynamic certificate rotation and restart recovery | Implemented for `tlsRuntime: assignment` with bounded material resolution, SAN/time/key/fingerprint validation, exact/wildcard SNI, listener-compatible TLS/ALPN policy, atomic Rustls reload, failed-candidate last-known-good retention, and independent A/B snapshot recovery |
+| Website persisted rollback, listener bind/topology hot handoff, executable upgrade, complete Nginx profile, cache, cluster rollout | Not implemented; later requirements |
 
 No planned row may be reported as implemented until its verification evidence passes.
 

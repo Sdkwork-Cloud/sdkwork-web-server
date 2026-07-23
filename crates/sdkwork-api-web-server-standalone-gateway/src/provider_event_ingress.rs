@@ -14,6 +14,10 @@ use axum::{
     routing::post,
     Router,
 };
+use sdkwork_drive_contract::drive::events::{
+    derive_website_event_channel_id, derive_website_event_verification_token,
+    WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID,
+};
 use sdkwork_utils_rust::{hmac_sha256, secure_compare, sha256_hash};
 use sdkwork_webserver_delivery_runtime::{
     parse_website_provider_event, FileWebsiteProviderEventCheckpointStore,
@@ -44,6 +48,10 @@ const EVENT_SIGNATURE_HEADER: &str = "x-sdkwork-event-signature";
 const EVENT_SEQUENCE_HEADER: &str = "x-sdkwork-event-sequence";
 const EVENT_TYPE_HEADER: &str = "x-sdkwork-event-type";
 const DRIVE_CHANNEL_ID_HEADER: &str = "x-sdkwork-drive-channel-id";
+const DRIVE_RETRY_COUNT_HEADER: &str = "x-sdkwork-event-retry-count";
+const DRIVE_IDEMPOTENCY_KEY_HEADER: &str = "x-sdkwork-idempotency-key";
+const MAXIMUM_DRIVE_CHANNEL_ID_BYTES: usize = 64;
+const MAXIMUM_DRIVE_RETRY_COUNT: u8 = 9;
 
 #[derive(Debug, Error)]
 pub(crate) enum WebsiteProviderEventIngressError {
@@ -64,6 +72,7 @@ impl WebsiteProviderEventIngress {
     pub(crate) async fn bind_from_file(
         path: &Path,
         expected_tenant_scope_hash: &str,
+        expected_node_uuid: &str,
         require_drive: bool,
         require_knowledgebase: bool,
         invalidator: Arc<dyn WebsiteProviderEventInvalidator>,
@@ -73,6 +82,7 @@ impl WebsiteProviderEventIngress {
         let validated = validate_config(
             config,
             expected_tenant_scope_hash,
+            expected_node_uuid,
             require_drive,
             require_knowledgebase,
         )?;
@@ -97,10 +107,7 @@ impl WebsiteProviderEventIngress {
             maximum_clock_skew_seconds: validated.maximum_clock_skew_seconds,
             concurrency: Arc::new(Semaphore::new(validated.maximum_concurrent_deliveries)),
         });
-        let router = Router::new()
-            .route("/provider-events/{subscription_id}", post(receive_event))
-            .layer(DefaultBodyLimit::max(MAXIMUM_PROVIDER_EVENT_BYTES))
-            .with_state(state);
+        let router = provider_event_router(state);
         Ok(Self { listener, router })
     }
 
@@ -141,7 +148,7 @@ struct ProviderEventSubscriptionConfig {
     tenant_scope_hash: String,
     tenant_id: String,
     organization_id: Option<String>,
-    drive_channel_id: Option<String>,
+    drive_node_uuid: Option<String>,
     secret_file: PathBuf,
 }
 
@@ -165,8 +172,8 @@ struct ProviderEventSubscription {
     provider: ProviderEventSourceConfig,
     tenant_id: String,
     organization_id: Option<String>,
-    drive_channel_id: Option<String>,
-    signing_key: Zeroizing<Vec<u8>>,
+    drive_node_uuid: Option<String>,
+    signing_secret: Zeroizing<Vec<u8>>,
 }
 
 struct IngressState {
@@ -209,6 +216,7 @@ fn load_config(
 fn validate_config(
     config: ProviderEventIngressConfig,
     expected_tenant_scope_hash: &str,
+    expected_node_uuid: &str,
     require_drive: bool,
     require_knowledgebase: bool,
 ) -> Result<ValidatedIngressConfig, WebsiteProviderEventIngressError> {
@@ -233,7 +241,7 @@ fn validate_config(
     }
 
     let mut subscriptions = BTreeMap::new();
-    let mut drive_channels = BTreeSet::new();
+    let mut drive_nodes = BTreeSet::new();
     let mut has_drive = false;
     let mut has_knowledgebase = false;
     for subscription in config.subscriptions {
@@ -246,34 +254,35 @@ fn validate_config(
             validate_bounded_identity(value, 64)?;
         }
         let secret = read_secret(&subscription.secret_file, subscription.provider)?;
-        let signing_key = match subscription.provider {
+        match subscription.provider {
             ProviderEventSourceConfig::Drive => {
                 has_drive = true;
-                let channel_id = subscription
-                    .drive_channel_id
-                    .as_deref()
-                    .ok_or(WebsiteProviderEventIngressError::Config)?;
-                validate_bounded_identity(channel_id, 200)?;
-                if !drive_channels.insert(channel_id.to_owned()) {
+                if subscription.subscription_id != WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID {
                     return Err(WebsiteProviderEventIngressError::Config);
                 }
-                Zeroizing::new(sha256_hash(secret.as_slice()).into_bytes())
+                let node_uuid = subscription
+                    .drive_node_uuid
+                    .as_deref()
+                    .ok_or(WebsiteProviderEventIngressError::Config)?;
+                validate_bounded_identity(node_uuid, 128)?;
+                if node_uuid != expected_node_uuid || !drive_nodes.insert(node_uuid.to_owned()) {
+                    return Err(WebsiteProviderEventIngressError::Config);
+                }
             }
             ProviderEventSourceConfig::Knowledgebase => {
                 has_knowledgebase = true;
-                if subscription.drive_channel_id.is_some() || subscription.organization_id.is_none()
+                if subscription.drive_node_uuid.is_some() || subscription.organization_id.is_none()
                 {
                     return Err(WebsiteProviderEventIngressError::Config);
                 }
-                secret
             }
-        };
+        }
         let entry = ProviderEventSubscription {
             provider: subscription.provider,
             tenant_id: subscription.tenant_id,
             organization_id: subscription.organization_id,
-            drive_channel_id: subscription.drive_channel_id,
-            signing_key,
+            drive_node_uuid: subscription.drive_node_uuid,
+            signing_secret: secret,
         };
         if subscriptions
             .insert(subscription.subscription_id, entry)
@@ -353,9 +362,42 @@ fn read_secret(
     Ok(secret)
 }
 
-async fn receive_event(
+fn provider_event_router(state: Arc<IngressState>) -> Router {
+    Router::new()
+        .route(
+            "/provider-events/{subscription_id}",
+            post(receive_unqualified_event),
+        )
+        .route(
+            "/nodes/{node_uuid}/provider-events/{subscription_id}",
+            post(receive_node_event),
+        )
+        .layer(DefaultBodyLimit::max(MAXIMUM_PROVIDER_EVENT_BYTES))
+        .with_state(state)
+}
+
+async fn receive_unqualified_event(
     State(state): State<Arc<IngressState>>,
     AxumPath(subscription_id): AxumPath<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> StatusCode {
+    receive_event(state, None, subscription_id, headers, body).await
+}
+
+async fn receive_node_event(
+    State(state): State<Arc<IngressState>>,
+    AxumPath((node_uuid, subscription_id)): AxumPath<(String, String)>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> StatusCode {
+    receive_event(state, Some(node_uuid), subscription_id, headers, body).await
+}
+
+async fn receive_event(
+    state: Arc<IngressState>,
+    route_node_uuid: Option<String>,
+    subscription_id: String,
     headers: HeaderMap,
     body: Bytes,
 ) -> StatusCode {
@@ -365,6 +407,9 @@ async fn receive_event(
     let Some(subscription) = state.subscriptions.get(&subscription_id) else {
         return StatusCode::NOT_FOUND;
     };
+    if !delivery_route_matches_subscription(subscription, route_node_uuid.as_deref()) {
+        return StatusCode::NOT_FOUND;
+    }
     if !content_type_is_json(&headers) {
         return StatusCode::UNSUPPORTED_MEDIA_TYPE;
     }
@@ -395,6 +440,21 @@ async fn receive_event(
             | WebsiteProviderEventProcessError::Reconciliation(_)
             | WebsiteProviderEventProcessError::Invalidation(_),
         ) => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+fn delivery_route_matches_subscription(
+    subscription: &ProviderEventSubscription,
+    route_node_uuid: Option<&str>,
+) -> bool {
+    match subscription.provider {
+        ProviderEventSourceConfig::Drive => {
+            route_node_uuid.is_some()
+                && route_node_uuid == subscription.drive_node_uuid.as_deref()
+                && route_node_uuid
+                    .is_some_and(|value| validate_bounded_identity(value, 128).is_ok())
+        }
+        ProviderEventSourceConfig::Knowledgebase => route_node_uuid.is_none(),
     }
 }
 
@@ -429,10 +489,27 @@ fn authenticate_delivery(
     payload.extend_from_slice(timestamp.as_bytes());
     payload.push(b'.');
     payload.extend_from_slice(body);
-    let expected = format!(
-        "{prefix}{}",
-        hmac_sha256(&payload, subscription.signing_key.as_slice())
-    );
+    let derived_signing_key = match subscription.provider {
+        ProviderEventSourceConfig::Drive => {
+            let channel_id = header_value(
+                headers,
+                DRIVE_CHANNEL_ID_HEADER,
+                MAXIMUM_DRIVE_CHANNEL_ID_BYTES,
+            )?;
+            let verification_token = derive_website_event_verification_token(
+                channel_id,
+                subscription.signing_secret.as_slice(),
+            );
+            Some(Zeroizing::new(
+                sha256_hash(verification_token.as_bytes()).into_bytes(),
+            ))
+        }
+        ProviderEventSourceConfig::Knowledgebase => None,
+    };
+    let signing_key = derived_signing_key
+        .as_ref()
+        .map_or(subscription.signing_secret.as_slice(), |key| key.as_slice());
+    let expected = format!("{prefix}{}", hmac_sha256(&payload, signing_key));
     if !secure_compare(&expected, signature) {
         return Err(());
     }
@@ -480,8 +557,30 @@ fn delivery_matches_event(
     }
     match subscription.provider {
         ProviderEventSourceConfig::Drive => {
-            header_value(headers, DRIVE_CHANNEL_ID_HEADER, 200)
-                == subscription.drive_channel_id.as_deref().ok_or(())
+            let Ok(channel_id) = header_value(
+                headers,
+                DRIVE_CHANNEL_ID_HEADER,
+                MAXIMUM_DRIVE_CHANNEL_ID_BYTES,
+            ) else {
+                return false;
+            };
+            let Some(node_uuid) = subscription.drive_node_uuid.as_deref() else {
+                return false;
+            };
+            if !valid_drive_retry_count(headers)
+                || !event.invalidations.iter().any(|invalidation| {
+                    derive_website_event_channel_id(node_uuid, &invalidation.provider_resource_uuid)
+                        == channel_id
+                })
+            {
+                return false;
+            }
+            let expected_idempotency_key = format!("{}:{channel_id}", event.id);
+            header_value(
+                headers,
+                DRIVE_IDEMPOTENCY_KEY_HEADER,
+                128 + 1 + MAXIMUM_DRIVE_CHANNEL_ID_BYTES,
+            ) == Ok(expected_idempotency_key.as_str())
         }
         ProviderEventSourceConfig::Knowledgebase => {
             header_value(headers, EVENT_TYPE_HEADER, 128) == Ok(event.event_type.as_str())
@@ -489,6 +588,15 @@ fn delivery_matches_event(
                     == Ok(event.sequence_no.to_string().as_str())
         }
     }
+}
+
+fn valid_drive_retry_count(headers: &HeaderMap) -> bool {
+    let Ok(value) = header_value(headers, DRIVE_RETRY_COUNT_HEADER, 1) else {
+        return false;
+    };
+    value
+        .parse::<u8>()
+        .is_ok_and(|retry_count| retry_count <= MAXIMUM_DRIVE_RETRY_COUNT)
 }
 
 fn header_value<'a>(
@@ -557,11 +665,37 @@ mod tests {
                 tenant_scope_hash: "a".repeat(64),
                 tenant_id: "100001".to_owned(),
                 organization_id: Some("0".to_owned()),
-                drive_channel_id: None,
-                secret_file: secret,
+                drive_node_uuid: None,
+                secret_file: secret.clone(),
             }],
         };
-        assert!(validate_config(config, &"a".repeat(64), false, true).is_ok());
+        assert!(validate_config(config, &"a".repeat(64), "node-1", false, true).is_ok());
+
+        let invalid_drive_subscription = ProviderEventIngressConfig {
+            schema_version: INGRESS_SCHEMA_VERSION.to_owned(),
+            bind_address: "127.0.0.1:3810".to_owned(),
+            checkpoint_directory: root.path().join("drive-checkpoints"),
+            maximum_checkpoint_streams: 8,
+            maximum_clock_skew_seconds: 300,
+            maximum_concurrent_deliveries: 4,
+            subscriptions: vec![ProviderEventSubscriptionConfig {
+                subscription_id: "drive-website-node-1".to_owned(),
+                provider: ProviderEventSourceConfig::Drive,
+                tenant_scope_hash: "a".repeat(64),
+                tenant_id: "100001".to_owned(),
+                organization_id: None,
+                drive_node_uuid: Some("node-1".to_owned()),
+                secret_file: secret.clone(),
+            }],
+        };
+        assert!(validate_config(
+            invalid_drive_subscription,
+            &"a".repeat(64),
+            "node-1",
+            true,
+            false,
+        )
+        .is_err());
 
         let invalid = ProviderEventIngressConfig {
             schema_version: INGRESS_SCHEMA_VERSION.to_owned(),
@@ -572,7 +706,7 @@ mod tests {
             maximum_concurrent_deliveries: 4,
             subscriptions: Vec::new(),
         };
-        assert!(validate_config(invalid, &"a".repeat(64), false, false).is_err());
+        assert!(validate_config(invalid, &"a".repeat(64), "node-1", false, false).is_err());
     }
 
     #[test]
@@ -613,18 +747,15 @@ mod tests {
                     provider: ProviderEventSourceConfig::Knowledgebase,
                     tenant_id: "100001".to_owned(),
                     organization_id: Some("0".to_owned()),
-                    drive_channel_id: None,
-                    signing_key: Zeroizing::new(secret.to_vec()),
+                    drive_node_uuid: None,
+                    signing_secret: Zeroizing::new(secret.to_vec()),
                 },
             )]),
             processor,
             maximum_clock_skew_seconds: 300,
             concurrency: Arc::new(Semaphore::new(4)),
         });
-        let app = Router::new()
-            .route("/provider-events/{subscription_id}", post(receive_event))
-            .layer(DefaultBodyLimit::max(MAXIMUM_PROVIDER_EVENT_BYTES))
-            .with_state(state);
+        let app = provider_event_router(state);
         let body = serde_json::to_vec(&wiki_event()).unwrap();
         let request = signed_knowledgebase_request(&body, secret, "knowledgebase-main");
         assert_eq!(
@@ -650,48 +781,124 @@ mod tests {
         );
     }
 
-    #[test]
-    fn drive_delivery_uses_channel_bound_derived_key_and_epoch_timestamp() {
-        let verification_token = b"drive-test-verification-token-at-least-32-bytes";
-        let subscription = ProviderEventSubscription {
-            provider: ProviderEventSourceConfig::Drive,
-            tenant_id: "tenant-1".to_owned(),
-            organization_id: None,
-            drive_channel_id: Some("website-node-1".to_owned()),
-            signing_key: Zeroizing::new(sha256_hash(verification_token).into_bytes()),
-        };
-        let body = serde_json::to_vec(&drive_event()).unwrap();
+    #[tokio::test]
+    async fn signed_drive_generation_delivery_is_accepted_and_metadata_tampering_is_rejected() {
+        let root = tempfile::tempdir().unwrap();
+        let checkpoints = Arc::new(
+            FileWebsiteProviderEventCheckpointStore::open(root.path().join("checkpoints"), 8)
+                .unwrap(),
+        );
+        let processor = Arc::new(WebsiteProviderEventProcessor::new(
+            checkpoints,
+            Arc::new(CachelessWebsiteProviderEventInvalidator),
+            Arc::new(SuccessfulReconciler),
+        ));
+        let node_derivation_secret = b"drive-test-node-derivation-secret-at-least-32-bytes";
+        let state = Arc::new(IngressState {
+            subscriptions: BTreeMap::from([(
+                WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID.to_owned(),
+                ProviderEventSubscription {
+                    provider: ProviderEventSourceConfig::Drive,
+                    tenant_id: "tenant-1".to_owned(),
+                    organization_id: None,
+                    drive_node_uuid: Some("node-1".to_owned()),
+                    signing_secret: Zeroizing::new(node_derivation_secret.to_vec()),
+                },
+            )]),
+            processor,
+            maximum_clock_skew_seconds: 300,
+            concurrency: Arc::new(Semaphore::new(4)),
+        });
+        let app = provider_event_router(state);
+        let body = serde_json::to_vec(&drive_generation_event()).unwrap();
+        let request = signed_drive_request(&body, node_derivation_secret);
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NO_CONTENT
+        );
+
+        let mut request = signed_drive_request(&body, node_derivation_secret);
+        *request.uri_mut() = format!("/provider-events/{WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID}")
+            .parse()
+            .unwrap();
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NOT_FOUND
+        );
+
+        let mut request = signed_drive_request(&body, node_derivation_secret);
+        *request.uri_mut() =
+            format!("/nodes/node-2/provider-events/{WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID}")
+                .parse()
+                .unwrap();
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NOT_FOUND
+        );
+
+        let mut request = signed_drive_request(&body, node_derivation_secret);
+        *request.uri_mut() = "/nodes/node-1/provider-events/drive-website-node-1"
+            .parse()
+            .unwrap();
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NOT_FOUND
+        );
+        let request = signed_drive_request(&body, node_derivation_secret);
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NO_CONTENT
+        );
+
+        let mut request = signed_drive_request(&body, node_derivation_secret);
+        request.headers_mut().insert(
+            DRIVE_IDEMPOTENCY_KEY_HEADER,
+            HeaderValue::from_static("drive-event-1:another-channel"),
+        );
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::BAD_REQUEST
+        );
+
+        let mut request = signed_drive_request(&body, node_derivation_secret);
+        request
+            .headers_mut()
+            .insert(DRIVE_RETRY_COUNT_HEADER, HeaderValue::from_static("10"));
+        assert_eq!(
+            app.oneshot(request).await.unwrap().status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+
+    fn signed_drive_request(body: &[u8], node_derivation_secret: &[u8]) -> Request<Body> {
         let timestamp = OffsetDateTime::now_utc().unix_timestamp().to_string();
         let mut payload = Vec::with_capacity(timestamp.len() + 1 + body.len());
         payload.extend_from_slice(timestamp.as_bytes());
         payload.push(b'.');
-        payload.extend_from_slice(&body);
-        let mut headers = HeaderMap::new();
-        headers.insert(EVENT_ID_HEADER, HeaderValue::from_static("drive-event-1"));
-        headers.insert(
-            DRIVE_EVENT_TIMESTAMP_HEADER,
-            HeaderValue::from_str(&timestamp).unwrap(),
-        );
-        headers.insert(
+        payload.extend_from_slice(body);
+        let channel_id =
+            derive_website_event_channel_id("node-1", "6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a");
+        let verification_token =
+            derive_website_event_verification_token(&channel_id, node_derivation_secret);
+        let signing_key = sha256_hash(verification_token.as_bytes());
+        Request::post(format!(
+            "/nodes/node-1/provider-events/{WEBSITE_PROVIDER_EVENT_SUBSCRIPTION_ID}"
+        ))
+        .header(CONTENT_TYPE, "application/json")
+        .header(EVENT_ID_HEADER, "drive-event-1")
+        .header(DRIVE_EVENT_TIMESTAMP_HEADER, &timestamp)
+        .header(
             EVENT_SIGNATURE_HEADER,
-            HeaderValue::from_str(&format!(
-                "v1={}",
-                hmac_sha256(&payload, subscription.signing_key.as_slice())
-            ))
-            .unwrap(),
-        );
-        headers.insert(
-            DRIVE_CHANNEL_ID_HEADER,
-            HeaderValue::from_static("website-node-1"),
-        );
-        assert!(authenticate_delivery(&subscription, &headers, &body, 300).is_ok());
-        let event = parse_website_provider_event(&body).unwrap();
-        assert!(delivery_matches_event(&subscription, &headers, &event));
-        headers.insert(
-            DRIVE_CHANNEL_ID_HEADER,
-            HeaderValue::from_static("another-channel"),
-        );
-        assert!(!delivery_matches_event(&subscription, &headers, &event));
+            format!("v1={}", hmac_sha256(&payload, signing_key.as_bytes())),
+        )
+        .header(DRIVE_CHANNEL_ID_HEADER, &channel_id)
+        .header(DRIVE_RETRY_COUNT_HEADER, "0")
+        .header(
+            DRIVE_IDEMPOTENCY_KEY_HEADER,
+            format!("drive-event-1:{channel_id}"),
+        )
+        .body(Body::from(body.to_vec()))
+        .unwrap()
     }
 
     fn signed_knowledgebase_request(
@@ -743,34 +950,29 @@ mod tests {
         })
     }
 
-    fn drive_event() -> Value {
+    fn drive_generation_event() -> Value {
         json!({
             "id": "drive-event-1",
-            "type": "drive.node.version.committed.v1",
+            "type": "drive.website_root.generation.changed.v1",
             "source": "sdkwork-drive",
             "specversion": "1.0",
             "time": "2026-07-22T00:00:00Z",
             "tenantId": "tenant-1",
-            "subject": "drive://spaces/space-1/nodes/node-1",
+            "subject": "drive://spaces/space-1/website_roots/6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a",
             "actorId": "user-1",
-            "sequenceNo": "1",
+            "sequenceNo": "2",
             "data": {
-                "operationId": "upload-1",
+                "operationId": "sync-1",
                 "spaceId": "space-1",
-                "nodeId": "node-1",
-                "driveUri": "drive://spaces/space-1/nodes/node-1",
-                "driveVersionId": "version-1",
-                "versionNo": "1",
-                "spaceRelativePath": "index.html",
-                "contentType": "text/html",
-                "contentLength": "10",
-                "checksumSha256Hex": format!("sha256:{}", "a".repeat(64)),
-                "rootScopes": [{
-                    "scopeId": "root-1",
-                    "scopeKind": "WEBSITE_ROOT",
-                    "relativePath": "index.html",
-                    "rootGeneration": "1"
-                }]
+                "websiteRootUuid": "6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a",
+                "previousRootNodeId": "node-generation-1",
+                "rootNodeId": "node-generation-2",
+                "previousGeneration": "1",
+                "generation": "2",
+                "manifestSha256": format!("sha256:{}", "a".repeat(64)),
+                "fileCount": "2",
+                "totalBytes": "42",
+                "changeReason": "SYNC_ACTIVATED"
             }
         })
     }

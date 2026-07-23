@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: sdkwork-web
-Updated: 2026-07-16
+Updated: 2026-07-23
 Parent: [PRD.md](PRD.md)
 Specs: NGINX_SPEC.md, SECURITY_SPEC.md, CONFIG_SPEC.md, ENVIRONMENT_SPEC.md, DEPLOYMENT_SPEC.md, TEST_SPEC.md
 
@@ -233,4 +233,17 @@ Release verification includes:
 
 [REQ-2026-0006](../requirements/REQ-2026-0006-multi-certificate-sni.md) delivers the bounded standalone static-map portion of sections 3 and 4: one HTTPS listener can load multiple protected-file certificates, validate leaf time/SAN/key consistency before opening, and select Exact or single-label Wildcard SNI through immutable indexed maps. Exact wins over Wildcard. Unknown or absent DNS SNI fails closed; there is no implicit first-certificate fallback.
 
-This does not complete this PRD. Certificate collection or material changes remain Restart-only. Explicit default-certificate policy, same-name RSA/ECDSA negotiation, full trust-chain and revocation validation, atomic live rotation, existing-connection rotation evidence, ACME/KMS distribution, cluster convergence, served-fingerprint probes, handshake abuse controls, telemetry, load/soak, and incident runbooks remain commercial release blockers.
+The node-scoped `sdkwork.tls-runtime.v1` consumer now extends that boundary with protected
+`file:<opaque-version-id>` material resolution, node/hash/fingerprint/declared-time validation,
+listener ALPN and TLS-version enforcement, complete SNI-map construction, atomic Rustls live
+rotation, failed-candidate last-known-good retention, and staging/production A/B restart recovery.
+Existing connections retain the Rustls context captured at acceptance; new handshakes use the
+atomically replaced context.
+
+This still does not complete this PRD. Explicit default-certificate policy, same-name RSA/ECDSA
+negotiation, full public trust-chain and revocation validation, Deploy-owned certificate-version
+assignment/distribution/observation, KMS/Vault/CSI authorization and decryption, public
+served-fingerprint probes, cluster convergence, handshake abuse controls, certificate telemetry,
+load/soak, and incident runbooks remain commercial release blockers. The current authored
+Kubernetes profile explicitly selects external ingress termination until those control-plane and
+operations gates close.

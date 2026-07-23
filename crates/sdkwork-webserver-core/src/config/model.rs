@@ -599,6 +599,7 @@ pub struct ListenerConfig {
     pub port: u16,
     pub protocols: Vec<ListenerProtocol>,
     pub tls_policy_ref: Option<String>,
+    pub tls_runtime: Option<ListenerTlsRuntime>,
     pub default_virtual_host_ref: Option<String>,
     pub max_connections: Option<usize>,
     pub trusted_proxy: Option<TrustedProxyConfig>,
@@ -610,6 +611,12 @@ pub struct ListenerConfig {
 pub enum ListenerProtocol {
     Http1,
     Http2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ListenerTlsRuntime {
+    Assignment,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

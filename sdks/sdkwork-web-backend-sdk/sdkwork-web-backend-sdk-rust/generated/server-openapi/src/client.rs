@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::api::{NginxApi, ServerApi, AgentApi, AuditApi};
+use crate::api::{AgentApi, AuditApi, NginxApi, ServerApi};
 use crate::http::{SdkworkConfig, SdkworkError, SdkworkHttpClient};
 
 #[derive(Clone)]
@@ -33,7 +33,6 @@ impl SdkworkBackendClient {
         self
     }
 
-
     pub fn set_header(&self, key: impl Into<String>, value: impl Into<String>) -> &Self {
         self.http.set_header(key, value);
         self
@@ -44,18 +43,18 @@ impl SdkworkBackendClient {
     }
 
     pub fn nginx(&self) -> NginxApi {
-            NginxApi::new(Arc::clone(&self.http))
-        }
+        NginxApi::new(Arc::clone(&self.http))
+    }
 
     pub fn server(&self) -> ServerApi {
-            ServerApi::new(Arc::clone(&self.http))
-        }
+        ServerApi::new(Arc::clone(&self.http))
+    }
 
     pub fn agent(&self) -> AgentApi {
-            AgentApi::new(Arc::clone(&self.http))
-        }
+        AgentApi::new(Arc::clone(&self.http))
+    }
 
     pub fn audit(&self) -> AuditApi {
-            AuditApi::new(Arc::clone(&self.http))
-        }
+        AuditApi::new(Arc::clone(&self.http))
+    }
 }

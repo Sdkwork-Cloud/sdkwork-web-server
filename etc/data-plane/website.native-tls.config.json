@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.webserver.app",
+  "appKey": "sdkwork-website-delivery-native-tls",
+  "compatibility": {
+    "nginxProfile": "http-core-v1",
+    "unknownDirectivePolicy": "error"
+  },
+  "listeners": [
+    {
+      "id": "website-https",
+      "bind": "0.0.0.0",
+      "port": 8443,
+      "protocols": ["http1", "http2"],
+      "tlsRuntime": "assignment",
+      "defaultVirtualHostRef": "website-delivery"
+    }
+  ],
+  "certificates": [],
+  "tlsPolicies": [],
+  "resolvers": [],
+  "resources": [
+    {
+      "id": "unmatched-response",
+      "type": "respond",
+      "status": 404,
+      "contentType": "text/plain; charset=utf-8",
+      "body": "not found\n"
+    }
+  ],
+  "upstreams": [],
+  "virtualHosts": [
+    {
+      "id": "website-delivery",
+      "listenerRefs": ["website-https"],
+      "serverNames": ["localhost"],
+      "routes": [
+        {
+          "id": "unmatched",
+          "match": {
+            "pathType": "prefix",
+            "path": "/"
+          },
+          "resourceRef": "unmatched-response"
+        }
+      ]
+    }
+  ],
+  "observability": {
+    "accessLog": true
+  },
+  "deployment": {
+    "drainTimeoutMs": 30000,
+    "reload": {
+      "mode": "disabled",
+      "pollIntervalMs": 1000
+    }
+  },
+  "metadata": {
+    "owner": "sdkwork",
+    "purpose": "native-tls-website-delivery"
+  }
+}

@@ -108,10 +108,17 @@ impl SemanticValidator {
             }
             if listener.protocols.contains(&ListenerProtocol::Http2)
                 && listener.tls_policy_ref.is_none()
+                && listener.tls_runtime.is_none()
             {
                 self.push(
                     format!("{path}/protocols"),
                     "HTTP/2 requires TLS in the foundation profile; public h2c is unsupported",
+                );
+            }
+            if listener.tls_policy_ref.is_some() && listener.tls_runtime.is_some() {
+                self.push(
+                    format!("{path}/tlsRuntime"),
+                    "tlsRuntime cannot be combined with tlsPolicyRef",
                 );
             }
             if let Some(policy_ref) = &listener.tls_policy_ref {

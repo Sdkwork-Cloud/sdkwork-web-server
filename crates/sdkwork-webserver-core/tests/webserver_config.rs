@@ -1818,6 +1818,29 @@ fn semantic_validation_rejects_static_root_escape() {
 }
 
 #[test]
+fn dynamic_tls_listener_allows_http2_and_rejects_static_policy_overlap() {
+    let directory = TempDir::new().expect("create temp directory");
+    let mut config = base_config();
+    config["listeners"][0]["protocols"] = json!(["http1", "http2"]);
+    config["listeners"][0]["tlsRuntime"] = json!("assignment");
+    let path = write_config(directory.path(), &config);
+    let compiled = load_and_compile_webserver_config(path).expect("compile dynamic TLS listener");
+    assert_eq!(
+        compiled.config().listeners[0].tls_runtime,
+        Some(sdkwork_webserver_core::ListenerTlsRuntime::Assignment)
+    );
+
+    config["listeners"][0]["tlsPolicyRef"] = json!("static-policy");
+    let path = write_config(directory.path(), &config);
+    let error = load_and_compile_webserver_config(path)
+        .expect_err("static and dynamic TLS authority must be exclusive");
+    assert!(error.diagnostics().iter().any(|diagnostic| {
+        diagnostic.path == "/listeners/0/tlsRuntime"
+            && diagnostic.message.contains("cannot be combined")
+    }));
+}
+
+#[test]
 fn compilation_rejects_missing_tls_files() {
     let directory = TempDir::new().expect("create temp directory");
     let mut config = base_config();

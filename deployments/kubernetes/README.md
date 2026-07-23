@@ -36,12 +36,15 @@ contain:
 | `drive-ingress-token` | Drive Internal SDK service credential for the same tenant scope |
 | `knowledgebase-ingress-token` | Knowledgebase Internal SDK service credential for the same tenant scope |
 | `website-provider-events.json` | Loopback provider-event subscription config for this tenant scope |
-| referenced signing-secret keys | Drive channel verification tokens and Knowledgebase outbox secrets referenced by the event config |
+| referenced signing-secret keys | The Node's Drive derivation secret and Knowledgebase outbox secrets referenced by the event config |
 
 The event config uses `/run/secrets/sdkwork-web-node/<key>` paths for its signing secrets and
 `/var/lib/sdkwork/web/website-provider-events` for checkpoints. Do not reuse a Node Secret across
 StatefulSets. Do not commit a Secret manifest or plaintext values. Encryption roots and Node/provider
 credentials must be independent, randomly generated, least-privilege, rotation-governed values.
+The Drive entry must use subscription ID `drive-website-events`; its derivation secret must contain
+the same bytes exposed to the Deploy runtime-assignment worker under the hashed filename contract.
+Per-WebsiteRoot verification tokens are derived in memory and must not be stored in this Secret.
 
 ## Release And Apply
 
@@ -84,9 +87,10 @@ credentials must be independent, randomly generated, least-privilege, rotation-g
    and its ingress Pods with `sdkwork.com/network-role=provider-event-ingress`, then apply
    `network-policy.yaml`.
 7. Configure the reviewed internal HTTPS ingress or service mesh to send exact owner callback
-   subscription requests to
-   `sdkwork-web-events-<tenant-fleet-name>-<node-name>:3811` for the exact subscribed Node. A fleet
-   Service must never randomly distribute signed callbacks because subscription IDs, signing
+   requests at `/nodes/{nodeUuid}/provider-events/drive-website-events` to
+   `sdkwork-web-events-<tenant-fleet-name>-<node-name>:3811` for that exact Node. Preserve the path;
+   the unqualified `/provider-events/{subscriptionId}` route is reserved for Knowledgebase. A fleet
+   Service must never randomly distribute signed callbacks because Drive channels, signing
    secrets, and checkpoints are Node-bound. The authored relay sidecar preserves the TCP byte
    stream and forwards it to the loopback receiver, where HMAC, clock-window, tenant,
    organization, channel, and AsyncAPI checks remain authoritative. Every highly available Node
@@ -104,6 +108,14 @@ service-account token mounting, dropped Linux capabilities, RuntimeDefault secco
 ephemeral-storage requests/limits, disabled Service-link environment injection, loopback-only
 operations, exec probes, a bounded provider-event relay sidecar, ingress NetworkPolicy, rolling
 updates, and a tenant-fleet-scoped PodDisruptionBudget.
+The container also sets `SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES=268435456`, a
+non-queueing process-wide 256 MiB admission ceiling for complete Drive/Knowledgebase SDK content
+buffers retained by active responses. The compiled route's full `maximumObjectBytes` ceiling is
+reserved even for small or Range requests, and the reservation is released when the response
+completes, fails, or is cancelled.
+Keep this value within the runtime's 16 MiB..2 GiB validation range and below the Pod's memory limit
+with headroom for connections, TLS, runtime descriptors, allocator overhead, and the generated SDK
+copy itself. Raising the value requires measured capacity evidence; it does not enable streaming.
 Hostname topology spread is a hard scheduling constraint for Nodes in the same tenant fleet;
 availability-zone spread is preferred without making a single-zone cluster permanently
 unschedulable.
@@ -118,9 +130,12 @@ inside the process. The data plane accepts
 `X-Forwarded-Proto` only from a direct peer in the rendered trusted CIDRs, requires one exact
 `http` or `https` value, rejects malformed trusted metadata, and never lets forwarding metadata
 downgrade native TLS. Website HTTPS redirects, reverse-proxy forwarding headers, and access logs
-consume that same resolved scheme. TLS/SNI hot activation remains a separate release gate until
-the runtime consumes validated TLS assignments; this template does not claim that custom-domain
-certificate activation is complete.
+consume that same resolved scheme. The runtime can consume validated native TLS assignments and
+atomically hot-activate Rustls SNI contexts, but this template explicitly sets
+`SDKWORK_WEB_TLS_RUNTIME_SOURCE=external`. It does not claim native custom-domain certificate
+activation until Deploy publishes independent TLS assignments, an approved secret provider mounts
+authorized versioned material, the listener and Service expose the reviewed TLS port, and
+served-fingerprint/node-convergence probes are recorded.
 
 This dedicated-tenant topology is the production-deployable baseline. A shared multi-tenant edge
 fleet is not implemented by these manifests. It requires owner-defined tenant-aware runtime

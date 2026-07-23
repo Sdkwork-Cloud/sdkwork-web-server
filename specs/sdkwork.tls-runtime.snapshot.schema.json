@@ -9,6 +9,7 @@
     "kind",
     "snapshotUuid",
     "nodeUuid",
+    "generation",
     "generatedAt",
     "compilerVersion",
     "snapshotSha256",
@@ -27,6 +28,11 @@
     },
     "nodeUuid": {
       "$ref": "#/$defs/opaqueId"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
     },
     "generatedAt": {
       "$ref": "#/$defs/timestamp"

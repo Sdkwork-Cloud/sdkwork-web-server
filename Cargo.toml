@@ -38,16 +38,21 @@ arc-swap = "1"
 axum = "0.8"
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 bytes = "1"
+cap-fs-ext = "3.4.5"
+cap-std = "3.4.5"
 crc = "3"
 dotenvy = "0.15"
 http = "1.4"
 http-body = "1"
 http-body-util = "0.1"
+http-range-header = "0.4"
+httpdate = "1"
 hyper = { version = "1", features = ["client", "http1", "http2", "server"] }
 hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "server-auto", "tokio"] }
 hyper-rustls = { version = "0.27", default-features = false, features = ["aws-lc-rs", "http1", "http2", "tls12", "webpki-roots"] }
 ipnet = { version = "2", features = ["serde"] }
 futures-util = "0.3"
+mime_guess = "2"
 percent-encoding = "2"
 reqwest = { version = "0.12", default-features = false, features = ["http2", "rustls-tls", "stream"] }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
@@ -76,7 +81,7 @@ aes-gcm = "0.10"
 instant-acme = { version = "0.8", features = ["rcgen"] }
 rcgen = "0.13"
 x509-parser = "0.16"
-time = "0.3"
+time = { version = "0.3", features = ["formatting", "parsing"] }
 zeroize = "1"
 tokio-rustls = "0.26"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
@@ -115,5 +120,6 @@ sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi
 sdkwork-database-sqlx = { path = "../sdkwork-database/crates/sdkwork-database-sqlx", package = "sdkwork-database-sqlx" }
 sdkwork-database-id = { path = "../sdkwork-database/crates/sdkwork-database-id", package = "sdkwork-database-id" }
 sdkwork-utils-rust = { path = "../sdkwork-utils/packages/sdkwork-utils-rust" }
+sdkwork-drive-contract = { path = "../sdkwork-drive/crates/sdkwork-drive-contract" }
 sdkwork-drive-internal-sdk = { path = "../sdkwork-drive/sdks/sdkwork-drive-internal-sdk/sdkwork-drive-internal-sdk-rust/generated/server-openapi", package = "sdkwork-drive-internal-sdk-generated-rust" }
 sdkwork-knowledgebase-internal-sdk = { path = "../sdkwork-knowledgebase/sdks/sdkwork-knowledgebase-internal-sdk/sdkwork-knowledgebase-internal-sdk-rust/generated/server-openapi", package = "sdkwork-knowledgebase-internal-sdk-generated-rust" }

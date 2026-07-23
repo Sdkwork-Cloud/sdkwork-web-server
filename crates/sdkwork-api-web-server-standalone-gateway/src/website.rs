@@ -26,7 +26,7 @@ use sdkwork_webserver_delivery_runtime::{
     probe_website_runtime_set_activation, CachelessWebsiteProviderEventInvalidator,
     WebsiteDeliveryExecutor, WebsiteProviderRegistry, WebsiteProviderRegistryError,
     WebsiteRuntimeActivationProbeError, WebsiteRuntimeProviderValidationError,
-    WebsiteRuntimeSetProviderEventReconciler,
+    WebsiteRuntimeSetProviderEventReconciler, DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES,
 };
 use sdkwork_webserver_drive_provider::{
     DriveWebsiteProvider, FixedDriveWebsiteSdkClientResolver, MAXIMUM_DRIVE_CONTENT_BYTES,
@@ -43,7 +43,7 @@ use url::Url;
 
 use crate::{
     provider_event_ingress::WebsiteProviderEventIngress,
-    run_website_data_plane_with_operations_until,
+    run_website_data_plane_with_operations_until, run_website_data_plane_with_tls_operations_until,
     website_runtime_cloud::{
         CloudRuntimeAssignment, CloudRuntimeAssignmentError, CloudRuntimeAssignmentSource,
         CloudRuntimeDelivery,
@@ -51,7 +51,8 @@ use crate::{
     website_runtime_recovery::{
         LoadedWebsiteRuntimeSet, WebsiteRuntimeSetRecoveryOpen, WebsiteRuntimeSetRecoveryStore,
     },
-    DataPlaneError, DataPlaneOperationsConfig,
+    DataPlaneError, DataPlaneOperationsConfig, FileTlsRuntimeConfig, FileTlsRuntimeController,
+    FileTlsRuntimeError,
 };
 
 pub const WEBSITE_RUNTIME_SET_FILE_ENV: &str = "SDKWORK_WEB_WEBSITE_RUNTIME_SET_FILE";
@@ -68,6 +69,8 @@ pub const WEBSITE_RUNTIME_SET_POLL_INTERVAL_MS_ENV: &str =
 pub const WEBSITE_TENANT_SCOPE_HASH_ENV: &str = "SDKWORK_WEB_WEBSITE_TENANT_SCOPE_HASH";
 pub const WEBSITE_PROVIDER_VALIDATION_CONCURRENCY_ENV: &str =
     "SDKWORK_WEB_WEBSITE_PROVIDER_VALIDATION_CONCURRENCY";
+pub const WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV: &str =
+    "SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES";
 pub const WEBSITE_PROVIDER_EVENT_CONFIG_FILE_ENV: &str =
     "SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE";
 pub const KNOWLEDGEBASE_INTERNAL_API_BASE_URL_ENV: &str =
@@ -77,12 +80,20 @@ pub const KNOWLEDGEBASE_INTERNAL_API_INGRESS_TOKEN_FILE_ENV: &str =
 pub const DRIVE_INTERNAL_API_BASE_URL_ENV: &str = "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL";
 pub const DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE_ENV: &str =
     "SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_INGRESS_TOKEN_FILE";
+pub const TLS_RUNTIME_SOURCE_ENV: &str = "SDKWORK_WEB_TLS_RUNTIME_SOURCE";
+pub const TLS_RUNTIME_SNAPSHOT_FILE_ENV: &str = "SDKWORK_WEB_TLS_RUNTIME_SNAPSHOT_FILE";
+pub const TLS_MATERIAL_ROOT_ENV: &str = "SDKWORK_WEB_TLS_MATERIAL_ROOT";
+pub const TLS_LISTENER_ID_ENV: &str = "SDKWORK_WEB_TLS_LISTENER_ID";
+pub const TLS_RUNTIME_POLL_INTERVAL_MS_ENV: &str = "SDKWORK_WEB_TLS_RUNTIME_POLL_INTERVAL_MS";
+pub const TLS_RUNTIME_RECOVERY_DIRECTORY_ENV: &str = "SDKWORK_WEB_TLS_RUNTIME_RECOVERY_DIRECTORY";
 
 const DEFAULT_RUNTIME_SET_POLL_INTERVAL_MS: u64 = 2_000;
 const MINIMUM_RUNTIME_SET_POLL_INTERVAL_MS: u64 = 250;
 const MAXIMUM_RUNTIME_SET_POLL_INTERVAL_MS: u64 = 60_000;
 const DEFAULT_PROVIDER_VALIDATION_CONCURRENCY: usize = 16;
 const MAXIMUM_PROVIDER_VALIDATION_CONCURRENCY: usize = 64;
+const MINIMUM_PROVIDER_BUFFERED_CONTENT_BYTES: usize = 16 * 1024 * 1024;
+const MAXIMUM_PROVIDER_BUFFERED_CONTENT_BYTES: usize = 2 * 1024 * 1024 * 1024;
 const MAXIMUM_INGRESS_TOKEN_FILE_BYTES: u64 = 16 * 1024;
 const MAXIMUM_KNOWLEDGEBASE_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
 
@@ -132,6 +143,8 @@ pub enum WebsiteDataPlaneBootstrapError {
     RuntimeAssignment,
     #[error(transparent)]
     DataPlane(#[from] DataPlaneError),
+    #[error(transparent)]
+    TlsRuntime(#[from] FileTlsRuntimeError),
 }
 
 impl From<CloudRuntimeAssignmentError> for WebsiteDataPlaneBootstrapError {
@@ -164,6 +177,17 @@ struct CloudRuntimeSetWatchContext {
     validation_concurrency: usize,
     poll_interval: Duration,
     source: Arc<CloudRuntimeAssignmentSource>,
+}
+
+struct ProviderEventIngressBootstrapContext<'a> {
+    environment: WebsiteRuntimeEnvironment,
+    require_drive: bool,
+    require_knowledgebase: bool,
+    tenant_scope_hash: &'a str,
+    node_uuid: &'a str,
+    runtime_registry: Arc<WebsiteRuntimeRegistry>,
+    providers: Arc<WebsiteProviderRegistry>,
+    validation_concurrency: usize,
 }
 
 enum ConfiguredRuntimeSetSource {
@@ -319,6 +343,7 @@ where
         "website runtime-set passed node-local activation probes"
     );
     let environment = initial.runtime_set().environment();
+    let tls_runtime = configured_tls_runtime(environment, initial.runtime_set().node_uuid())?;
     persist_runtime_set(recovery_store.as_ref(), &initial).await?;
     if let Some(delivery) = initial_cloud_delivery.as_mut() {
         advance_cloud_observation(
@@ -352,21 +377,28 @@ where
         .await?;
     }
 
-    let provider_event_ingress = build_provider_event_ingress(
-        environment,
-        drive_registered,
-        knowledgebase_registered,
-        &tenant_scope_hash,
-        Arc::clone(&runtime_registry),
-        Arc::clone(&providers),
-        validation_concurrency,
-    )
-    .await?;
+    let provider_event_ingress =
+        build_provider_event_ingress(ProviderEventIngressBootstrapContext {
+            environment,
+            require_drive: drive_registered,
+            require_knowledgebase: knowledgebase_registered,
+            tenant_scope_hash: &tenant_scope_hash,
+            node_uuid: initial.runtime_set().node_uuid(),
+            runtime_registry: Arc::clone(&runtime_registry),
+            providers: Arc::clone(&providers),
+            validation_concurrency,
+        })
+        .await?;
 
-    let executor = Arc::new(WebsiteDeliveryExecutor::new(
-        Arc::clone(&runtime_registry),
-        Arc::clone(&providers),
-    ));
+    let buffered_content_bytes = provider_buffered_content_bytes()?;
+    let executor = Arc::new(
+        WebsiteDeliveryExecutor::with_buffered_content_budget(
+            Arc::clone(&runtime_registry),
+            Arc::clone(&providers),
+            buffered_content_bytes,
+        )
+        .map_err(|error| WebsiteDataPlaneBootstrapError::ProviderConfig(error.to_string()))?,
+    );
     let poll_interval = runtime_set_poll_interval()?;
     let (stop_tx, stop_rx) = watch::channel(false);
     let watcher = match configured_source {
@@ -400,18 +432,119 @@ where
         }
     };
 
-    let data_plane = run_website_data_plane_with_operations_until(
-        host_config.into_app(),
-        executor,
-        operations,
-        shutdown,
-    );
+    let data_plane = async move {
+        match tls_runtime {
+            Some(tls_runtime) => {
+                run_website_data_plane_with_tls_operations_until(
+                    host_config.into_app(),
+                    executor,
+                    operations,
+                    tls_runtime,
+                    shutdown,
+                )
+                .await
+            }
+            None => {
+                run_website_data_plane_with_operations_until(
+                    host_config.into_app(),
+                    executor,
+                    operations,
+                    shutdown,
+                )
+                .await
+            }
+        }
+    };
     let result = run_with_provider_event_ingress(provider_event_ingress, data_plane).await;
     let _ = stop_tx.send(true);
     if let Err(error) = watcher.await {
         tracing::error!(error = %error, "website runtime-set watcher stopped unexpectedly");
     }
     result
+}
+
+fn configured_tls_runtime(
+    environment: WebsiteRuntimeEnvironment,
+    node_uuid: &str,
+) -> Result<Option<Arc<FileTlsRuntimeController>>, WebsiteDataPlaneBootstrapError> {
+    match optional_env(TLS_RUNTIME_SOURCE_ENV)?.as_deref() {
+        None | Some("external") => {
+            reject_external_tls_file_options()?;
+            Ok(None)
+        }
+        Some("file") => {
+            let snapshot_file = PathBuf::from(required_env(TLS_RUNTIME_SNAPSHOT_FILE_ENV)?);
+            let material_root = PathBuf::from(required_env(TLS_MATERIAL_ROOT_ENV)?);
+            let listener_id = required_env(TLS_LISTENER_ID_ENV)?;
+            validate_opaque_config_id(&listener_id, 64, TLS_LISTENER_ID_ENV)?;
+            let poll_interval = tls_runtime_poll_interval()?;
+            let recovery_directory =
+                optional_env(TLS_RUNTIME_RECOVERY_DIRECTORY_ENV)?.map(PathBuf::from);
+            if recovery_directory.is_none()
+                && matches!(
+                    environment,
+                    WebsiteRuntimeEnvironment::Staging | WebsiteRuntimeEnvironment::Production
+                )
+            {
+                return Err(WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(
+                    format!(
+                        "{TLS_RUNTIME_RECOVERY_DIRECTORY_ENV} is required for native TLS in staging and production"
+                    ),
+                ));
+            }
+            FileTlsRuntimeController::load(FileTlsRuntimeConfig {
+                snapshot_file,
+                material_root,
+                listener_id,
+                node_uuid: node_uuid.to_owned(),
+                poll_interval,
+                recovery_directory,
+            })
+            .map(Some)
+            .map_err(WebsiteDataPlaneBootstrapError::from)
+        }
+        Some(_) => Err(WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(
+            format!("{TLS_RUNTIME_SOURCE_ENV} must select external or file"),
+        )),
+    }
+}
+
+fn reject_external_tls_file_options() -> Result<(), WebsiteDataPlaneBootstrapError> {
+    for key in [
+        TLS_RUNTIME_SNAPSHOT_FILE_ENV,
+        TLS_MATERIAL_ROOT_ENV,
+        TLS_LISTENER_ID_ENV,
+        TLS_RUNTIME_POLL_INTERVAL_MS_ENV,
+        TLS_RUNTIME_RECOVERY_DIRECTORY_ENV,
+    ] {
+        if optional_env(key)?.is_some() {
+            return Err(WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(
+                format!("{key} must not be set when {TLS_RUNTIME_SOURCE_ENV}=external"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn tls_runtime_poll_interval() -> Result<Duration, WebsiteDataPlaneBootstrapError> {
+    let value = match optional_env(TLS_RUNTIME_POLL_INTERVAL_MS_ENV)? {
+        Some(value) => value.parse::<u64>().map_err(|_| {
+            WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(format!(
+                "{TLS_RUNTIME_POLL_INTERVAL_MS_ENV} must be an integer"
+            ))
+        })?,
+        None => DEFAULT_RUNTIME_SET_POLL_INTERVAL_MS,
+    };
+    if !(MINIMUM_RUNTIME_SET_POLL_INTERVAL_MS..=MAXIMUM_RUNTIME_SET_POLL_INTERVAL_MS)
+        .contains(&value)
+    {
+        return Err(WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(
+            format!(
+                "{TLS_RUNTIME_POLL_INTERVAL_MS_ENV} must be between {MINIMUM_RUNTIME_SET_POLL_INTERVAL_MS} and {MAXIMUM_RUNTIME_SET_POLL_INTERVAL_MS}"
+            ),
+        ));
+    }
+    Ok(Duration::from_millis(value))
 }
 
 fn configured_runtime_set_source(
@@ -699,13 +832,7 @@ async fn reject_cloud_assignment(
 }
 
 async fn build_provider_event_ingress(
-    environment: WebsiteRuntimeEnvironment,
-    require_drive: bool,
-    require_knowledgebase: bool,
-    tenant_scope_hash: &str,
-    runtime_registry: Arc<WebsiteRuntimeRegistry>,
-    providers: Arc<WebsiteProviderRegistry>,
-    validation_concurrency: usize,
+    context: ProviderEventIngressBootstrapContext<'_>,
 ) -> Result<Option<WebsiteProviderEventIngress>, WebsiteDataPlaneBootstrapError> {
     let config_path = match env::var(WEBSITE_PROVIDER_EVENT_CONFIG_FILE_ENV) {
         Ok(value) if !value.trim().is_empty() => Some(PathBuf::from(value.trim())),
@@ -722,9 +849,9 @@ async fn build_provider_event_ingress(
         }
     };
     let Some(config_path) = config_path else {
-        if (require_drive || require_knowledgebase)
+        if (context.require_drive || context.require_knowledgebase)
             && matches!(
-                environment,
+                context.environment,
                 WebsiteRuntimeEnvironment::Staging | WebsiteRuntimeEnvironment::Production
             )
         {
@@ -733,16 +860,17 @@ async fn build_provider_event_ingress(
         return Ok(None);
     };
     let reconciler = Arc::new(WebsiteRuntimeSetProviderEventReconciler::new(
-        runtime_registry,
-        providers,
-        validation_concurrency,
+        context.runtime_registry,
+        context.providers,
+        context.validation_concurrency,
     ));
     let invalidator = Arc::new(CachelessWebsiteProviderEventInvalidator);
     WebsiteProviderEventIngress::bind_from_file(
         &config_path,
-        tenant_scope_hash,
-        require_drive,
-        require_knowledgebase,
+        context.tenant_scope_hash,
+        context.node_uuid,
+        context.require_drive,
+        context.require_knowledgebase,
         invalidator,
         reconciler,
     )
@@ -1002,6 +1130,37 @@ fn provider_validation_concurrency() -> Result<usize, WebsiteDataPlaneBootstrapE
     if !(1..=MAXIMUM_PROVIDER_VALIDATION_CONCURRENCY).contains(&value) {
         return Err(WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
             "{WEBSITE_PROVIDER_VALIDATION_CONCURRENCY_ENV} must be between 1 and {MAXIMUM_PROVIDER_VALIDATION_CONCURRENCY}"
+        )));
+    }
+    Ok(value)
+}
+
+fn provider_buffered_content_bytes() -> Result<usize, WebsiteDataPlaneBootstrapError> {
+    match env::var(WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV) {
+        Ok(value) => parse_provider_buffered_content_bytes(Some(&value)),
+        Err(env::VarError::NotPresent) => parse_provider_buffered_content_bytes(None),
+        Err(env::VarError::NotUnicode(_)) => Err(WebsiteDataPlaneBootstrapError::ProviderConfig(
+            format!("{WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV} must be UTF-8"),
+        )),
+    }
+}
+
+fn parse_provider_buffered_content_bytes(
+    value: Option<&str>,
+) -> Result<usize, WebsiteDataPlaneBootstrapError> {
+    let value = match value {
+        Some(value) => value.trim().parse::<usize>().map_err(|_| {
+            WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
+                "{WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV} must be an integer"
+            ))
+        })?,
+        None => DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES,
+    };
+    if !(MINIMUM_PROVIDER_BUFFERED_CONTENT_BYTES..=MAXIMUM_PROVIDER_BUFFERED_CONTENT_BYTES)
+        .contains(&value)
+    {
+        return Err(WebsiteDataPlaneBootstrapError::ProviderConfig(format!(
+            "{WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES_ENV} must be between {MINIMUM_PROVIDER_BUFFERED_CONTENT_BYTES} and {MAXIMUM_PROVIDER_BUFFERED_CONTENT_BYTES} bytes"
         )));
     }
     Ok(value)
@@ -1535,6 +1694,21 @@ mod tests {
         website_runtime_set_snapshot_sha256, WebsiteRuntimeSetSnapshot,
     };
     use serde_json::{json, Value};
+
+    #[test]
+    fn provider_buffered_content_budget_is_bounded_and_has_a_safe_default() {
+        assert_eq!(
+            parse_provider_buffered_content_bytes(None).unwrap(),
+            DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES
+        );
+        assert_eq!(
+            parse_provider_buffered_content_bytes(Some("268435456")).unwrap(),
+            268_435_456
+        );
+        for value in ["", "not-a-number", "16777215", "2147483649"] {
+            assert!(parse_provider_buffered_content_bytes(Some(value)).is_err());
+        }
+    }
 
     use super::*;
 

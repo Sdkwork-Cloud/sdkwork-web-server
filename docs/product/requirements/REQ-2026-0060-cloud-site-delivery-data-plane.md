@@ -69,8 +69,10 @@ SECURITY_SPEC.md, PRIVACY_SPEC.md, PERFORMANCE_SPEC.md, OBSERVABILITY_SPEC.md, T
     provider-event, and headless Service plus every matching Pod selector, NetworkPolicy, and
     PodDisruptionBudget shall include one stable non-sensitive fleet label matching
     `^tf-[a-z2-7]{15}$`. Each provider-event
-    Service shall additionally select exactly one Web Node because its subscription, HMAC secret,
-    and checkpoint are Node-bound. Tenant identity and tenant scope hashes shall not appear in
+    Service shall additionally select exactly one Web Node because its Drive channel, HMAC secret,
+    and checkpoint are Node-bound. Drive shall use the canonical Node-qualified callback
+    `/nodes/{nodeUuid}/provider-events/drive-website-events`; the unqualified provider-event route
+    shall accept Knowledgebase only. Tenant identity and tenant scope hashes shall not appear in
     object names or labels and remain Secret/runtime data.
 17. Do not claim a shared multi-tenant edge fleet until owner contracts exist for tenant-aware
     assignment, credential brokerage and hot rotation, per-tenant generated Provider SDK client
@@ -82,7 +84,7 @@ SECURITY_SPEC.md, PRIVACY_SPEC.md, PERFORMANCE_SPEC.md, OBSERVABILITY_SPEC.md, T
 
 ## Implementation Status
 
-Implemented foundation as of 2026-07-22:
+Implemented foundation as of 2026-07-23:
 
 - strict Draft 2020-12 consumer schema for `sdkwork.website-runtime.v1`;
 - bounded JSON ingestion, canonical SHA-256 verification, collection-order and referential checks;
@@ -98,8 +100,16 @@ Implemented foundation as of 2026-07-22:
   rollback generation, and failed-candidate retention of the current set;
 - segment-aware Binding-relative routing, `ROOT`/`ALIAS` URL translation, redirect structure, and
   fail-closed denied-path/dotfile policy;
-- independent node-scoped `sdkwork.tls-runtime.v1` assignment schema, canonical hash, exact/wildcard
-  SNI index, TLS policy bounds, and raw private-key rejection;
+- independent node-scoped `sdkwork.tls-runtime.v1` assignment schema, canonical hash, strictly
+  increasing JSON-safe generation, stale/same-generation-conflict fencing, exact/wildcard SNI
+  index, TLS policy bounds, and raw private-key rejection;
+- native Rustls assignment consumption through an explicit `tlsRuntime: assignment` listener,
+  protected `file:<opaque-version-id>` material provider, canonical root/symlink confinement,
+  bounded PEM parsing, SAN/current-time/declared-time/fingerprint/key-match validation,
+  listener-wide policy and ALPN compatibility checks, exact-before-single-label-wildcard SNI,
+  enforced TLS 1.2/1.3 bounds, off-path complete-context construction, atomic hot activation,
+  unchanged-hash fast path, failed-candidate last-known-good retention, and node-local A/B restart
+  recovery required for staging/production native TLS;
 - typed resource/static/Wiki provider ports with opaque redacted content handles, incremental body
   streams, conditions/range metadata, public/provider generations, and cursor page-size bounds;
 - generated Knowledgebase Internal SDK adapter with ACTIVE publication checks, Wiki page/redirect
@@ -123,7 +133,8 @@ Implemented foundation as of 2026-07-22:
   recovery-directory configuration without Web business-database ownership;
 - independent loopback-only provider-event ingress with provider/tenant/organization/channel-bound
   subscriptions, secret-file credentials, bounded body/time-window/concurrency checks, Drive
-  derived-key `v1=` HMAC verification, and Knowledgebase `sha256=` HMAC/header verification;
+  derived-key `v1=` HMAC verification, Knowledgebase `sha256=` HMAC/header verification, canonical
+  Node-qualified Drive routing, and fail-closed wrong/missing-Node rejection;
 - strict consumption of four Drive WebsiteRoot and five Knowledgebase Wiki owner events, including
   Drive contiguous and Knowledgebase monotonic-non-contiguous ordering, bounded deduplication,
   conflict fail-closed behavior, initial/gap/uncertain generated-SDK reconciliation, and node-local
@@ -151,23 +162,42 @@ Implemented foundation as of 2026-07-22:
   SDK, immutable per-target observation evidence, full assignment-identity validation, and a
   transactional all-frozen-target `ACTIVE` quorum that alone advances
   `deploy_site.current_revision_id`.
+- A focused cross-repository contract compiles a real Deploy Site/runtime set, activates the exact
+  output in Web, routes host/path desktop and mobile Wiki requests through the Knowledgebase
+  adapter/fake generated-SDK boundary, fails private/unpublished routes closed, and reads updated
+  content without changing the SiteRevision, runtime generation, or snapshot hash.
 
 Still open and therefore release-blocking: detached distribution signature/source attestation where
-required, external public-domain multi-vantage probes, production drift dashboards/alerts, TLS
-material authorization/decryption,
-certificate/key/chain/time validation and atomic hot activation, service credential hot rotation,
+required, external public-domain multi-vantage probes, production drift dashboards/alerts,
+Deploy-owned TLS assignment publication and node observation, KMS/Vault/CSI authorization and
+encrypted material distribution beyond the protected file-provider boundary, served-fingerprint
+convergence, full public trust-chain/revocation policy, service credential hot rotation,
 true upstream content streaming, provider-aware cache behavior and concrete event-driven cache
 invalidation, sanitizer/rendition
-and full-text search pipelines, single-writer migration, deployed browser-to-resource E2E,
+and full-text search pipelines, single-writer migration, deployed-service browser-to-resource E2E,
 load/soak, and production operations evidence. The local file watcher remains a
 standalone/development mechanism; cloud pull and node recovery do not replace Deploy's immutable
 fleet rollout evidence or recorded restart/backup-restore drills. The isolated node-local `HEAD`
 probe does not prove public DNS, certificate/SNI, CDN, or Internet reachability. Until the
 generated owner SDKs support streaming, activation enforces their 16 MiB Knowledgebase and 256 MiB
-Drive object ceilings rather than claiming the descriptor schema's future 1 TiB capability.
+Drive object ceilings rather than claiming the descriptor schema's future 1 TiB capability. The
+delivery executor additionally enforces one process-wide buffered-content admission budget before
+content open. The budget defaults to 256 MiB, is configured within 16 MiB..2 GiB, reserves the
+compiled route's `maximumObjectBytes` so metadata drift and Range fallback cannot bypass it, never
+queues saturated requests, and is held until response
+completion, failure, or cancellation. This bounds concurrent generated-SDK buffer retention but
+does not remove the owner SDK's per-response full-buffer allocation.
 The current website request path is cacheless, so its event invalidator cannot leave stale cached
 bytes but does not satisfy the cache, negative-cache, single-flight, stampede, or invalidation-storm
 acceptance criteria.
+
+Local filesystem delivery opens one capability handle for the configured root, validates request
+and fallback paths, opens every directory component and final regular file with no-follow
+semantics, and streams from that already-open stable handle. Path replacement cannot redirect the
+active response. Windows and Linux tests cover replacement stability, final and intermediate
+symlink rejection, directory index/redirect, SPA fallback, conditional requests, Range, HEAD, MIME,
+and bounded streaming. Immutable read-only mounts remain defense in depth against untrusted
+writers, hard links, and mount changes rather than the primary TOCTOU control.
 
 ## Acceptance Criteria
 

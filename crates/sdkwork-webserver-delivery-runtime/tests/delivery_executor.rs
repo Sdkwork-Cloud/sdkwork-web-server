@@ -23,9 +23,9 @@ use sdkwork_webserver_core::website_runtime::{
 };
 use sdkwork_webserver_delivery_runtime::{
     WebsiteDeliveryContentKind, WebsiteDeliveryError, WebsiteDeliveryExecutor,
-    WebsiteDeliveryMethod, WebsiteDeliveryOutcome, WebsiteDeliveryRequest,
-    WebsiteDeliveryRoutingContext, WebsiteDeliveryScheme, WebsiteProviderRegistry,
-    WebsiteProviderRegistryError,
+    WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
+    WebsiteDeliveryRequest, WebsiteDeliveryRoutingContext, WebsiteDeliveryScheme,
+    WebsiteProviderRegistry, WebsiteProviderRegistryError,
 };
 use serde_json::{json, Value};
 
@@ -417,6 +417,111 @@ async fn static_index_and_spa_fallback_are_provider_relative_and_explicit() {
             "/web/missing",
             "/web/index.html"
         ]
+    );
+}
+
+#[tokio::test]
+async fn buffered_content_budget_rejects_without_queueing_and_recovers_on_drop() {
+    let mut descriptor = descriptor_fixture(FixtureHandler::Spa);
+    descriptor["deliveryPolicy"]["maximumObjectBytes"] = json!(5);
+    let runtime = active_runtime_from_descriptor(descriptor, 2_500);
+    let static_provider = Arc::new(FakeStaticProvider {
+        files: HashMap::from([("/web/index.html".to_owned(), b"shell".to_vec())]),
+        resolve_paths: Mutex::new(Vec::new()),
+        open_requests: Mutex::new(Vec::new()),
+    });
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_static(WebsiteProviderType::Drive, static_provider.clone())
+        .unwrap();
+    let executor =
+        WebsiteDeliveryExecutor::with_buffered_content_budget(runtime, Arc::new(providers), 5)
+            .unwrap();
+
+    let first = executor
+        .execute(delivery_request("/", WebsiteDeliveryMethod::Get))
+        .await
+        .unwrap();
+    let WebsiteDeliveryOutcome::Content(first) = first else {
+        panic!("expected first content")
+    };
+
+    let saturated = match executor
+        .execute(delivery_request("/", WebsiteDeliveryMethod::Get))
+        .await
+    {
+        Ok(_) => panic!("held response must own the entire buffered-content budget"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        saturated,
+        WebsiteDeliveryError::Provider(WebsiteProviderError {
+            kind: WebsiteProviderErrorKind::Unavailable,
+            retry_after_ms: Some(100),
+        })
+    ));
+    assert_eq!(static_provider.open_requests.lock().unwrap().len(), 1);
+
+    drop(first);
+    let recovered = executor
+        .execute(delivery_request("/", WebsiteDeliveryMethod::Get))
+        .await
+        .expect("dropping a response releases its buffered-content permit");
+    assert!(matches!(recovered, WebsiteDeliveryOutcome::Content(_)));
+    assert_eq!(static_provider.open_requests.lock().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn buffered_content_budget_reserves_the_compiled_object_ceiling() {
+    let runtime = active_runtime(FixtureHandler::Spa);
+    let static_provider = Arc::new(FakeStaticProvider {
+        files: HashMap::from([("/web/index.html".to_owned(), b"shell".to_vec())]),
+        resolve_paths: Mutex::new(Vec::new()),
+        open_requests: Mutex::new(Vec::new()),
+    });
+    let mut providers = WebsiteProviderRegistry::new();
+    providers
+        .register_static(WebsiteProviderType::Drive, static_provider.clone())
+        .unwrap();
+    let executor =
+        WebsiteDeliveryExecutor::with_buffered_content_budget(runtime, Arc::new(providers), 5)
+            .unwrap();
+
+    let rejected = match executor
+        .execute(delivery_request("/", WebsiteDeliveryMethod::Get))
+        .await
+    {
+        Ok(_) => panic!("object ceiling above the process budget must be rejected"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        rejected,
+        WebsiteDeliveryError::Provider(WebsiteProviderError {
+            kind: WebsiteProviderErrorKind::Unavailable,
+            retry_after_ms: Some(100),
+        })
+    ));
+    assert_eq!(static_provider.open_requests.lock().unwrap().len(), 0);
+}
+
+#[test]
+fn buffered_content_budget_rejects_zero_capacity() {
+    let error = WebsiteDeliveryExecutor::with_buffered_content_budget(
+        Arc::new(WebsiteRuntimeRegistry::new(
+            NODE_UUID,
+            WebsiteRuntimeEnvironment::Production,
+        )),
+        Arc::new(WebsiteProviderRegistry::new()),
+        0,
+    )
+    .err()
+    .expect("zero capacity must fail");
+    assert_eq!(
+        error,
+        WebsiteDeliveryExecutorConfigError::InvalidBufferedContentBudget {
+            configured_bytes: 0,
+            maximum_bytes: u32::MAX as usize,
+        }
     );
 }
 

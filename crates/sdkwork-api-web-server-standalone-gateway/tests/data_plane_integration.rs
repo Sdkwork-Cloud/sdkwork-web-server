@@ -1162,6 +1162,10 @@ async fn serves_fixed_and_static_routes_and_drains() {
     fs::create_dir(&public).expect("create public directory");
     fs::write(public.join("index.html"), "<h1>real static response</h1>")
         .expect("write static index");
+    fs::write(public.join("asset.txt"), "0123456789").expect("write static asset");
+    fs::create_dir(public.join("docs")).expect("create static subdirectory");
+    fs::write(public.join("docs/index.html"), "<h1>docs index</h1>")
+        .expect("write nested static index");
     let port = available_port();
     let config = base_config(
         port,
@@ -1177,6 +1181,7 @@ async fn serves_fixed_and_static_routes_and_drains() {
                 "type": "static",
                 "root": "public",
                 "indexFiles": ["index.html"],
+                "spaFallback": "index.html",
                 "followSymlinks": false
             },
             {
@@ -1251,6 +1256,84 @@ async fn serves_fixed_and_static_routes_and_drains() {
         .await
         .expect("read static body")
         .contains("real static response"));
+
+    let nested_redirect = no_redirect_client
+        .get(format!("http://127.0.0.1:{port}/docs?view=compact"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request static directory redirect");
+    assert_eq!(
+        nested_redirect.status(),
+        reqwest::StatusCode::TEMPORARY_REDIRECT
+    );
+    assert_eq!(
+        nested_redirect.headers()[reqwest::header::LOCATION],
+        "/docs/?view=compact"
+    );
+
+    let nested_index = client
+        .get(format!("http://127.0.0.1:{port}/docs/"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request nested static index");
+    assert_eq!(nested_index.status(), reqwest::StatusCode::OK);
+    assert!(nested_index.text().await.unwrap().contains("docs index"));
+
+    let fallback = client
+        .get(format!("http://127.0.0.1:{port}/application/route"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request SPA fallback");
+    assert_eq!(fallback.status(), reqwest::StatusCode::OK);
+    assert!(fallback
+        .text()
+        .await
+        .unwrap()
+        .contains("real static response"));
+
+    let partial = client
+        .get(format!("http://127.0.0.1:{port}/asset.txt"))
+        .header("host", "test.localhost")
+        .header(reqwest::header::RANGE, "bytes=2-5")
+        .send()
+        .await
+        .expect("request static byte range");
+    assert_eq!(partial.status(), reqwest::StatusCode::PARTIAL_CONTENT);
+    assert_eq!(
+        partial.headers()[reqwest::header::CONTENT_RANGE],
+        "bytes 2-5/10"
+    );
+    assert_eq!(partial.text().await.unwrap(), "2345");
+
+    let asset = client
+        .get(format!("http://127.0.0.1:{port}/asset.txt"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request static asset metadata");
+    let last_modified = asset.headers()[reqwest::header::LAST_MODIFIED].clone();
+    assert_eq!(asset.text().await.unwrap(), "0123456789");
+    let not_modified = client
+        .get(format!("http://127.0.0.1:{port}/asset.txt"))
+        .header("host", "test.localhost")
+        .header(reqwest::header::IF_MODIFIED_SINCE, last_modified)
+        .send()
+        .await
+        .expect("request conditional static asset");
+    assert_eq!(not_modified.status(), reqwest::StatusCode::NOT_MODIFIED);
+
+    let head = client
+        .head(format!("http://127.0.0.1:{port}/asset.txt"))
+        .header("host", "test.localhost")
+        .send()
+        .await
+        .expect("request static HEAD");
+    assert_eq!(head.status(), reqwest::StatusCode::OK);
+    assert_eq!(head.headers()[reqwest::header::CONTENT_LENGTH], "10");
+    assert!(head.bytes().await.unwrap().is_empty());
 
     assert_eq!(
         raw_http_status(

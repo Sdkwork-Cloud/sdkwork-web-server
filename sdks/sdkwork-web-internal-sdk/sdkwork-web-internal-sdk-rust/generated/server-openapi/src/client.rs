@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::api::{RuntimeApi};
+use crate::api::RuntimeApi;
 use crate::http::{SdkworkConfig, SdkworkError, SdkworkHttpClient};
 
 #[derive(Clone)]
@@ -34,7 +34,6 @@ impl SdkworkCustomClient {
         self
     }
 
-
     pub fn set_header(&self, key: impl Into<String>, value: impl Into<String>) -> &Self {
         self.http.set_header(key, value);
         self
@@ -45,6 +44,6 @@ impl SdkworkCustomClient {
     }
 
     pub fn runtime(&self) -> RuntimeApi {
-            RuntimeApi::new(Arc::clone(&self.http))
-        }
+        RuntimeApi::new(Arc::clone(&self.http))
+    }
 }

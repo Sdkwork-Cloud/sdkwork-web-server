@@ -10,6 +10,7 @@ pub struct TlsAssignmentSnapshot {
     pub kind: String,
     pub snapshot_uuid: String,
     pub node_uuid: String,
+    pub generation: u64,
     pub generated_at: String,
     pub compiler_version: String,
     pub snapshot_sha256: String,

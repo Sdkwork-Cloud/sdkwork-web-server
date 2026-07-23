@@ -26,7 +26,8 @@ use hyper_util::{
     service::TowerToHyperService,
 };
 use sdkwork_webserver_core::{
-    CompiledWebServerApp, ListenerConfig, ListenerProtocol, ProxyProtocolConfig, WebServerLimits,
+    CompiledWebServerApp, ListenerConfig, ListenerProtocol, ListenerTlsRuntime,
+    ProxyProtocolConfig, WebServerLimits,
 };
 use sdkwork_webserver_delivery_runtime::WebsiteDeliveryExecutor;
 use tokio::{
@@ -52,6 +53,7 @@ use super::{
     proxy_protocol::{resolve_connection_info, DownstreamConnectionInfo},
     runtime::RuntimeGeneration,
     tls::build_tls_config,
+    tls_runtime::FileTlsRuntimeController,
     DataPlaneError, DataPlaneRuntime, ListenerState,
 };
 
@@ -86,7 +88,8 @@ where
         }
         None => DataPlaneRuntime::build(app)?,
     };
-    let result = run_data_plane_runtime_until(runtime.clone(), operations, None, shutdown).await;
+    let result =
+        run_data_plane_runtime_until(runtime.clone(), operations, None, None, shutdown).await;
     let health_result = runtime.stop_active_health().await;
     let resource_result = runtime.stop_resource_pressure().await;
     result.and(health_result).and(resource_result)
@@ -122,6 +125,36 @@ where
         runtime.clone(),
         operations,
         Some(website_delivery),
+        None,
+        shutdown,
+    )
+    .await;
+    let health_result = runtime.stop_active_health().await;
+    let resource_result = runtime.stop_resource_pressure().await;
+    result.and(health_result).and(resource_result)
+}
+
+pub async fn run_website_data_plane_with_tls_operations_until<F>(
+    app: CompiledWebServerApp,
+    website_delivery: Arc<WebsiteDeliveryExecutor>,
+    operations: Option<DataPlaneOperationsConfig>,
+    tls_runtime: Arc<FileTlsRuntimeController>,
+    shutdown: F,
+) -> Result<(), DataPlaneError>
+where
+    F: Future<Output = ()> + Send,
+{
+    let runtime = match operations.as_ref() {
+        Some(config) => {
+            DataPlaneRuntime::build_with_metric_dimensions(app, config.dimensions.clone())?
+        }
+        None => DataPlaneRuntime::build(app)?,
+    };
+    let result = run_data_plane_runtime_until(
+        runtime.clone(),
+        operations,
+        Some(website_delivery),
+        Some(tls_runtime),
         shutdown,
     )
     .await;
@@ -134,15 +167,31 @@ pub(crate) async fn run_data_plane_runtime_until<F>(
     runtime: Arc<DataPlaneRuntime>,
     operations: Option<DataPlaneOperationsConfig>,
     website_delivery: Option<Arc<WebsiteDeliveryExecutor>>,
+    tls_runtime: Option<Arc<FileTlsRuntimeController>>,
     shutdown: F,
 ) -> Result<(), DataPlaneError>
 where
     F: Future<Output = ()> + Send,
 {
     let initial = runtime.current();
+    if let Some(tls_runtime) = tls_runtime.as_ref() {
+        let matching_listeners = initial
+            .app
+            .listeners()
+            .filter(|listener| listener.id == tls_runtime.listener_id())
+            .count();
+        if matching_listeners != 1 {
+            return Err(DataPlaneError::DynamicTlsConfiguration {
+                detail: format!(
+                    "listener {} must resolve to exactly one configured listener",
+                    tls_runtime.listener_id()
+                ),
+            });
+        }
+    }
     let mut prepared = Vec::with_capacity(initial.app.config().listeners.len());
     for listener in initial.app.listeners() {
-        prepared.push(prepare_listener(&initial, listener).await?);
+        prepared.push(prepare_listener(&initial, listener, tls_runtime.as_deref()).await?);
     }
     let prepared_operations = match operations.as_ref() {
         Some(config) => Some(prepare_operations_listener(config).await?),
@@ -150,6 +199,15 @@ where
     };
     runtime.start_resource_pressure().await?;
     runtime.start_active_health().await;
+
+    let (tls_shutdown_tx, tls_watcher) = match tls_runtime {
+        Some(tls_runtime) => {
+            let (stop_tx, stop_rx) = watch::channel(false);
+            let watcher = tokio::spawn(tls_runtime.watch_until(stop_rx));
+            (Some(stop_tx), Some(watcher))
+        }
+        None => (None, None),
+    };
 
     let drain_timeout = Duration::from_millis(
         initial
@@ -229,6 +287,18 @@ where
         }
     };
     let remaining_drain = drain_deadline.saturating_duration_since(Instant::now());
+    if let Some(stop_tx) = tls_shutdown_tx {
+        let _ = stop_tx.send(true);
+    }
+    if let Some(watcher) = tls_watcher {
+        match watcher.await {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                tracing::error!(error = %error, "TLS runtime watcher stopped unexpectedly")
+            }
+            Err(error) => tracing::error!(error = %error, "TLS runtime watcher task failed"),
+        }
+    }
     if runtime
         .tunnel_supervisor
         .stop_and_drain(remaining_drain)
@@ -255,6 +325,7 @@ async fn observe_data_plane_request(
 async fn prepare_listener(
     generation: &Arc<RuntimeGeneration>,
     listener: &ListenerConfig,
+    tls_runtime: Option<&FileTlsRuntimeController>,
 ) -> Result<PreparedListener, DataPlaneError> {
     let ip = listener
         .bind
@@ -276,7 +347,41 @@ async fn prepare_listener(
             listener_id: listener.id.clone(),
             source,
         })?;
-    let tls = build_tls_config(generation, listener)?;
+    let tls = match tls_runtime.filter(|runtime| runtime.listener_id() == listener.id) {
+        Some(runtime) => {
+            if listener.tls_policy_ref.is_some() {
+                return Err(DataPlaneError::DynamicTlsConfiguration {
+                    detail: format!(
+                        "listener {} cannot combine tlsPolicyRef with dynamic TLS",
+                        listener.id
+                    ),
+                });
+            }
+            if listener.tls_runtime != Some(ListenerTlsRuntime::Assignment) {
+                return Err(DataPlaneError::DynamicTlsConfiguration {
+                    detail: format!(
+                        "listener {} must declare tlsRuntime=assignment",
+                        listener.id
+                    ),
+                });
+            }
+            runtime.configure_listener(listener).map_err(|error| {
+                DataPlaneError::DynamicTlsConfiguration {
+                    detail: error.to_string(),
+                }
+            })?;
+            Some(runtime.rustls_config())
+        }
+        None if listener.tls_runtime.is_some() => {
+            return Err(DataPlaneError::DynamicTlsConfiguration {
+                detail: format!(
+                    "listener {} declares tlsRuntime=assignment but no TLS runtime is configured",
+                    listener.id
+                ),
+            });
+        }
+        None => build_tls_config(generation, listener)?,
+    };
     Ok(PreparedListener {
         config: listener.clone(),
         socket,

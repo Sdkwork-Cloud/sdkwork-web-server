@@ -23,8 +23,12 @@ mod resource_pressure;
 mod runtime;
 mod server;
 mod smooth_weighted;
+mod static_file_response;
 mod static_files;
+mod static_path;
 mod tls;
+mod tls_material;
+mod tls_runtime;
 mod tunnel;
 mod upstream_admission;
 mod upstream_client;
@@ -36,7 +40,11 @@ pub use error::DataPlaneError;
 pub use operations::{probe_data_plane_operations_from_env, DataPlaneOperationsConfig};
 pub use runtime::DataPlaneReloadReport;
 pub use server::{run_data_plane_until, run_data_plane_with_operations_until};
-pub use server::{run_website_data_plane_until, run_website_data_plane_with_operations_until};
+pub use server::{
+    run_website_data_plane_until, run_website_data_plane_with_operations_until,
+    run_website_data_plane_with_tls_operations_until,
+};
+pub use tls_runtime::{FileTlsRuntimeConfig, FileTlsRuntimeController, FileTlsRuntimeError};
 pub use watch::{
     run_data_plane_from_config_until, run_data_plane_from_config_with_operations_until,
 };

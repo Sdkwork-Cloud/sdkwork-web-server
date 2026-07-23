@@ -88,10 +88,11 @@
           "minLength": 1,
           "maxLength": 64
         },
-        "driveChannelId": {
+        "driveNodeUuid": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 200
+          "maxLength": 128,
+          "description": "Exact Web Node identity used to derive bounded per-WebsiteRoot Drive channels and verification tokens from the node secret."
         },
         "secretFile": {
           "type": "string",
@@ -110,7 +111,12 @@
             "required": ["provider"]
           },
           "then": {
-            "required": ["driveChannelId"]
+            "required": ["driveNodeUuid"],
+            "properties": {
+              "subscriptionId": {
+                "const": "drive-website-events"
+              }
+            }
           }
         },
         {
@@ -125,7 +131,7 @@
           "then": {
             "required": ["organizationId"],
             "properties": {
-              "driveChannelId": false
+              "driveNodeUuid": false
             }
           }
         }

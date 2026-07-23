@@ -7,12 +7,12 @@
   "maximumConcurrentDeliveries": 32,
   "subscriptions": [
     {
-      "subscriptionId": "drive-website-node-1",
+      "subscriptionId": "drive-website-events",
       "provider": "DRIVE",
       "tenantScopeHash": "1111111111111111111111111111111111111111111111111111111111111111",
       "tenantId": "100001",
-      "driveChannelId": "website-node-1",
-      "secretFile": ".sdkwork/secrets/drive-website-node-1.token"
+      "driveNodeUuid": "node-1",
+      "secretFile": ".sdkwork/secrets/drive-website-node-35971be6e9bb024a895582fe0e42e04848a86da550aaef0fccbfba86f99f617d.derivation-secret"
     },
     {
       "subscriptionId": "knowledgebase-wiki-node-1",

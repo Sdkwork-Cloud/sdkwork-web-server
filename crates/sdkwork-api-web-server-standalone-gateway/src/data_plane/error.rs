@@ -79,6 +79,9 @@ pub enum DataPlaneError {
         source: io::Error,
     },
 
+    #[error("dynamic TLS runtime configuration is invalid: {detail}")]
+    DynamicTlsConfiguration { detail: String },
+
     #[error("cannot fingerprint TLS material {path}: {source}")]
     TlsMaterialRead { path: PathBuf, source: io::Error },
 

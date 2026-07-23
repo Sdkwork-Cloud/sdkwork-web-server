@@ -59,6 +59,15 @@ runtime-set containing another or multiple tenant scopes is rejected before acti
 files contain only deployment-provided ingress tokens and must never be committed. Production and
 staging provider origins must use HTTPS. Provider resources are validated before initial activation
 and every watched update with bounded concurrency; a failure retains the last-known-good set.
+`SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES` bounds the aggregate provider content bytes
+admitted by one process while Drive or Knowledgebase generated SDK responses remain live. It is a
+strict integer from 16777216 through 2147483648 bytes and defaults to 268435456 bytes. Admission is
+conservative: every content request reserves the compiled route's `maximumObjectBytes`, so
+under-reported metadata and `If-Range` fallback cannot weaken the bound. Saturation fails
+immediately with a retryable unavailable result and
+does not create a memory waiter queue. The permit remains owned by the HTTP response stream and is
+released on completion, stream failure, or cancellation. This is a process memory-amplification
+guard for the current generated `Vec<u8>` transports, not a claim of end-to-end provider streaming.
 `SDKWORK_WEB_WEBSITE_RUNTIME_SET_RECOVERY_DIRECTORY` owns a dedicated node-local A/B slot
 directory containing only complete, hash-verified `sdkwork.website-runtime-set.v1` snapshots.
 Staging and production require this directory. Bootstrap selects the highest valid generation from
@@ -70,15 +79,40 @@ durable. The directory is node data-plane state, not Web business persistence or
 authenticated Deploy runtime-set distribution; it must be writable only by the service identity,
 must not share files with another subsystem, and belongs on durable host storage.
 
+TLS termination is selected independently with `SDKWORK_WEB_TLS_RUNTIME_SOURCE`. `external` means
+the reviewed load balancer, CDN, or ingress terminates TLS and is the explicit setting in the
+current cloud profiles. `file` enables native Rustls termination and requires a listener declaring
+`"tlsRuntime": "assignment"`, plus `SDKWORK_WEB_TLS_RUNTIME_SNAPSHOT_FILE`,
+`SDKWORK_WEB_TLS_MATERIAL_ROOT`, and `SDKWORK_WEB_TLS_LISTENER_ID`. The snapshot follows
+`../specs/sdkwork.tls-runtime.snapshot.schema.json`; every `materialReference` must be
+`file:<opaque-version-id>` and resolves only to
+`<material-root>/<opaque-version-id>/fullchain.pem` and `privkey.pem` after canonical boundary
+checks. Snapshot JSON never contains PEM, a filesystem path, URL, token, or key.
+
+`SDKWORK_WEB_TLS_RUNTIME_POLL_INTERVAL_MS` is bounded to 250..60000 milliseconds. Candidate
+snapshots are schema/hash/node/policy checked before any material work, unchanged hashes skip
+certificate parsing, and changed candidates validate SAN coverage, current validity, declared
+validity evidence, leaf SHA-256, key match, SNI ownership, TLS version range, and listener ALPN.
+Only a complete candidate replaces the shared Rustls context; existing connections keep their
+original context and a rejected candidate leaves last-known-good active. Native TLS in staging and
+production additionally requires `SDKWORK_WEB_TLS_RUNTIME_RECOVERY_DIRECTORY`, an exclusive
+node-local A/B directory persisted before activation and used for restart recovery. The recovery
+slots contain only bounded hash-verified snapshots; certificate material remains in the protected
+material provider root. `data-plane/website.native-tls.config.json` and
+`data-plane/website.native-tls.development.env.example` are the non-secret native TLS examples.
+
 `data-plane/website-provider-events.development.json.example` is the provider-event ingress
 instance selected by `SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE` and validated by
 `../specs/sdkwork.website-provider-event-ingress.schema.json`. It binds only to loopback, maps each
-unguessable subscription path to an expected provider/channel/tenant/organization, references a
-protected signing secret file, and writes dual-slot per-stream checkpoints under ignored runtime
-state. Drive uses the original channel verification token; the receiver derives Drive's signing
-key exactly as the owner contract requires. Knowledgebase uses its outbox webhook secret directly.
+subscription to an expected provider/channel/tenant/organization, references a protected signing
+secret file, and writes dual-slot per-stream checkpoints under ignored runtime state. Drive accepts
+only `/nodes/{nodeUuid}/provider-events/drive-website-events`, requires the path Node to match the
+configured active Node, derives each channel verification token from the Node derivation secret,
+and then derives the owner signing key. The unqualified `/provider-events/{subscriptionId}` route
+accepts Knowledgebase only; Knowledgebase uses its outbox webhook secret directly.
 Production and staging place an authenticated internal HTTPS ingress or sidecar in front of this
-loopback listener; the public website listener never mounts provider-event routes. Both owner
+loopback listener and preserve the complete path; the public website listener never mounts
+provider-event routes. Both owner
 webhooks sign `delivery-time + "." + exact-body`, and the receiver enforces the configured clock
 window before strict AsyncAPI parsing. A production/staging website runtime-set that uses either
 provider fails bootstrap when this event-ingress configuration is absent.

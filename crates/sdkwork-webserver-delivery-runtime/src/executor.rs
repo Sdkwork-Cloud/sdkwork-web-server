@@ -2,9 +2,9 @@ use std::{future::Future, sync::Arc, time::Duration};
 
 use sdkwork_webserver_contract::provider::{
     OpenWebsiteContentRequest, OpenedWebsiteContent, ResolveWebsiteStaticPathRequest,
-    ResolveWebsiteWikiRouteRequest, ResolvedWebsiteContent, WebsiteByteRange,
-    WebsiteContentMetadata, WebsiteContentRange, WebsiteContentResolution, WebsiteProviderError,
-    WebsiteProviderErrorKind, WebsiteProviderPurpose, WebsiteProviderResult,
+    ResolveWebsiteWikiRouteRequest, ResolvedWebsiteContent, ResolvedWebsiteWikiContent,
+    WebsiteByteRange, WebsiteContentMetadata, WebsiteContentRange, WebsiteContentResolution,
+    WebsiteProviderError, WebsiteProviderErrorKind, WebsiteProviderPurpose, WebsiteProviderResult,
     WebsiteProviderRuntimeContext, WebsiteStaticContentProvider, WebsiteWikiProvider,
     WebsiteWikiRouteResolution,
 };
@@ -12,21 +12,28 @@ use sdkwork_webserver_core::website_runtime::{
     SelectedWebsiteRoute, WebsiteHandler, WebsiteMountMode, WebsiteRequestRoutingContext,
     WebsiteRouteSelection, WebsiteRuntimeRegistry,
 };
-use tokio::time::{timeout, Instant};
+use tokio::{
+    sync::{OwnedSemaphorePermit, Semaphore},
+    time::{timeout, Instant},
+};
 
 use crate::{
-    stream::BoundedProviderContentStream, WebsiteDeliveryContent, WebsiteDeliveryContentKind,
-    WebsiteDeliveryError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome, WebsiteDeliveryRedirect,
-    WebsiteDeliveryRequest, WebsiteDeliveryRouteIdentity, WebsiteDeliveryScheme,
-    WebsiteProviderRegistry,
+    stream::{AdmittedProviderContentStream, BoundedProviderContentStream},
+    WebsiteDeliveryContent, WebsiteDeliveryContentKind, WebsiteDeliveryError,
+    WebsiteDeliveryExecutorConfigError, WebsiteDeliveryMethod, WebsiteDeliveryOutcome,
+    WebsiteDeliveryRedirect, WebsiteDeliveryRequest, WebsiteDeliveryRouteIdentity,
+    WebsiteDeliveryScheme, WebsiteProviderRegistry,
 };
 
 const MAXIMUM_REQUEST_ID_BYTES: usize = 256;
 const MAXIMUM_TRACE_ID_BYTES: usize = 256;
+pub const DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES: usize = 256 * 1024 * 1024;
+const PROVIDER_BUFFER_RETRY_AFTER_MS: u64 = 100;
 
 pub struct WebsiteDeliveryExecutor {
     runtime_registry: Arc<WebsiteRuntimeRegistry>,
     provider_registry: Arc<WebsiteProviderRegistry>,
+    buffered_content_admission: Arc<Semaphore>,
 }
 
 impl WebsiteDeliveryExecutor {
@@ -34,10 +41,32 @@ impl WebsiteDeliveryExecutor {
         runtime_registry: Arc<WebsiteRuntimeRegistry>,
         provider_registry: Arc<WebsiteProviderRegistry>,
     ) -> Self {
-        Self {
+        Self::with_buffered_content_budget(
             runtime_registry,
             provider_registry,
+            DEFAULT_PROVIDER_BUFFERED_CONTENT_BYTES,
+        )
+        .expect("default provider buffered-content budget is valid")
+    }
+
+    pub fn with_buffered_content_budget(
+        runtime_registry: Arc<WebsiteRuntimeRegistry>,
+        provider_registry: Arc<WebsiteProviderRegistry>,
+        maximum_bytes: usize,
+    ) -> Result<Self, WebsiteDeliveryExecutorConfigError> {
+        if maximum_bytes == 0 || maximum_bytes > u32::MAX as usize {
+            return Err(
+                WebsiteDeliveryExecutorConfigError::InvalidBufferedContentBudget {
+                    configured_bytes: maximum_bytes,
+                    maximum_bytes: u32::MAX as usize,
+                },
+            );
         }
+        Ok(Self {
+            runtime_registry,
+            provider_registry,
+            buffered_content_admission: Arc::new(Semaphore::new(maximum_bytes)),
+        })
     }
 
     pub async fn execute(
@@ -164,16 +193,9 @@ impl WebsiteDeliveryExecutor {
                     route.maximum_object_bytes,
                     request.range,
                 )?;
-                let opened = Self::open_wiki_body(
-                    provider,
-                    &route,
-                    &request,
-                    context,
-                    &deadline,
-                    content.content_handle.clone(),
-                    content.metadata.content_length,
-                )
-                .await?;
+                let opened = self
+                    .open_wiki_body(provider, &route, &request, context, &deadline, &content)
+                    .await?;
                 let canonical_route = route.public_route(&content.canonical_route)?;
                 let opened = opened_body_fields(
                     opened,
@@ -204,39 +226,42 @@ impl WebsiteDeliveryExecutor {
     }
 
     async fn open_wiki_body(
+        &self,
         provider: Arc<dyn WebsiteWikiProvider>,
         route: &OwnedSelectedRoute,
         request: &WebsiteDeliveryRequest,
         mut context: WebsiteProviderRuntimeContext,
         deadline: &ProviderDeadline,
-        content_handle: sdkwork_webserver_contract::provider::WebsiteProviderContentHandle,
-        expected_bytes: u64,
+        content: &ResolvedWebsiteWikiContent,
     ) -> Result<Option<OpenedWebsiteContent>, WebsiteDeliveryError> {
         if request.method == WebsiteDeliveryMethod::Head {
             return Ok(None);
         }
+        let expected_bytes = content.metadata.content_length;
+        let permit = self.acquire_buffered_content(route.maximum_object_bytes)?;
         context.deadline_ms = deadline.remaining_ms()?;
         let open_request = OpenWebsiteContentRequest {
             context,
             provider: route.identity.provider.clone(),
             provider_relative_path: route.identity.provider_relative_path.clone(),
-            content_handle,
+            content_handle: content.content_handle.clone(),
             range: request.range,
             conditions: request.conditions.clone(),
             maximum_bytes: route.maximum_object_bytes,
         };
-        let opened = deadline
+        let mut opened = deadline
             .call(provider.open_wiki_content(&open_request))
             .await?;
         if request.range.is_none() && opened.content_length != expected_bytes {
             return Err(provider_contract_mismatch());
         }
+        opened.stream = Box::new(AdmittedProviderContentStream::new(opened.stream, permit));
         Ok(Some(opened))
     }
 
     async fn execute_static(
         &self,
-        route: OwnedSelectedRoute,
+        mut route: OwnedSelectedRoute,
         request: WebsiteDeliveryRequest,
         purpose: WebsiteProviderPurpose,
     ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
@@ -272,29 +297,29 @@ impl WebsiteDeliveryExecutor {
                 Err(error) => return Err(error.into()),
             };
             enforce_content_policy(&content.metadata, route.maximum_object_bytes, request.range)?;
-            return Self::open_static_content(
-                provider, route, request, context, &deadline, candidate, content,
-            )
-            .await;
+            route.identity.provider_relative_path = candidate;
+            return self
+                .open_static_content(provider, route, request, context, &deadline, content)
+                .await;
         }
         Ok(WebsiteDeliveryOutcome::NotFound)
     }
 
     async fn open_static_content(
+        &self,
         provider: Arc<dyn WebsiteStaticContentProvider>,
-        mut route: OwnedSelectedRoute,
+        route: OwnedSelectedRoute,
         request: WebsiteDeliveryRequest,
         mut context: WebsiteProviderRuntimeContext,
         deadline: &ProviderDeadline,
-        candidate: String,
         content: ResolvedWebsiteContent,
     ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
-        route.identity.provider_relative_path = candidate;
         let expected_bytes = content.metadata.content_length;
         let if_range_present = request.conditions.if_range.is_some();
         let opened = if request.method == WebsiteDeliveryMethod::Head {
             None
         } else {
+            let permit = self.acquire_buffered_content(route.maximum_object_bytes)?;
             context.deadline_ms = deadline.remaining_ms()?;
             let open_request = OpenWebsiteContentRequest {
                 context,
@@ -305,12 +330,13 @@ impl WebsiteDeliveryExecutor {
                 conditions: request.conditions,
                 maximum_bytes: route.maximum_object_bytes,
             };
-            let opened = deadline
+            let mut opened = deadline
                 .call(provider.open_static_content(&open_request))
                 .await?;
             if request.range.is_none() && opened.content_length != expected_bytes {
                 return Err(provider_contract_mismatch());
             }
+            opened.stream = Box::new(AdmittedProviderContentStream::new(opened.stream, permit));
             Some(opened)
         };
         let opened = opened_body_fields(
@@ -337,6 +363,16 @@ impl WebsiteDeliveryExecutor {
                 body: opened.stream,
             },
         )))
+    }
+
+    fn acquire_buffered_content(
+        &self,
+        reserved_bytes: u64,
+    ) -> WebsiteProviderResult<OwnedSemaphorePermit> {
+        let permits = u32::try_from(reserved_bytes.max(1)).map_err(|_| provider_unavailable())?;
+        Arc::clone(&self.buffered_content_admission)
+            .try_acquire_many_owned(permits)
+            .map_err(|_| provider_unavailable())
     }
 }
 
@@ -659,6 +695,13 @@ impl ProviderDeadline {
 
 fn provider_deadline_exceeded() -> WebsiteProviderError {
     WebsiteProviderError::new(WebsiteProviderErrorKind::DeadlineExceeded)
+}
+
+fn provider_unavailable() -> WebsiteProviderError {
+    WebsiteProviderError::with_retry_after(
+        WebsiteProviderErrorKind::Unavailable,
+        PROVIDER_BUFFER_RETRY_AFTER_MS,
+    )
 }
 
 fn provider_contract_mismatch() -> WebsiteDeliveryError {

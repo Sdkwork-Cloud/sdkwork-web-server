@@ -10,6 +10,7 @@ fn snapshot_fixture() -> Value {
         "kind": "sdkwork.tls-runtime.snapshot",
         "snapshotUuid": "tls-snapshot-0001",
         "nodeUuid": "web-node-0001",
+        "generation": 1,
         "generatedAt": "2026-07-21T00:00:00Z",
         "compilerVersion": "deploy-tls-compiler/1",
         "snapshotSha256": "0".repeat(64),
@@ -150,4 +151,18 @@ fn rejects_noncanonical_timestamps_and_oversized_snapshots() {
         compile_tls_assignment_snapshot(&oversized),
         Err(TlsRuntimeSnapshotError::TooLarge { .. })
     ));
+}
+
+#[test]
+fn rejects_zero_or_non_json_safe_generation() {
+    for generation in [json!(0), json!(9_007_199_254_740_992_u64)] {
+        let mut snapshot = snapshot_fixture();
+        snapshot["generation"] = generation;
+        let error = compile_tls_assignment_snapshot(&signed_snapshot(snapshot))
+            .expect_err("generation must be a positive JSON-safe fencing token");
+        assert!(error
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.path == "/generation"));
+    }
 }

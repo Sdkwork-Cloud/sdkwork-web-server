@@ -102,6 +102,8 @@ spec:
               value: /var/lib/sdkwork/web/website-runtime-recovery
             - name: SDKWORK_WEB_WEBSITE_RUNTIME_SET_POLL_INTERVAL_MS
               value: "2000"
+            - name: SDKWORK_WEB_TLS_RUNTIME_SOURCE
+              value: external
             - name: SDKWORK_WEB_WEBSITE_TENANT_SCOPE_HASH
               valueFrom:
                 secretKeyRef:
@@ -109,6 +111,8 @@ spec:
                   key: tenant-scope-hash
             - name: SDKWORK_WEB_WEBSITE_PROVIDER_VALIDATION_CONCURRENCY
               value: "16"
+            - name: SDKWORK_WEB_WEBSITE_PROVIDER_BUFFERED_CONTENT_BYTES
+              value: "268435456"
             - name: SDKWORK_WEB_WEBSITE_PROVIDER_EVENT_CONFIG_FILE
               value: /run/secrets/sdkwork-web-node/website-provider-events.json
             - name: SDKWORK_WEBSERVER_DRIVE_INTERNAL_API_BASE_URL

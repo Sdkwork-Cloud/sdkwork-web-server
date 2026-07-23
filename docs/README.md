@@ -11,6 +11,7 @@ those standards instead of copying normative text.
 | [product/prd/PRD-cloud-site-delivery-data-plane.md](product/prd/PRD-cloud-site-delivery-data-plane.md) | Live Drive/Wiki cloud delivery product contract |
 | [architecture/tech/TECH-cloud-site-delivery-data-plane.md](architecture/tech/TECH-cloud-site-delivery-data-plane.md) | Compiled descriptor and provider data-plane design |
 | [standards-alignment.md](standards-alignment.md) | Current SDKWork integration and verification evidence |
+| [engineering/reviews/REVIEW-20260723-web-server-production-readiness.md](engineering/reviews/REVIEW-20260723-web-server-production-readiness.md) | Consolidated implementation, configuration, deployment coverage, verification, and production gate review |
 | [architecture/decisions/](architecture/decisions/) | Accepted and proposed architecture decisions |
 | [product/requirements/](product/requirements/) | Requirement contracts and their verification evidence |
 
