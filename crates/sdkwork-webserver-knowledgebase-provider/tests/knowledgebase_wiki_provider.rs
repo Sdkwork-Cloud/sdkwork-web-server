@@ -9,8 +9,8 @@ use std::{
 use async_trait::async_trait;
 use sdkwork_knowledgebase_internal_sdk::{
     models::{
-        PageInfo, ResolveWikiRouteRequest, WikiPage, WikiPageListData, WikiPublication,
-        WikiRouteResolution,
+        PageInfo, ResolveWikiRouteRequest, WikiPublicPageListData, WikiPublicPageMetadata,
+        WikiPublication, WikiRouteResolution,
     },
     SdkworkError,
 };
@@ -37,8 +37,8 @@ struct FakeKnowledgebaseWikiSdk {
     publication: Mutex<WikiPublication>,
     resolution: Mutex<WikiRouteResolution>,
     content: Mutex<Vec<u8>>,
-    navigation: Mutex<WikiPageListData>,
-    search: Mutex<WikiPageListData>,
+    navigation: Mutex<WikiPublicPageListData>,
+    search: Mutex<WikiPublicPageListData>,
     next_publication_status: AtomicU16,
     publication_delay_ms: AtomicU64,
     publication_calls: AtomicUsize,
@@ -49,7 +49,7 @@ struct FakeKnowledgebaseWikiSdk {
 
 impl FakeKnowledgebaseWikiSdk {
     fn new() -> Self {
-        let page = wiki_page();
+        let page = public_wiki_page();
         Self {
             publication: Mutex::new(wiki_publication()),
             resolution: Mutex::new(WikiRouteResolution {
@@ -124,7 +124,7 @@ impl KnowledgebaseWikiSdkClient for FakeKnowledgebaseWikiSdk {
         _locale: Option<&str>,
         _cursor: Option<&str>,
         _page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError> {
+    ) -> Result<WikiPublicPageListData, SdkworkError> {
         Ok(self.navigation.lock().expect("navigation lock").clone())
     }
 
@@ -135,7 +135,7 @@ impl KnowledgebaseWikiSdkClient for FakeKnowledgebaseWikiSdk {
         _locale: Option<&str>,
         _cursor: Option<&str>,
         _page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError> {
+    ) -> Result<WikiPublicPageListData, SdkworkError> {
         *self.last_search_query.lock().expect("search query lock") = Some(query.to_string());
         Ok(self.search.lock().expect("search lock").clone())
     }
@@ -464,8 +464,8 @@ fn wiki_publication() -> WikiPublication {
     }
 }
 
-fn wiki_page() -> WikiPage {
-    WikiPage {
+fn public_wiki_page() -> WikiPublicPageMetadata {
+    WikiPublicPageMetadata {
         projection_uuid: PROJECTION_UUID.to_string(),
         canonical_route: "/guide/".to_string(),
         file_kind: "PAGE".to_string(),
@@ -481,8 +481,11 @@ fn wiki_page() -> WikiPage {
     }
 }
 
-fn page_list(items: Vec<WikiPage>, next_cursor: Option<&str>) -> WikiPageListData {
-    WikiPageListData {
+fn page_list(
+    items: Vec<WikiPublicPageMetadata>,
+    next_cursor: Option<&str>,
+) -> WikiPublicPageListData {
+    WikiPublicPageListData {
         items,
         page_info: PageInfo {
             mode: "cursor".to_string(),

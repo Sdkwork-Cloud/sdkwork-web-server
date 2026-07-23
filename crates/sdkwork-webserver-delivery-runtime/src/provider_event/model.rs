@@ -13,6 +13,7 @@ const DRIVE_VERSION_COMMITTED: &str = "drive.node.version.committed.v1";
 const DRIVE_PATH_CHANGED: &str = "drive.node.path.changed.v1";
 const DRIVE_ELIGIBILITY_CHANGED: &str = "drive.node.eligibility.changed.v1";
 const DRIVE_DELETED: &str = "drive.node.deleted.v1";
+const DRIVE_WEBSITE_ROOT_GENERATION_CHANGED: &str = "drive.website_root.generation.changed.v1";
 const WIKI_PROVIDER_CHANGED: &str = "knowledgebase.wiki.provider.changed.v1";
 const WIKI_ROUTE_CHANGED: &str = "knowledgebase.wiki.route.changed.v1";
 const WIKI_ROUTE_REVOKED: &str = "knowledgebase.wiki.route.revoked.v1";
@@ -149,6 +150,10 @@ fn parse_drive(
     validate_optional_text(envelope.organization_id, 64)?;
     validate_text(required_string(object, "actorId")?, 128)?;
 
+    if envelope.event_type == DRIVE_WEBSITE_ROOT_GENERATION_CHANGED {
+        return parse_drive_website_root_generation(object, envelope, payload_sha256);
+    }
+
     let (space_id, node_id, drive_uri, invalidations) = match envelope.event_type {
         DRIVE_VERSION_COMMITTED => parse_drive_version(envelope.data)?,
         DRIVE_PATH_CHANGED => parse_drive_path(envelope.data)?,
@@ -179,6 +184,83 @@ fn parse_drive(
             stream_id,
         },
         invalidations,
+        payload_sha256,
+    })
+}
+
+fn parse_drive_website_root_generation(
+    object: &Map<String, Value>,
+    envelope: ParsedEnvelope<'_>,
+    payload_sha256: String,
+) -> Result<WebsiteProviderEvent, WebsiteProviderEventParseError> {
+    exact_keys(
+        envelope.data,
+        &[
+            "operationId",
+            "spaceId",
+            "websiteRootUuid",
+            "previousRootNodeId",
+            "rootNodeId",
+            "previousGeneration",
+            "generation",
+            "fileCount",
+            "totalBytes",
+            "changeReason",
+        ],
+        &["manifestSha256"],
+    )?;
+    validate_text(required_string(envelope.data, "operationId")?, 128)?;
+    let space_id = required_string(envelope.data, "spaceId")?;
+    validate_text(space_id, 64)?;
+    let website_root_uuid = required_string(envelope.data, "websiteRootUuid")?;
+    validate_uuid(website_root_uuid)?;
+    validate_text(required_string(envelope.data, "previousRootNodeId")?, 64)?;
+    validate_text(required_string(envelope.data, "rootNodeId")?, 64)?;
+    let previous_generation =
+        parse_positive(required_string(envelope.data, "previousGeneration")?)?;
+    let generation = parse_positive(required_string(envelope.data, "generation")?)?;
+    if generation != previous_generation.saturating_add(1) {
+        return Err(WebsiteProviderEventParseError::InvalidValue);
+    }
+    if let Some(manifest_sha256) = optional_non_null_string(envelope.data, "manifestSha256")? {
+        validate_sha256(manifest_sha256)?;
+    }
+    parse_non_negative(required_string(envelope.data, "fileCount")?)?;
+    parse_non_negative(required_string(envelope.data, "totalBytes")?)?;
+    if !matches!(
+        required_string(envelope.data, "changeReason")?,
+        "SYNC_ACTIVATED" | "ROLLBACK_ACTIVATED"
+    ) {
+        return Err(WebsiteProviderEventParseError::InvalidValue);
+    }
+    let expected_subject = format!("drive://spaces/{space_id}/website_roots/{website_root_uuid}");
+    if required_string(object, "subject")? != expected_subject {
+        return Err(WebsiteProviderEventParseError::InvalidValue);
+    }
+    let stream_id = format!(
+        "drive:{}:{}:{space_id}",
+        envelope.tenant_id,
+        envelope.organization_id.unwrap_or("-")
+    );
+    Ok(WebsiteProviderEvent {
+        id: envelope.id.to_owned(),
+        event_type: envelope.event_type.to_owned(),
+        sequence_no: envelope.sequence_no,
+        ordering: WebsiteProviderEventOrdering::Contiguous,
+        scope: WebsiteProviderEventScope {
+            source: WebsiteProviderEventSource::Drive,
+            tenant_id: envelope.tenant_id.to_owned(),
+            organization_id: envelope.organization_id.map(str::to_owned),
+            stream_id,
+        },
+        invalidations: vec![WebsiteProviderEventInvalidation {
+            provider_type: WebsiteProviderType::Drive,
+            provider_resource_uuid: website_root_uuid.to_owned(),
+            kind: WebsiteProviderEventInvalidationKind::Provider,
+            priority: WebsiteProviderEventInvalidationPriority::Normal,
+            provider_generation: Some(generation.to_string()),
+            public_generation: None,
+        }],
         payload_sha256,
     })
 }

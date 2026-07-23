@@ -455,8 +455,7 @@ CREATE TABLE web_runtime_assignment (
         UNIQUE (tenant_id, id, server_id),
     CONSTRAINT uk_web_runtime_assignment_generation
         UNIQUE (tenant_id, server_id, environment, generation),
-    CONSTRAINT uk_web_runtime_assignment_snapshot
-        UNIQUE (tenant_id, server_id, environment, snapshot_uuid),
+    CONSTRAINT uk_web_runtime_assignment_snapshot UNIQUE (snapshot_uuid),
     CONSTRAINT fk_web_runtime_assignment_server
         FOREIGN KEY (tenant_id, server_id) REFERENCES web_server (tenant_id, id),
     CONSTRAINT chk_web_runtime_assignment_environment

@@ -1,4 +1,4 @@
 export interface NginxValidateResponse {
   valid?: boolean;
-  errors?: Record<string, unknown>[];
+  errors?: ({ line?: number; message?: string; severity?: 'error' | 'warning' | 'info'; })[];
 }

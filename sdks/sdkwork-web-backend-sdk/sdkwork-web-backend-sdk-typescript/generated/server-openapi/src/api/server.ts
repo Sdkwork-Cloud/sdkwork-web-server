@@ -18,12 +18,12 @@ export class ServerApi {
 
 
 /** List managed servers */
-  async list(params?: ServerListParams): Promise<Record<string, unknown>> {
+  async list(params?: ServerListParams): Promise<{ items: ServerResponse[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/servers`), query));
+    return this.client.get<{ items: ServerResponse[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/servers`), query));
   }
 
 /** Register a managed server */

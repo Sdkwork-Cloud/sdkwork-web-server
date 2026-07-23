@@ -1,9 +1,9 @@
 import type { NginxConfigResponse } from './nginx-config-response';
 import type { PageInfo } from './page-info';
 
-export interface NginxConfigsListResponse {
+export interface ConfigsListResponse {
   code: 0;
-  data: unknown & Record<string, unknown>;
+  data: unknown & { items: NginxConfigResponse[]; pageInfo: PageInfo; };
   /** Server-owned request correlation id. */
   traceId: string;
 }

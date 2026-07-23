@@ -34,10 +34,11 @@ Control-plane connectivity is not on the request hot path after a valid snapshot
 Provider resolution is on the origin path and therefore uses bounded timeouts, concurrency,
 circuit breaking, caching, and explicit stale behavior.
 
-The current writable Web app-api and `web_site`, `web_domain`, `web_deployment`, and
-`web_certificate` tables are pre-cutover control-plane debt, not part of this target data plane.
-Public activation is blocked until Deploy is the single writer, state is shadow-compared and
-reconciled, Web write routes are disabled/retired, and rollback cannot reactivate dual writers.
+The writable Web app-api and `web_site`, `web_domain`, `web_deployment`, and `web_certificate`
+tables belong only to the explicit standalone local-management profile. `cloud.production` starts
+only the Website Edge Runtime with management composition disabled and accepts Deploy-owned
+immutable assignments. Standalone records are never imported, shadow-written, or treated as cloud
+authority.
 
 ### 1.1 Implemented Runtime Contract Slice
 
@@ -112,12 +113,12 @@ runtime-adapter stage.
 ### 2.3 Activation
 
 ```text
-received -> validating -> staged -> probed -> active
-                  |          |         |
-                  +----------+---------+-> rejected
+RECEIVED -> VALIDATED -> isolated node-local HEAD probe -> STAGED -> ACTIVE
+     |           |                    |            |          |
+     +-----------+--------------------+------------+----------+-> REJECTED
 ```
 
-Only `active` changes the current pointer. Rejection retains the previous snapshot and reports a
+Only `ACTIVE` changes the current pointer. Rejection retains the previous snapshot and reports a
 bounded reason. The implemented website registry serializes activation/rollback writers while
 request readers load one lock-free immutable pointer. It enforces node/environment scope,
 deduplicates unchanged hashes, rejects stale generations and same-generation hash conflicts, and
@@ -125,14 +126,23 @@ retains exactly one previous complete set; rollback consumes that one generation
 the replay barrier. The standalone gateway also persists the activated complete runtime-set in
 node-local A/B slots, recompiles both slots at restart, selects the highest valid generation across
 source and recovery state, and rejects same-generation hash conflicts or node/environment scope
-mismatches. Staging and production require an explicit protected recovery directory. The Web side
-of authenticated distribution is implemented through the application-ingress Web Internal API and
-generated Rust SDK. A Web Node conditionally pulls by environment/generation/hash, validates
-node/environment/hash identity, durably stages before activation, and records resumable
-`RECEIVED`, `VALIDATED`, `STAGED`, `ACTIVE`, or terminal `REJECTED` observations. Deploy producer
-wiring, detached source attestation where required, staging probes, quorum policy, drift reporting,
-and fleet reconciliation remain control-plane work. TLS hot activation remains independently
-unimplemented.
+mismatches. Staging and production require an explicit protected recovery directory.
+Authenticated distribution is implemented end to end through the application-ingress Web Internal
+API and its generated Rust SDK. A Web Node conditionally pulls by environment/generation/hash,
+validates node/environment/hash identity and Provider resources, then runs bounded `HEAD` requests
+against a candidate-only registry before writing the recovery slot. The probe covers every Binding
+and every reachable selectable device Variant and uses `WebsiteProviderPurpose::Activation`; a
+failed candidate reports `ACTIVATION_PROBE_FAILED` and cannot replace the live or recoverable
+last-known-good runtime-set. Only a successful probe is durably staged and atomically activated.
+The Node records resumable `RECEIVED`, `VALIDATED`, `STAGED`, `ACTIVE`, or terminal `REJECTED`
+observations. Deploy publishes assignments and reads the latest observation through the generated
+Web Internal SDK, persists immutable per-target evidence, and transactionally advances
+`deploy_site.current_revision_id` only after every frozen target reports the exact assignment as
+`ACTIVE`; partial, stale, mismatched, or `REJECTED` evidence cannot advance it. Detached source
+attestation where required, external public-domain multi-vantage probes, production drift
+dashboards/alerts, and TLS material hot activation remain independent release work. The node-local
+probe proves candidate route/provider resolvability on one Node; it is not public DNS, TLS, CDN, or
+Internet reachability evidence.
 
 ## 3. Request Pipeline
 
@@ -324,9 +334,12 @@ runtime-set containing another or multiple tenant scopes cannot reuse the proces
 credentials and is rejected. The adapter maps GET/HEAD, conditions, redirects, Range failures,
 typed provider failures, metadata, security headers, and incremental provider chunks to HTTP
 without re-entering legacy `ResourceConfig` route selection. A local watcher activates only
-monotonic, fully compiled, tenant-scoped, provider-validated updates. Successful activation writes
-the inactive node-local recovery slot with bounded asynchronous I/O; invalid candidates retain the
-current set, and a source older than the recovered generation cannot lower the replay barrier.
+monotonic, fully compiled, tenant-scoped, provider-validated updates that also pass the isolated
+node-local Binding/Variant `HEAD` probe. The candidate is probed through a temporary registry, so
+failure cannot mutate the live registry or recovery state. A successful probe writes the inactive
+node-local recovery slot with bounded asynchronous I/O before atomic live activation; invalid
+candidates retain the current set, and a source older than the recovered generation cannot lower
+the replay barrier.
 
 The same bootstrap starts an independent loopback-only provider-event listener for every registered
 Drive or Knowledgebase provider capability, including a capability that a later watched runtime-set
@@ -338,11 +351,16 @@ and secret-file credential. The processor strictly consumes the four Drive Websi
 five Knowledgebase Wiki events, persists per-stream dual-slot checkpoints, and reconciles uncertain
 state through the generated-SDK provider registry before accepting subsequent freshness evidence.
 
-The Web consumer half of authenticated cloud runtime-set distribution is implemented. The
-Deployments producer must still publish through the generated Web Internal SDK, and detached source
-attestation, staged probes, quorum/drift policy, service-credential hot rotation, and provider-aware
-cache integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
-data-plane state: neither writes Web business authority nor replaces fleet rollout observation.
+Authenticated cloud runtime-set distribution and convergence are implemented: Deploy publishes
+through the generated Web Internal SDK, Web performs provider validation plus an isolated node-local
+activation probe, Web exposes the latest authenticated observation, and Deploy persists immutable
+evidence and applies strict all-frozen-target `ACTIVE` quorum before advancing the Site current
+revision. Detached source attestation where required, external public-domain multi-vantage probes,
+production drift dashboards/alerts, service-credential hot rotation, and provider-aware cache
+integration remain open. Runtime-set recovery slots and provider-event checkpoints are node
+data-plane state: neither writes Web business authority nor substitutes for Deploy's durable rollout
+evidence. A node-local activation probe does not establish public DNS, TLS, CDN, or Internet
+reachability.
 Axum streams provider chunks without response buffering, but the current generated owner SDKs
 retrieve each content object as a bounded `Vec<u8>` before the adapters create their streams.
 Activation therefore enforces the concrete 16 MiB Knowledgebase or 256 MiB Drive adapter ceiling
@@ -462,12 +480,11 @@ The cloud business source is Deploy `deploy_*`. Web Server may persist:
 - runtime audit and operation evidence owned by Web Server.
 
 It must not accept independent cloud writes that create a Site/domain/certificate truth conflicting
-with Deploy. Existing `web_site`, `web_domain`, `web_deployment`, and `web_certificate` follow the
-cross-repository migration. Runtime files use canonical protected directories and atomic
-write/fsync/rename semantics where applicable.
-The same retirement applies to overlapping Web app-api Site/Domain/Deployment/Certificate write
-routes. Read-only runtime observation APIs may remain only after their ownership and names no
-longer imply control-plane authority.
+with Deploy. Existing `web_site`, `web_domain`, `web_deployment`, and `web_certificate` remain
+standalone-only local authority. Runtime files use canonical protected directories and atomic
+write/fsync/rename semantics where applicable. The cloud artifact excludes overlapping Web app-api
+Site/Domain/Deployment/Certificate write routes; typed runtime observation APIs are a separate
+Deploy-facing projection and must not imply configuration ownership.
 
 ## 11. Concurrency And Bounds
 

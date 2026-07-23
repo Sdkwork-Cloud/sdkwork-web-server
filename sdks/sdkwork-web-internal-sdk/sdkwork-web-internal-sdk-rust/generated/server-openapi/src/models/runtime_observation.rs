@@ -8,8 +8,13 @@ pub struct RuntimeObservation {
     #[serde(rename = "assignmentUuid")]
     pub assignment_uuid: String,
 
+    #[serde(rename = "tenantId")]
+    pub tenant_id: String,
+
     #[serde(rename = "nodeUuid")]
     pub node_uuid: String,
+
+    pub environment: String,
 
     pub generation: String,
 

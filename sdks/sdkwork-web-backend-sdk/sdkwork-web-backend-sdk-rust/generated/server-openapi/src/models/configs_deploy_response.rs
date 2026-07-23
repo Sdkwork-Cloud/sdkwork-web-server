@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct NginxConfigsRetrieveResponse {
+pub struct ConfigsDeployResponse {
     pub code: i64,
 
     pub data: serde_json::Value,

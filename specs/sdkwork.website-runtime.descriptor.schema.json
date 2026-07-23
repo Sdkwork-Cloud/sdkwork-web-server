@@ -278,7 +278,7 @@
           "const": "CLIENT_CLASS"
         },
         "clientClass": {
-          "enum": ["DESKTOP", "MOBILE", "TABLET", "BOT", "OTHER"]
+          "enum": ["DESKTOP", "MOBILE", "TABLET", "TV", "BOT", "OTHER"]
         }
       }
     },

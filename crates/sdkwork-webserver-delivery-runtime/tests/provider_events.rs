@@ -15,7 +15,7 @@ use sdkwork_webserver_delivery_runtime::{
     WebsiteProviderEventProcessor, WebsiteProviderEventReconciler, WebsiteProviderEventScope,
     WebsiteProviderEventSource,
 };
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[derive(Default)]
 struct RecordingInvalidator {
@@ -321,6 +321,67 @@ async fn different_event_streams_reconcile_concurrently() {
     .await
     .expect("independent streams must not share one global processing lock");
     assert_eq!(reconciler.maximum_active.load(Ordering::SeqCst), 2);
+}
+
+#[test]
+fn website_root_generation_event_invalidates_the_stable_drive_provider() {
+    let body = serde_json::to_vec(&json!({
+        "id": "generation-event-1",
+        "type": "drive.website_root.generation.changed.v1",
+        "source": "sdkwork-drive",
+        "specversion": "1.0",
+        "time": "2026-07-23T00:00:00Z",
+        "tenantId": "tenant-1",
+        "subject": "drive://spaces/space-1/website_roots/6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a",
+        "actorId": "user-1",
+        "sequenceNo": "2",
+        "data": {
+            "operationId": "sync-1",
+            "spaceId": "space-1",
+            "websiteRootUuid": "6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a",
+            "previousRootNodeId": "node-generation-1",
+            "rootNodeId": "node-generation-2",
+            "previousGeneration": "1",
+            "generation": "2",
+            "manifestSha256": format!("sha256:{}", "a".repeat(64)),
+            "fileCount": "2",
+            "totalBytes": "42",
+            "changeReason": "SYNC_ACTIVATED"
+        }
+    }))
+    .unwrap();
+
+    let event = parse_website_provider_event(&body).expect("generation event should parse");
+    assert_eq!(event.scope.stream_id, "drive:tenant-1:-:space-1");
+    assert_eq!(event.invalidations.len(), 1);
+    assert_eq!(
+        event.invalidations[0].provider_resource_uuid,
+        "6ecf7e32-4f07-4c78-b6b8-a8b5dd0af02a"
+    );
+    assert_eq!(
+        event.invalidations[0].kind,
+        WebsiteProviderEventInvalidationKind::Provider
+    );
+    assert_eq!(
+        event.invalidations[0].provider_generation.as_deref(),
+        Some("2")
+    );
+
+    let mut invalid = serde_json::from_slice::<Value>(&body).unwrap();
+    invalid["data"]["generation"] = json!("4");
+    assert!(parse_website_provider_event(&serde_json::to_vec(&invalid).unwrap()).is_err());
+
+    let mut invalid = serde_json::from_slice::<Value>(&body).unwrap();
+    invalid["subject"] = json!("drive://spaces/space-1/website_roots/other");
+    assert!(parse_website_provider_event(&serde_json::to_vec(&invalid).unwrap()).is_err());
+
+    let mut invalid = serde_json::from_slice::<Value>(&body).unwrap();
+    invalid["data"]["unexpected"] = json!(true);
+    assert!(parse_website_provider_event(&serde_json::to_vec(&invalid).unwrap()).is_err());
+
+    let mut invalid = serde_json::from_slice::<Value>(&body).unwrap();
+    invalid["data"]["manifestSha256"] = json!("sha256:not-a-digest");
+    assert!(parse_website_provider_event(&serde_json::to_vec(&invalid).unwrap()).is_err());
 }
 
 fn drive_event(sequence_no: u64, id: &str) -> WebsiteProviderEvent {

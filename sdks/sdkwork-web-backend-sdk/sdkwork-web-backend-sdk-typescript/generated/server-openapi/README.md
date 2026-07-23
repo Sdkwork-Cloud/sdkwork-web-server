@@ -86,7 +86,7 @@ const result = await client.server.list(params);
 const params = {
   ifSyncVersion: 'ifSyncVersion',
 };
-const result = await client.agent.retrieve(params);
+const result = await client.agent.sync.list(params);
 ```
 
 ### audit

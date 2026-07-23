@@ -3,7 +3,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use sdkwork_knowledgebase_internal_sdk::{
     api::KnowledgebaseInternalWikiApi,
-    models::{ResolveWikiRouteRequest, WikiPageListData, WikiPublication, WikiRouteResolution},
+    models::{
+        ResolveWikiRouteRequest, WikiPublicPageListData, WikiPublication, WikiRouteResolution,
+    },
     SdkworkError,
 };
 use sdkwork_webserver_contract::provider::{
@@ -35,7 +37,7 @@ pub trait KnowledgebaseWikiSdkClient: Send + Sync {
         locale: Option<&str>,
         cursor: Option<&str>,
         page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError>;
+    ) -> Result<WikiPublicPageListData, SdkworkError>;
 
     async fn search_pages(
         &self,
@@ -44,7 +46,7 @@ pub trait KnowledgebaseWikiSdkClient: Send + Sync {
         locale: Option<&str>,
         cursor: Option<&str>,
         page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError>;
+    ) -> Result<WikiPublicPageListData, SdkworkError>;
 }
 
 #[async_trait]
@@ -80,7 +82,7 @@ impl KnowledgebaseWikiSdkClient for KnowledgebaseInternalWikiApi {
         locale: Option<&str>,
         cursor: Option<&str>,
         page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError> {
+    ) -> Result<WikiPublicPageListData, SdkworkError> {
         self.wiki_publications_navigation_list(publication_uuid, locale, cursor, Some(page_size))
             .await
     }
@@ -92,7 +94,7 @@ impl KnowledgebaseWikiSdkClient for KnowledgebaseInternalWikiApi {
         locale: Option<&str>,
         cursor: Option<&str>,
         page_size: i64,
-    ) -> Result<WikiPageListData, SdkworkError> {
+    ) -> Result<WikiPublicPageListData, SdkworkError> {
         self.wiki_publications_pages_search(
             publication_uuid,
             query,

@@ -387,8 +387,10 @@ mod tests {
                 StatusCode::CREATED,
                 json!({
                     "observationUuid": "observation-7",
+                    "tenantId": "7",
                     "assignmentUuid": "assignment-7",
                     "nodeUuid": node_uuid,
+                    "environment": "production",
                     "generation": "7",
                     "snapshotUuid": SNAPSHOT_UUID,
                     "snapshotSha256": SNAPSHOT_SHA256,

@@ -137,6 +137,11 @@
         "provider": "sdkwork-webserver-delivery-runtime"
       },
       {
+        "name": "websiteRuntimeActivationProbe",
+        "export": "crate-root",
+        "provider": "sdkwork-webserver-delivery-runtime"
+      },
+      {
         "name": "websiteProviderRegistry",
         "export": "crate-root",
         "provider": "sdkwork-webserver-delivery-runtime"

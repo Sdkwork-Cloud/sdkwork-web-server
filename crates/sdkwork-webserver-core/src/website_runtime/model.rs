@@ -119,6 +119,7 @@ pub enum WebsiteClientClass {
     Desktop,
     Mobile,
     Tablet,
+    Tv,
     Bot,
     Other,
 }

@@ -57,6 +57,10 @@ pub fn build_router_with_shared_internal_api(api: Arc<dyn WebInternalApi>) -> Ro
             post(create_runtime_observation)
                 .layer(DefaultBodyLimit::max(OBSERVATION_REQUEST_BYTES)),
         )
+        .route(
+            paths::LATEST_RUNTIME_OBSERVATION,
+            get(retrieve_latest_runtime_observation),
+        )
         .with_state(InternalState { api })
 }
 
@@ -105,6 +109,20 @@ async fn create_runtime_observation(
         state
             .api
             .create_runtime_observation(&context, &snapshot_uuid, &request)
+            .await,
+    )
+}
+
+async fn retrieve_latest_runtime_observation(
+    State(state): State<InternalState>,
+    context: Option<Extension<WebInternalRequestContext>>,
+    Path(snapshot_uuid): Path<String>,
+) -> Result<Response, WebApiError> {
+    let context = require_internal_context(context)?;
+    ok_resource(
+        state
+            .api
+            .retrieve_latest_runtime_observation(&context, &snapshot_uuid)
             .await,
     )
 }

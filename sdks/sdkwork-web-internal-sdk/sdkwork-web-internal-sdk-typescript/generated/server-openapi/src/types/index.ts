@@ -17,3 +17,4 @@ export type { WebsiteRuntimeSetSnapshotTimestamp } from './website-runtime-set-s
 export type { RuntimeAssignmentsUpdateResponse } from './runtime-assignments-update-response';
 export type { RuntimeAssignmentsCurrentRetrieveResponse } from './runtime-assignments-current-retrieve-response';
 export type { RuntimeAssignmentsObservationsCreateResponse201 } from './runtime-assignments-observations-create-response201';
+export type { RuntimeAssignmentsObservationsLatestRetrieveResponse } from './runtime-assignments-observations-latest-retrieve-response';

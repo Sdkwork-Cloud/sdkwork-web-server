@@ -28,6 +28,7 @@
     "publicExports": ["crate-root"],
     "providedPorts": [
       {"name": "websiteDeliveryExecutor", "export": "crate-root"},
+      {"name": "websiteRuntimeActivationProbe", "export": "crate-root"},
       {"name": "websiteProviderRegistry", "export": "crate-root"},
       {"name": "websiteRuntimeProviderValidator", "export": "crate-root"},
       {"name": "websiteProviderEventProcessor", "export": "crate-root"},
@@ -52,6 +53,7 @@
       "drive.node.path.changed.v1",
       "drive.node.eligibility.changed.v1",
       "drive.node.deleted.v1",
+      "drive.website_root.generation.changed.v1",
       "knowledgebase.wiki.provider.changed.v1",
       "knowledgebase.wiki.route.changed.v1",
       "knowledgebase.wiki.route.revoked.v1",

@@ -23,7 +23,7 @@ export class AuditAuditLogsApi {
 
 
 /** List audit logs */
-  async list(params?: AuditAuditLogsListParams): Promise<Record<string, unknown>> {
+  async list(params?: AuditAuditLogsListParams): Promise<{ items: AuditLogResponse[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -33,16 +33,16 @@ export class AuditAuditLogsApi {
       { name: 'startDate', value: params?.startDate, style: 'form', explode: true, allowReserved: false },
       { name: 'endDate', value: params?.endDate, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/audit_logs`), query));
+    return this.client.get<{ items: AuditLogResponse[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/audit_logs`), query));
   }
 }
 
 export class AuditApi {
-  private client: HttpClient;
+
   public readonly auditLogs: AuditAuditLogsApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
+
     this.auditLogs = new AuditAuditLogsApi(client);
   }
 

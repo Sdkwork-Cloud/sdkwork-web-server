@@ -129,7 +129,9 @@ pub struct CreateRuntimeObservationRequest {
 pub struct RuntimeObservation {
     pub observation_uuid: String,
     pub assignment_uuid: String,
+    pub tenant_id: String,
     pub node_uuid: String,
+    pub environment: String,
     pub generation: String,
     pub snapshot_uuid: String,
     pub snapshot_sha256: String,
@@ -166,5 +168,11 @@ pub trait WebInternalApi: Send + Sync {
         context: &WebInternalRequestContext,
         snapshot_uuid: &str,
         request: &CreateRuntimeObservationRequest,
+    ) -> WebServiceResult<RuntimeObservation>;
+
+    async fn retrieve_latest_runtime_observation(
+        &self,
+        context: &WebInternalRequestContext,
+        snapshot_uuid: &str,
     ) -> WebServiceResult<RuntimeObservation>;
 }

@@ -59,6 +59,10 @@ fn descriptor_fixture() -> Value {
             {
                 "variantUuid": "variant-mobile",
                 "label": "Mobile"
+            },
+            {
+                "variantUuid": "variant-tv",
+                "label": "TV"
             }
         ],
         "variantRules": [
@@ -78,6 +82,15 @@ fn descriptor_fixture() -> Value {
                 "match": {
                     "type": "PATH_PREFIX",
                     "pathPrefix": "/m"
+                }
+            },
+            {
+                "ruleUuid": "rule-tv-client",
+                "variantUuid": "variant-tv",
+                "priority": 100,
+                "match": {
+                    "type": "CLIENT_CLASS",
+                    "clientClass": "TV"
                 }
             }
         ],
@@ -145,6 +158,19 @@ fn descriptor_fixture() -> Value {
                 "translation": {
                     "mode": "ROOT",
                     "resourceSubpath": "/mobile"
+                },
+                "indexFiles": ["index.html"],
+                "spaFallback": "/index.html"
+            },
+            {
+                "mountUuid": "mount-tv-root",
+                "variantUuid": "variant-tv",
+                "pathPrefix": "/",
+                "resourceUuid": "resource-drive",
+                "handler": "SPA",
+                "translation": {
+                    "mode": "ROOT",
+                    "resourceSubpath": "/tv"
                 },
                 "indexFiles": ["index.html"],
                 "spaFallback": "/index.html"
@@ -265,6 +291,34 @@ fn applies_variant_precedence_and_keeps_root_translation_inside_provider_scope()
         preferred.variant_reason,
         WebsiteVariantSelectionReason::Preference
     );
+}
+
+#[test]
+fn selects_tv_variant_from_the_runtime_descriptor_contract() {
+    let compiled = compile_website_runtime_descriptor(&signed_descriptor(descriptor_fixture()))
+        .expect("fixture must compile");
+    let selected = compiled
+        .select_route(
+            "example.com",
+            "/dashboard",
+            WebsiteRequestRoutingContext {
+                verified_preferred_variant_uuid: None,
+                client_class: Some(WebsiteClientClass::Tv),
+                client_classification_source: Some(WebsiteClientClassificationSource::UserAgent),
+            },
+        )
+        .unwrap()
+        .unwrap();
+    let WebsiteRouteSelection::Serve(selected) = selected else {
+        panic!("expected a served TV route");
+    };
+    assert_eq!(selected.variant.variant_uuid, "variant-tv");
+    assert_eq!(
+        selected.variant_reason,
+        WebsiteVariantSelectionReason::UserAgent
+    );
+    assert_eq!(selected.mount.mount_uuid, "mount-tv-root");
+    assert_eq!(selected.provider_relative_path, "/tv/dashboard");
 }
 
 #[test]

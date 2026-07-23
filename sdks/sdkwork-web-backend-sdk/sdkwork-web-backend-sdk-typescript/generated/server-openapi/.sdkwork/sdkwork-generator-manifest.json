@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+      "sha256": "582c020e50ece8a369ab0c5b2f18d6efe16a54d7c46cd4b29d0a2d560ea07d6c"
     },
     {
       "path": "bin/publish.ps1",
@@ -44,7 +44,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "0c8a9a5ed24817e54008fb86945c44884b1682c1843b2df16e02d4a1294278e9"
+      "sha256": "e47df304655c0fb01a090827c3b6ef41e0683ef9b36ffd3ae68809e7a0d3fadc"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -52,11 +52,11 @@
     },
     {
       "path": "src/api/agent.ts",
-      "sha256": "33431585d0da64c15aafd7022d45e61c9fe7c6774cca9daea0f42ebead612268"
+      "sha256": "33ccd01a884d391805a59de67f0e7494ace9e480276755a6e712c1fc773930eb"
     },
     {
       "path": "src/api/audit.ts",
-      "sha256": "5938647b0201e4f2ebefcd2803ff1b5aaf4d6c4a007f7bb9bdbe090b2f553369"
+      "sha256": "1e82fa52cc3df5b0592d6366be091d3e05581273b202f2fc81746f2aae88f065"
     },
     {
       "path": "src/api/base.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/nginx.ts",
-      "sha256": "6f5d0e30d9012de97141060db463c7e6ac5f0e80abf3210e8aceed0946166917"
+      "sha256": "e7cf7dcc450e3852da837d52df16c46bbeb20cfc1df696af1d3d36f6f8c21b61"
     },
     {
       "path": "src/api/paths.ts",
@@ -76,7 +76,7 @@
     },
     {
       "path": "src/api/server.ts",
-      "sha256": "55a8ccf9108f2b03afaf5c3fc1aad395b8c68f1af860b1820a11a45a16ea5c67"
+      "sha256": "ca7668c4787cf642cb5a9d02ba00b98a236200b178e68abcb88ebb48ce19d6ee"
     },
     {
       "path": "src/auth/index.ts",
@@ -103,10 +103,6 @@
       "sha256": "0ce1b4f2f2ec8cbd1c5785c0e5bb4cee176a8d13a67f1e96e3691b54e931546a"
     },
     {
-      "path": "src/types/agent-heartbeat-post-response.ts",
-      "sha256": "f587f2bb74428bb9be0f05958e22a7577c4b268699cff966d758591eacae9bbf"
-    },
-    {
       "path": "src/types/agent-heartbeat-request.ts",
       "sha256": "2dbe4611ccedad7dbc70b8dd43f35f992ad86d2a6a5b93564a91fe9805ffa0ba"
     },
@@ -117,10 +113,6 @@
     {
       "path": "src/types/agent-nginx-config-bundle.ts",
       "sha256": "496fd34efc7051dcad8c365be4441d2b7ff04e7232d8ffbd7ed1b994d9eada90"
-    },
-    {
-      "path": "src/types/agent-retrieve-response.ts",
-      "sha256": "399804d7f1d94f6ca22a667b21aeb74b5792711f0247b6e21652fca99a05fa3b"
     },
     {
       "path": "src/types/agent-sync-response.ts",
@@ -136,11 +128,35 @@
     },
     {
       "path": "src/types/audit-logs-list-response.ts",
-      "sha256": "fc36a94fe6e03e64a021507b6e490e8feefb88e237547135c9ad1e2e2e09cc66"
+      "sha256": "7a0711896a646fb1250f57191f352eedd6f0c3039df5a12d6adc31e095184580"
     },
     {
       "path": "src/types/common.ts",
       "sha256": "351d721c3c6f48f4453f92276856105120d72eb8d2fa9cd28de8e3854bf10f6c"
+    },
+    {
+      "path": "src/types/configs-create-response201.ts",
+      "sha256": "cca73f12675f466e238969754c6aa28d2d940c3b9af37cb4f0a19a321777e9ec"
+    },
+    {
+      "path": "src/types/configs-deploy-response.ts",
+      "sha256": "b0ca4337169d3f4678bec9dba1b84f283c9ba484d46625337bda2f5777315d39"
+    },
+    {
+      "path": "src/types/configs-list-response.ts",
+      "sha256": "71355e36c173d496e08d04241cf90d564ad65d2734c8233e99be08a249255133"
+    },
+    {
+      "path": "src/types/configs-retrieve-response.ts",
+      "sha256": "eb922a70a5467c0c17752ae11bfcd74d733ff2224c2b342227daa1188f4785fa"
+    },
+    {
+      "path": "src/types/configs-update-response.ts",
+      "sha256": "1ca65343cdefe2560ac1d7fe661ab015ad5231411b7548ab1759eb2d87d623cb"
+    },
+    {
+      "path": "src/types/configs-validate-response.ts",
+      "sha256": "9db9f3ccb600d353542b80f3fa768507b0ce5091ae12e0fa9fe06da457c65a45"
     },
     {
       "path": "src/types/create-nginx-config-request.ts",
@@ -159,8 +175,12 @@
       "sha256": "df70e331e6bff0817bc35428286fa8de5d7274ab83a6c60d7184759bf680a088"
     },
     {
+      "path": "src/types/heartbeat-response.ts",
+      "sha256": "7f1cfdc85799f17219e56671002950b8060ded4b3af9155a8cfaf4a7acf05feb"
+    },
+    {
       "path": "src/types/index.ts",
-      "sha256": "5b7094886313adf724a744fda9f1785dd420bd8c99b1b619bc3f41fa2a6ee963"
+      "sha256": "42cfd65e255c1c2f7deebead5f93343bd459a1b85c835275afd6c4be8eb741dd"
     },
     {
       "path": "src/types/nginx-config-page.ts",
@@ -171,36 +191,8 @@
       "sha256": "893c129f9d263c98f30f5f62c2e1d55a77cf63eed5ffa1355a6034697a3b316e"
     },
     {
-      "path": "src/types/nginx-configs-create-response201.ts",
-      "sha256": "751f8c5035b9242da13d8267365b128c6b5b02d7737ce12584e8304dfe55a249"
-    },
-    {
-      "path": "src/types/nginx-configs-deploy-response.ts",
-      "sha256": "39bcbb92bdfca6038cc00b10ba97546094e74e377d1d1c5738b845c5ebfe9db3"
-    },
-    {
-      "path": "src/types/nginx-configs-list-response.ts",
-      "sha256": "52721b7f1d6189089a8846bf6af78d460df08c6c172c90948218788bd73d089d"
-    },
-    {
-      "path": "src/types/nginx-configs-retrieve-response.ts",
-      "sha256": "66b9c0f8ad7f3a3564041882d501a5fd35130471bc8753ff3e8bea03a0bdea6f"
-    },
-    {
-      "path": "src/types/nginx-configs-update-response.ts",
-      "sha256": "e42526f9080271e88229f94d4ab51c31d47e4f57aa2876247b2bb330c81cce7b"
-    },
-    {
-      "path": "src/types/nginx-configs-validate-response.ts",
-      "sha256": "64f7f7110d8b3423de1340f352c7f2dab1330f351a13c39ccef1c7e53c541ce2"
-    },
-    {
       "path": "src/types/nginx-deploy-response.ts",
-      "sha256": "0f1c4d98c171bb2ca241a6c9cb892e545c82a38ede5026f57fa42cde06ef4255"
-    },
-    {
-      "path": "src/types/nginx-reload-post-response.ts",
-      "sha256": "b3599c917c9d3c9d435d7891cc7618e02b8d0757e1616e3b9bb0201ab6f58353"
+      "sha256": "e384f72dde2b5db865b69d299a6f601916112145ea3e5d84724db922cf6c2bee"
     },
     {
       "path": "src/types/nginx-reload-response.ts",
@@ -211,12 +203,8 @@
       "sha256": "c5a87ab73650cedc921625986d5fda0359d010f9627eb0c736223e59052796e0"
     },
     {
-      "path": "src/types/nginx-status-retrieve-response.ts",
-      "sha256": "8374ad519647d7b1348915e93ba7587e96ed6b7eb95f4f595ef130c224f22844"
-    },
-    {
       "path": "src/types/nginx-validate-response.ts",
-      "sha256": "428e41a748fd9a0253da46577df1030713d19495612b2b1d03aa66f53aa6717d"
+      "sha256": "7ab57fd6750dc26467df24406d56a724e0cc5cb85e33edcfbe5e69a9a88f3584"
     },
     {
       "path": "src/types/page-info.ts",
@@ -225,6 +213,14 @@
     {
       "path": "src/types/problem-detail.ts",
       "sha256": "deca621176487754cbfa2012aa3eab046131ced5829ddf7cff64de692f8bcb0e"
+    },
+    {
+      "path": "src/types/reload-response.ts",
+      "sha256": "09b92821d15b73f8a4354d84bfb87f58a83ffc8bef56371a99d38fe1e9f39c3e"
+    },
+    {
+      "path": "src/types/retrieve-response.ts",
+      "sha256": "91906d71eed8368926183a11bcc172e33d4272d059ef4879decf6759e37e8a17"
     },
     {
       "path": "src/types/sdk-work-api-response.ts",
@@ -268,11 +264,15 @@
     },
     {
       "path": "src/types/servers-create-response201.ts",
-      "sha256": "06ae7fe72b8adeb32b7acc4202b5c92efa9e0871a52b7ec632c073241a4a86bc"
+      "sha256": "c121378f0e852b0b9dc4c142030b61017ce6b77ac47a49a0f9bd17674d09b938"
     },
     {
       "path": "src/types/servers-list-response.ts",
-      "sha256": "a6a42cce2e05764752ad9d5059af97aaa40809d7c99de3fe2018c64fefc08e45"
+      "sha256": "c964b34006ad6b2a03d3bb51be3407a2c8ff3394527b21c50d7cb1e2bd170fc6"
+    },
+    {
+      "path": "src/types/status-retrieve-response.ts",
+      "sha256": "00ea64673fac1b0b0172f7600a51641297f95c543ebba278b9253e2dee557df3"
     },
     {
       "path": "src/types/update-nginx-config-request.ts",

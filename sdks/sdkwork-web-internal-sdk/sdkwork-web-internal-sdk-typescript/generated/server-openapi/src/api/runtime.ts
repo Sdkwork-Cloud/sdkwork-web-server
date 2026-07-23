@@ -4,11 +4,27 @@ import type { HttpClient } from '../http/client';
 import type { CreateRuntimeObservationRequest, GenerationString, PublishRuntimeAssignmentRequest, RuntimeAssignment, RuntimeAssignmentDelivery, RuntimeEnvironment, RuntimeObservation, Sha256 } from '../types';
 
 
-export class RuntimeRuntimeAssignmentsObservationsApi {
+export class RuntimeRuntimeAssignmentsObservationsLatestApi {
   private client: HttpClient;
 
   constructor(client: HttpClient) {
     this.client = client;
+  }
+
+
+/** Retrieve the latest authenticated Web Node runtime-set observation */
+  async retrieve(snapshotUuid: string): Promise<RuntimeObservation> {
+    return this.client.get<RuntimeObservation>(customApiPath(`/web/runtime_assignments/${serializePathParameter(snapshotUuid, { name: 'snapshotUuid', style: 'simple', explode: false })}/observations/latest`));
+  }
+}
+
+export class RuntimeRuntimeAssignmentsObservationsApi {
+  private client: HttpClient;
+  public readonly latest: RuntimeRuntimeAssignmentsObservationsLatestApi;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+    this.latest = new RuntimeRuntimeAssignmentsObservationsLatestApi(client);
   }
 
 
@@ -62,11 +78,11 @@ export class RuntimeRuntimeAssignmentsApi {
 }
 
 export class RuntimeApi {
-  private client: HttpClient;
+
   public readonly runtimeAssignments: RuntimeRuntimeAssignmentsApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
+
     this.runtimeAssignments = new RuntimeRuntimeAssignmentsApi(client);
   }
 

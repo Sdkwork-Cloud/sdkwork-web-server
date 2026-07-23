@@ -436,6 +436,20 @@ impl WebRepositoryPort for WebRepository {
         self.create_runtime_observation_repo(write).await
     }
 
+    async fn retrieve_latest_runtime_observation(
+        &self,
+        requester_tenant_id: i64,
+        can_cross_tenant: bool,
+        snapshot_uuid: &str,
+    ) -> WebServiceResult<RuntimeObservation> {
+        self.retrieve_latest_runtime_observation_repo(
+            requester_tenant_id,
+            can_cross_tenant,
+            snapshot_uuid,
+        )
+        .await
+    }
+
     async fn record_agent_heartbeat(
         &self,
         server_id: &str,

@@ -121,6 +121,36 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /internal/v3/api/web/runtime_assignments/{snapshotUuid}/observations/latest:
+    parameters:
+      - name: snapshotUuid
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+    get:
+      operationId: runtimeAssignments.observations.latest.retrieve
+      summary: Retrieve the latest authenticated Web Node runtime-set observation
+      tags: [runtime]
+      security:
+        - ApiKey: []
+      x-sdkwork-api-surface: internal-api
+      x-sdkwork-api-authority: sdkwork-web-internal-api
+      x-sdkwork-request-context: WebRequestContext
+      x-sdkwork-auth-mode: ingress-token
+      x-sdkwork-route-auth: ingress-token
+      x-sdkwork-permission: web.runtimeAssignments.write
+      x-sdkwork-owner: sdkwork-web
+      responses:
+        '200':
+          $ref: '#/components/responses/RuntimeObservationResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     ApiKey:
@@ -186,7 +216,7 @@ components:
                       item:
                         $ref: '#/components/schemas/RuntimeAssignmentDelivery'
     RuntimeObservationResponse:
-      description: Runtime observation accepted idempotently.
+      description: Authenticated Web Node runtime observation resource.
       content:
         application/json:
           schema:
@@ -291,7 +321,9 @@ components:
       required:
         - observationUuid
         - assignmentUuid
+        - tenantId
         - nodeUuid
+        - environment
         - generation
         - snapshotUuid
         - snapshotSha256
@@ -304,8 +336,15 @@ components:
         assignmentUuid:
           type: string
           format: uuid
+        tenantId:
+          type: string
+          minLength: 1
+          maxLength: 19
+          pattern: '^[1-9][0-9]{0,18}$'
         nodeUuid:
           type: string
+        environment:
+          $ref: '#/components/schemas/RuntimeEnvironment'
         generation:
           $ref: '#/components/schemas/GenerationString'
         snapshotUuid:

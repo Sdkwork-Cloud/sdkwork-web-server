@@ -313,8 +313,13 @@ The first executable boundary is implemented in `sdkwork-webserver-core::website
   preserves the complete compiled scope, handles HEAD/conditional/redirect/Range outcomes, and
   bounds streams again at the consumer boundary. It also validates each unique logical resource on
   the handler-specific Provider port before activation using bounded concurrency and descriptor
-  deadlines, rejecting missing ports, invalid Provider evidence, and unsupported object limits.
-  Its focused executor and activation suites pass.
+  deadlines, rejecting missing ports, invalid Provider evidence, and unsupported object limits;
+- after Provider validation, an isolated candidate-only registry executes bounded `HEAD` delivery
+  probes for every Binding and every reachable selectable device Variant with
+  `WebsiteProviderPurpose::Activation`. A failed candidate reports `ACTIVATION_PROBE_FAILED`, is not
+  persisted into the recovery slot, and cannot replace the live last-known-good registry. STATIC
+  and SPA Variants require a resolvable entrypoint; WIKI probes its publication root. Focused
+  executor, provider-validation, activation-probe, and last-known-good retention suites pass.
 - the dedicated `sdkwork-web-server-website-delivery-edge-runtime` process loads and watches a bounded, hash-verified
   runtime-set, binds the process and both generated Provider clients to one configured tenant scope,
   loads Drive and Knowledgebase ingress tokens from secret files, registers both adapters, validates
@@ -337,22 +342,26 @@ The first executable boundary is implemented in `sdkwork-webserver-core::website
   force-HTTPS, security headers, and incremental response-body chunks. Focused browser-adapter tests
   pass through the real Drive and Knowledgebase provider adapters and injected SDK port fakes.
 
-This is not production completion. The Web consumer half of authenticated cloud distribution is
-implemented, but Deployments producer wiring through the generated Web Internal SDK, detached
-source attestation where required, staged probing/quorum/drift reporting, atomic TLS pointer
-activation, TLS
-material/key/chain validation, credential rotation/reload, provider-aware cache and concrete
-event-driven cache invalidation,
-fleet telemetry, single-writer cutover, and deployed browser E2E remain mandatory P0 work. The
+This is not production completion. Authenticated assignment publication and convergence are
+implemented across Deploy and Web: Deploy uses the generated Web Internal SDK for publication and
+latest-observation reads; Web performs Provider validation plus an isolated node-local activation
+probe before staging and atomic website activation; Deploy persists immutable per-target evidence
+and advances `deploy_site.current_revision_id` only after strict all-frozen-target `ACTIVE` quorum.
+Detached source attestation where required, external public-domain multi-vantage probes, atomic TLS
+pointer activation, TLS material/key/chain validation, credential rotation/reload, provider-aware
+cache and concrete event-driven cache invalidation, production drift dashboards/alerts, fleet
+telemetry, single-writer cutover, and deployed browser E2E remain mandatory P0 work. The
 legacy `data-plane` operation intentionally continues to use `ResourceConfig`; website delivery
 uses the independent edge runtime with the management feature disabled. True upstream streaming is still absent
 because both generated owner SDKs return bounded `Vec<u8>` content. Candidate activation therefore
 enforces a 16 MiB Knowledgebase or 256 MiB Drive object ceiling; supporting the schema's future
 1 TiB ceiling requires generated streaming APIs. The sanitizer/rendition chain, rendition-backed
 full-text search, negative-cache/single-flight/stampede controls, and invalidation-storm evidence
-also remain open. Node-local runtime-set recovery and event checkpoints are implemented; they do
-not replace Deploy producer integration, rollout quorum/drift reporting, or production
-restart/backup-restore drill evidence.
+also remain open. Node-local runtime-set recovery and event checkpoints are implemented; they are
+not Deploy business authority and do not replace immutable rollout evidence or production
+restart/backup-restore drill evidence. The node-local `HEAD` probe proves only candidate
+route/provider resolution on one Node and does not replace public DNS, certificate/SNI, CDN, or
+multi-region Internet reachability probes.
 
 The cloud topology, image entrypoint, release archive, and Kubernetes workload now select the
 dedicated edge-runtime binary. The production-deployable baseline is one dedicated fleet per

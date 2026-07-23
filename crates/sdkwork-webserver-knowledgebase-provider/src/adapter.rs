@@ -3,7 +3,7 @@ use std::{future::Future, sync::Arc, time::Duration};
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Utc};
 use sdkwork_knowledgebase_internal_sdk::{
-    models::{ResolveWikiRouteRequest, WikiPage, WikiPublication},
+    models::{ResolveWikiRouteRequest, WikiPublicPageMetadata, WikiPublication},
     SdkworkError,
 };
 use sdkwork_webserver_contract::provider::{
@@ -355,7 +355,7 @@ fn public_generation(publication: &WikiPublication) -> WebsiteProviderResult<Str
 
 fn resolved_page(
     content_handle: WebsiteProviderContentHandle,
-    page: WikiPage,
+    page: WikiPublicPageMetadata,
     publication: &WikiPublication,
 ) -> WebsiteProviderResult<ResolvedWebsiteWikiContent> {
     validate_route(&page.canonical_route)?;
@@ -397,7 +397,7 @@ fn resolved_page(
 }
 
 fn collection_page(
-    pages: Vec<WikiPage>,
+    pages: Vec<WikiPublicPageMetadata>,
     next_cursor: Option<String>,
     generation: &str,
 ) -> WebsiteProviderResult<WebsiteWikiCollectionPage> {

@@ -29,7 +29,7 @@ Management mode uses SDKWork typed server/database environment configuration. `v
 
 ## Deployment Profile And Runtime Target Behavior
 
-The current executable is the standalone server gateway. The data-plane-only operation does not initialize PostgreSQL or SQLite. Cloud node-scoped snapshot consumption remains a separate requirement.
+This executable is the standalone server gateway. Its data-plane-only operation does not initialize PostgreSQL or SQLite. The cloud Website Edge Runtime composes this crate with management features disabled and adds authenticated node-scoped runtime-set consumption and durable recovery; it is packaged as a separate binary entrypoint.
 
 ## Security
 

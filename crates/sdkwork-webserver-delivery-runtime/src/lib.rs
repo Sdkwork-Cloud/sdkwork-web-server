@@ -1,3 +1,4 @@
+mod activation_probe;
 mod error;
 mod executor;
 mod model;
@@ -5,6 +6,10 @@ mod provider_event;
 mod registry;
 mod stream;
 
+pub use activation_probe::{
+    probe_website_runtime_set_activation, WebsiteRuntimeActivationProbeError,
+    WebsiteRuntimeActivationProbeReport,
+};
 pub use error::{
     WebsiteDeliveryError, WebsiteProviderRegistryError, WebsiteRuntimeProviderValidationError,
 };

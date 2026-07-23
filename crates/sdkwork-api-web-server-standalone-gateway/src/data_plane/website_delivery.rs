@@ -236,7 +236,8 @@ fn classify_client(
     ),
     RequestHeaderError,
 > {
-    if let Some(user_agent) = header_value(headers, USER_AGENT, MAXIMUM_USER_AGENT_BYTES)? {
+    let user_agent = header_value(headers, USER_AGENT, MAXIMUM_USER_AGENT_BYTES)?;
+    if let Some(user_agent) = user_agent {
         let lower = user_agent.to_ascii_lowercase();
         let parsed = Parser::new().parse(user_agent);
         if parsed.is_some_and(|value| value.category == "crawler")
@@ -247,6 +248,12 @@ fn classify_client(
             return Ok((
                 Some(WebsiteClientClass::Bot),
                 Some(WebsiteClientClassificationSource::Bot),
+            ));
+        }
+        if is_tv_user_agent(&lower) {
+            return Ok((
+                Some(WebsiteClientClass::Tv),
+                Some(WebsiteClientClassificationSource::UserAgent),
             ));
         }
     }
@@ -261,7 +268,7 @@ fn classify_client(
             Some(WebsiteClientClassificationSource::ClientHint),
         ));
     }
-    let Some(user_agent) = header_value(headers, USER_AGENT, MAXIMUM_USER_AGENT_BYTES)? else {
+    let Some(user_agent) = user_agent else {
         return Ok((None, None));
     };
     let lower = user_agent.to_ascii_lowercase();
@@ -278,6 +285,16 @@ fn classify_client(
         Some(class),
         Some(WebsiteClientClassificationSource::UserAgent),
     ))
+}
+
+fn is_tv_user_agent(lower_user_agent: &str) -> bool {
+    const TV_SIGNATURES: [&str; 10] = [
+        "smart-tv", "smarttv", "hbbtv", "netcast", "webos", "web0s", "tizen", "roku", "crkey",
+        "viera",
+    ];
+    TV_SIGNATURES
+        .iter()
+        .any(|signature| lower_user_agent.contains(signature))
 }
 
 fn navigation_request(headers: &HeaderMap) -> Result<bool, RequestHeaderError> {
@@ -560,8 +577,8 @@ mod tests {
     };
     use sdkwork_knowledgebase_internal_sdk::{
         models::{
-            ResolveWikiRouteRequest, WikiPage, WikiPageListData, WikiPublication,
-            WikiRouteResolution,
+            ResolveWikiRouteRequest, WikiPublicPageListData, WikiPublicPageMetadata,
+            WikiPublication, WikiRouteResolution,
         },
         SdkworkError,
     };
@@ -646,6 +663,28 @@ mod tests {
                 Some(WebsiteClientClassificationSource::Bot),
             )
         );
+    }
+
+    #[test]
+    fn tv_signatures_override_coarse_non_mobile_client_hints() {
+        for user_agent in [
+            "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0)",
+            "Mozilla/5.0 (Web0S; Linux/SmartTV)",
+            "Mozilla/5.0 (X11; HbbTV/1.5.1)",
+            "Roku/DVP-12.5 (519.50E04154A)",
+            "Mozilla/5.0 (CrKey armv7l)",
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert(SEC_CH_UA_MOBILE, HeaderValue::from_static("?0"));
+            headers.insert(USER_AGENT, HeaderValue::from_str(user_agent).unwrap());
+            assert_eq!(
+                classify_client(&headers).unwrap(),
+                (
+                    Some(WebsiteClientClass::Tv),
+                    Some(WebsiteClientClassificationSource::UserAgent),
+                )
+            );
+        }
     }
 
     #[test]
@@ -803,7 +842,7 @@ mod tests {
 
     #[tokio::test]
     async fn force_https_and_mobile_client_hint_select_the_compiled_variant() {
-        let (executor, sdk, mobile) = website_executor(2_500, true);
+        let (executor, sdk, variant_static) = website_executor(2_500, true);
         let response = serve_website_request(
             executor.clone(),
             WebsiteDeliveryScheme::Http,
@@ -854,8 +893,39 @@ mod tests {
             Bytes::from_static(b"mobile")
         );
         assert_eq!(
-            mobile.resolve_paths.lock().unwrap().as_slice(),
+            variant_static.resolve_paths.lock().unwrap().as_slice(),
             ["/mobile/index.html"]
+        );
+    }
+
+    #[tokio::test]
+    async fn tv_user_agent_selects_the_compiled_tv_variant_end_to_end() {
+        let (executor, _, variant_static) = website_executor(2_500, false);
+        let mut headers = HeaderMap::new();
+        headers.insert(SEC_CH_UA_MOBILE, HeaderValue::from_static("?0"));
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_static("Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0)"),
+        );
+
+        let response = serve_website_request(
+            executor,
+            WebsiteDeliveryScheme::Https,
+            "example.com".to_owned(),
+            "/".to_owned(),
+            None,
+            Method::GET,
+            headers,
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.into_body().collect().await.unwrap().to_bytes(),
+            Bytes::from_static(b"tv")
+        );
+        assert_eq!(
+            variant_static.resolve_paths.lock().unwrap().as_slice(),
+            ["/tv/index.html"]
         );
     }
 
@@ -1095,7 +1165,7 @@ mod tests {
             }
             Ok(WikiRouteResolution {
                 disposition: "PAGE".to_owned(),
-                page: Some(wiki_page()),
+                page: Some(public_wiki_page()),
                 content_handle: Some("opaque-content-handle".to_owned()),
                 requested_route: None,
                 canonical_route: None,
@@ -1119,7 +1189,7 @@ mod tests {
             _locale: Option<&str>,
             _cursor: Option<&str>,
             _page_size: i64,
-        ) -> Result<WikiPageListData, SdkworkError> {
+        ) -> Result<WikiPublicPageListData, SdkworkError> {
             unreachable!("page delivery does not list navigation")
         }
 
@@ -1130,7 +1200,7 @@ mod tests {
             _locale: Option<&str>,
             _cursor: Option<&str>,
             _page_size: i64,
-        ) -> Result<WikiPageListData, SdkworkError> {
+        ) -> Result<WikiPublicPageListData, SdkworkError> {
             unreachable!("page delivery does not search")
         }
     }
@@ -1235,12 +1305,12 @@ mod tests {
         }
     }
 
-    struct FakeMobileStaticProvider {
+    struct FakeVariantStaticProvider {
         resolve_paths: Mutex<Vec<String>>,
     }
 
     #[async_trait]
-    impl WebsiteResourceProvider for FakeMobileStaticProvider {
+    impl WebsiteResourceProvider for FakeVariantStaticProvider {
         fn maximum_content_bytes(&self) -> u64 {
             1024
         }
@@ -1259,7 +1329,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl WebsiteStaticContentProvider for FakeMobileStaticProvider {
+    impl WebsiteStaticContentProvider for FakeVariantStaticProvider {
         async fn resolve_static_path(
             &self,
             request: &ResolveWebsiteStaticPathRequest,
@@ -1268,19 +1338,26 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push(request.provider_relative_path.clone());
-            if request.provider_relative_path != "/mobile/index.html" {
-                return Err(
-                    sdkwork_webserver_contract::provider::WebsiteProviderError::new(
-                        WebsiteProviderErrorKind::NotFound,
-                    ),
-                );
-            }
+            let (content_length, etag) = match request.provider_relative_path.as_str() {
+                "/mobile/index.html" => (6, "\"mobile-v1\""),
+                "/tv/index.html" => (2, "\"tv-v1\""),
+                _ => {
+                    return Err(
+                        sdkwork_webserver_contract::provider::WebsiteProviderError::new(
+                            WebsiteProviderErrorKind::NotFound,
+                        ),
+                    )
+                }
+            };
             Ok(WebsiteContentResolution::Found(ResolvedWebsiteContent {
-                content_handle: WebsiteProviderContentHandle::new("/mobile/index.html").unwrap(),
+                content_handle: WebsiteProviderContentHandle::new(
+                    request.provider_relative_path.clone(),
+                )
+                .unwrap(),
                 metadata: WebsiteContentMetadata {
                     content_type: "text/html; charset=utf-8".to_owned(),
-                    content_length: 6,
-                    etag: "\"mobile-v1\"".to_owned(),
+                    content_length,
+                    etag: etag.to_owned(),
                     last_modified: "Tue, 21 Jul 2026 00:00:00 GMT".to_owned(),
                     content_version: "1".to_owned(),
                     provider_generation: "1".to_owned(),
@@ -1291,13 +1368,24 @@ mod tests {
 
         async fn open_static_content(
             &self,
-            _request: &OpenWebsiteContentRequest,
+            request: &OpenWebsiteContentRequest,
         ) -> WebsiteProviderResult<OpenedWebsiteContent> {
+            let content = match request.content_handle.as_str() {
+                "/mobile/index.html" => b"mobile".as_slice(),
+                "/tv/index.html" => b"tv".as_slice(),
+                _ => {
+                    return Err(
+                        sdkwork_webserver_contract::provider::WebsiteProviderError::new(
+                            WebsiteProviderErrorKind::NotFound,
+                        ),
+                    )
+                }
+            };
             Ok(OpenedWebsiteContent {
                 stream: Box::new(MemoryStream {
-                    chunks: VecDeque::from([b"mobile".to_vec()]),
+                    chunks: VecDeque::from([content.to_vec()]),
                 }),
-                content_length: 6,
+                content_length: content.len() as u64,
                 content_range: None,
             })
         }
@@ -1309,7 +1397,7 @@ mod tests {
     ) -> (
         Arc<WebsiteDeliveryExecutor>,
         Arc<FakeKnowledgebaseSdk>,
-        Arc<FakeMobileStaticProvider>,
+        Arc<FakeVariantStaticProvider>,
     ) {
         let runtime = active_runtime(provider_timeout_ms, force_https);
         let sdk = Arc::new(FakeKnowledgebaseSdk {
@@ -1320,7 +1408,7 @@ mod tests {
         let resolver =
             FixedKnowledgebaseWikiSdkClientResolver::new(TENANT_SCOPE_HASH, sdk_client).unwrap();
         let knowledgebase = Arc::new(KnowledgebaseWikiWebsiteProvider::new(Arc::new(resolver)));
-        let mobile = Arc::new(FakeMobileStaticProvider {
+        let variant_static = Arc::new(FakeVariantStaticProvider {
             resolve_paths: Mutex::new(Vec::new()),
         });
         let mut providers = WebsiteProviderRegistry::new();
@@ -1328,12 +1416,12 @@ mod tests {
             .register_wiki(WebsiteProviderType::Knowledgebase, knowledgebase)
             .unwrap();
         providers
-            .register_static(WebsiteProviderType::Drive, mobile.clone())
+            .register_static(WebsiteProviderType::Drive, variant_static.clone())
             .unwrap();
         (
             Arc::new(WebsiteDeliveryExecutor::new(runtime, Arc::new(providers))),
             sdk,
-            mobile,
+            variant_static,
         )
     }
 
@@ -1392,14 +1480,23 @@ mod tests {
             }],
             "variants": [
                 {"variantUuid": "variant-desktop", "label": "Desktop"},
-                {"variantUuid": "variant-mobile", "label": "Mobile"}
+                {"variantUuid": "variant-mobile", "label": "Mobile"},
+                {"variantUuid": "variant-tv", "label": "TV"}
             ],
-            "variantRules": [{
-                "ruleUuid": "rule-mobile-client",
-                "variantUuid": "variant-mobile",
-                "priority": 100,
-                "match": {"type": "CLIENT_CLASS", "clientClass": "MOBILE"}
-            }],
+            "variantRules": [
+                {
+                    "ruleUuid": "rule-mobile-client",
+                    "variantUuid": "variant-mobile",
+                    "priority": 100,
+                    "match": {"type": "CLIENT_CLASS", "clientClass": "MOBILE"}
+                },
+                {
+                    "ruleUuid": "rule-tv-client",
+                    "variantUuid": "variant-tv",
+                    "priority": 100,
+                    "match": {"type": "CLIENT_CLASS", "clientClass": "TV"}
+                }
+            ],
             "resources": [
                 {
                     "resourceUuid": "resource-mobile",
@@ -1449,6 +1546,16 @@ mod tests {
                     "translation": {"mode": "ROOT", "resourceSubpath": "/mobile"},
                     "indexFiles": ["index.html"],
                     "spaFallback": "/mobile/index.html"
+                },
+                {
+                    "mountUuid": "mount-tv",
+                    "variantUuid": "variant-tv",
+                    "pathPrefix": "/",
+                    "resourceUuid": "resource-mobile",
+                    "handler": "SPA",
+                    "translation": {"mode": "ROOT", "resourceSubpath": "/tv"},
+                    "indexFiles": ["index.html"],
+                    "spaFallback": "/tv/index.html"
                 }
             ],
             "deliveryPolicy": {
@@ -1522,8 +1629,8 @@ mod tests {
         }
     }
 
-    fn wiki_page() -> WikiPage {
-        WikiPage {
+    fn public_wiki_page() -> WikiPublicPageMetadata {
+        WikiPublicPageMetadata {
             projection_uuid: PROJECTION_UUID.to_owned(),
             canonical_route: "/guide/".to_owned(),
             file_kind: "PAGE".to_owned(),

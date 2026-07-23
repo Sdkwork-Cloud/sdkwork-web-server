@@ -9,14 +9,10 @@
     "protocol": "http",
     "packageName": "@sdkwork/web-backend-sdk"
   },
-  "changeFingerprint": "09c7c0147ec20806f7f659c01e17e26e3fcce56248ca3af94a5347d4a0e70bdd",
+  "changeFingerprint": "4c69c7e6960c54b037fe6df1ebbb57520f5e6e305f87467be06df2896e128517",
   "changes": {
     "createdGeneratedFiles": [],
-    "updatedGeneratedFiles": [
-      "src/types/create-server-request.ts",
-      "src/types/create-server-response.ts",
-      "src/types/server-response.ts"
-    ],
+    "updatedGeneratedFiles": [],
     "unchangedGeneratedFiles": [
       "bin/publish-core.mjs",
       "bin/publish.ps1",
@@ -41,35 +37,36 @@
       "src/index.ts",
       "src/sdk.ts",
       "src/types/agent-certificate-bundle.ts",
-      "src/types/agent-heartbeat-post-response.ts",
       "src/types/agent-heartbeat-request.ts",
       "src/types/agent-heartbeat-response.ts",
       "src/types/agent-nginx-config-bundle.ts",
-      "src/types/agent-retrieve-response.ts",
       "src/types/agent-sync-response.ts",
       "src/types/audit-log-page.ts",
       "src/types/audit-log-response.ts",
       "src/types/audit-logs-list-response.ts",
       "src/types/common.ts",
+      "src/types/configs-create-response201.ts",
+      "src/types/configs-deploy-response.ts",
+      "src/types/configs-list-response.ts",
+      "src/types/configs-retrieve-response.ts",
+      "src/types/configs-update-response.ts",
+      "src/types/configs-validate-response.ts",
       "src/types/create-nginx-config-request.ts",
+      "src/types/create-server-request.ts",
+      "src/types/create-server-response.ts",
       "src/types/field-error.ts",
+      "src/types/heartbeat-response.ts",
       "src/types/index.ts",
       "src/types/nginx-config-page.ts",
       "src/types/nginx-config-response.ts",
-      "src/types/nginx-configs-create-response201.ts",
-      "src/types/nginx-configs-deploy-response.ts",
-      "src/types/nginx-configs-list-response.ts",
-      "src/types/nginx-configs-retrieve-response.ts",
-      "src/types/nginx-configs-update-response.ts",
-      "src/types/nginx-configs-validate-response.ts",
       "src/types/nginx-deploy-response.ts",
-      "src/types/nginx-reload-post-response.ts",
       "src/types/nginx-reload-response.ts",
       "src/types/nginx-status-response.ts",
-      "src/types/nginx-status-retrieve-response.ts",
       "src/types/nginx-validate-response.ts",
       "src/types/page-info.ts",
       "src/types/problem-detail.ts",
+      "src/types/reload-response.ts",
+      "src/types/retrieve-response.ts",
       "src/types/sdk-work-api-response.ts",
       "src/types/sdk-work-command-data.ts",
       "src/types/sdk-work-command-response.ts",
@@ -79,8 +76,10 @@
       "src/types/sdk-work-resource-data.ts",
       "src/types/sdk-work-resource-response.ts",
       "src/types/server-page.ts",
+      "src/types/server-response.ts",
       "src/types/servers-create-response201.ts",
       "src/types/servers-list-response.ts",
+      "src/types/status-retrieve-response.ts",
       "src/types/update-nginx-config-request.ts",
       "tsconfig.json"
     ],
@@ -94,74 +93,26 @@
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [
-      "models"
-    ],
-    "details": [
-      {
-        "area": "models",
-        "paths": [
-          "src/types/create-server-request.ts",
-          "src/types/create-server-response.ts",
-          "src/types/server-response.ts"
-        ]
-      }
-    ],
-    "requiresVerification": true,
-    "summary": "Detected impact areas: models. Verification is required."
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
   },
   "verificationPlan": {
-    "shouldRun": true,
-    "runPhase": "now",
-    "summary": "Detected impact areas: models. Verification is required. Run the required verification commands now against the generated SDK output.",
-    "steps": [
-      {
-        "id": "check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: models.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action check"
-      },
-      {
-        "id": "build",
-        "title": "Unified package build",
-        "required": true,
-        "rationale": "Run the full package build because this language uses a lighter check path than the final build. Triggered by: models.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-web-server\\sdks\\sdkwork-web-backend-sdk\\sdkwork-web-backend-sdk-typescript\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "typescript",
-          "--project-dir",
-          ".",
-          "--action",
-          "build"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language typescript --project-dir . --action build"
-      }
-    ]
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "medium",
-    "nextAction": "verify",
+    "riskLevel": "low",
+    "nextAction": "skip",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "Changes have been applied. Run the required verification plan now.",
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
     "reasons": [
-      "verification-required"
+      "no-actionable-changes"
     ]
   },
   "preservedLegacyFiles": false

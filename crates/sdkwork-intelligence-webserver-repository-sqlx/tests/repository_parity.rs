@@ -745,6 +745,14 @@ async fn verify_runtime_assignment_contract(context: &TestContext, node_uuid: &s
     assert_eq!(second.generation, "2");
     assert_eq!(
         repository
+            .retrieve_latest_runtime_observation(TENANT_A, false, &production_two.snapshot_uuid,)
+            .await
+            .expect_err("an assignment without observations is not an observation resource")
+            .kind(),
+        WebServiceErrorKind::NotFound
+    );
+    assert_eq!(
+        repository
             .publish_runtime_assignment(production_one)
             .await
             .expect_err("a lower generation must remain stale")
@@ -784,6 +792,28 @@ async fn verify_runtime_assignment_contract(context: &TestContext, node_uuid: &s
         .await
         .expect("identical observation is idempotent");
     assert_eq!(received_replay.observation_uuid, received.observation_uuid);
+    let latest_received = repository
+        .retrieve_latest_runtime_observation(TENANT_A, false, &production_two.snapshot_uuid)
+        .await
+        .expect("tenant retrieves its latest observation");
+    assert_eq!(latest_received, received);
+    assert_eq!(latest_received.environment, "production");
+    assert_eq!(latest_received.assignment_uuid, second.assignment_uuid);
+    assert_eq!(
+        repository
+            .retrieve_latest_runtime_observation(TENANT_B, false, &production_two.snapshot_uuid,)
+            .await
+            .expect_err("another tenant cannot retrieve the observation")
+            .kind(),
+        WebServiceErrorKind::NotFound
+    );
+    assert_eq!(
+        repository
+            .retrieve_latest_runtime_observation(0, true, &production_two.snapshot_uuid)
+            .await
+            .expect("authorized control plane retrieves a tenant observation"),
+        received
+    );
     let mut changed_received = received_write;
     changed_received.node_version = Some("1.0.1".to_owned());
     assert_eq!(
@@ -838,6 +868,14 @@ async fn verify_runtime_assignment_contract(context: &TestContext, node_uuid: &s
             .expect("retrieve activation checkpoint")
             .latest_observation_state,
         Some(RuntimeObservationState::Active)
+    );
+    assert_eq!(
+        repository
+            .retrieve_latest_runtime_observation(TENANT_A, false, &production_two.snapshot_uuid,)
+            .await
+            .expect("retrieve the active observation")
+            .state,
+        RuntimeObservationState::Active
     );
     assert_eq!(
         repository

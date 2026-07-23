@@ -92,6 +92,32 @@
       "permission": "web.agent.write",
       "idempotent": true,
       "rateLimitTier": "auth-critical"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/v3/api/web/runtime_assignments/{snapshotUuid}/observations/latest",
+      "operationId": "runtimeAssignments.observations.latest.retrieve",
+      "tags": [
+        "runtime"
+      ],
+      "auth": {
+        "mode": "ingress-token",
+        "required": true
+      },
+      "routeAuth": "ingress-token",
+      "handler": {
+        "module": "crate::routes",
+        "name": null
+      },
+      "ownership": {
+        "owner": "sdkwork-web",
+        "apiAuthority": "sdkwork-web-internal-api"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "internal-api",
+      "permission": "web.runtimeAssignments.write",
+      "idempotent": false,
+      "rateLimitTier": null
     }
   ]
 }

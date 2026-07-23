@@ -11,10 +11,13 @@ Specs: ARCHITECTURE_DECISION_SPEC.md, DOCUMENTATION_SPEC.md, RUST_CODE_SPEC.md, 
   descriptor v1 ingestion and immutable domain/path/Variant/Mount indexes are implemented, while
   generated-SDK Drive/Knowledgebase provider adapters, activation-time Provider validation, and the
   transport-neutral runtime-set delivery executor run through the dedicated
-  `sdkwork-web-server-website-delivery-edge-runtime`. Authenticated conditional cloud assignment pull and phased
-  node observations now run through the generated Web Internal SDK; Deploy producer integration,
-  true upstream SDK streaming, provider-aware cache consistency, TLS snapshot activation, and
-  commercial runtime evidence remain open. Node-local dual-slot runtime-set recovery,
+  `sdkwork-web-server-website-delivery-edge-runtime`. Authenticated assignment publication,
+  conditional cloud pull, latest-observation reads, immutable Deploy evidence, and strict
+  all-frozen-target `ACTIVE` quorum now run through the generated Web Internal SDK. Web performs an
+  isolated node-local Binding/Variant `HEAD` probe before staging and activation; this does not
+  replace external public-domain multi-vantage probes. True upstream SDK streaming, provider-aware
+  cache consistency, TLS snapshot activation, and commercial runtime evidence remain open.
+  Node-local dual-slot runtime-set recovery,
   owner-authenticated Drive/Knowledgebase event
   ingress, dual-slot per-stream checkpoints, ordering/gap handling, and generated-SDK reconciliation
   are implemented.
@@ -53,8 +56,11 @@ Current implemented baseline:
   assigned to another tenant scope or deliver a signed callback to the wrong Node;
 - a production `cloud` runtime assignment source that uses only the generated Web Internal Rust
   SDK, a protected Web Node token file, strict node/environment/hash validation, conditional pulls,
-  durable last-known-good recovery, and resumable `RECEIVED -> VALIDATED -> STAGED -> ACTIVE` or
-  terminal `REJECTED` observations;
+  durable last-known-good recovery, isolated candidate-only Binding/Variant `HEAD` probes, and
+  resumable `RECEIVED -> VALIDATED -> STAGED -> ACTIVE` or terminal `REJECTED` observations;
+- a Deploy convergence loop that publishes assignments and reads Web observations through the
+  generated SDK, stores immutable per-target evidence, and transactionally advances the Site
+  current revision only after every frozen target reports the exact assignment as `ACTIVE`;
 - a node-local dual-slot website runtime-set recovery store that preserves the highest valid
   generation across restart, rejects scope/hash conflicts, and never substitutes for authenticated
   Deploy distribution;
@@ -161,7 +167,7 @@ The request path does not call management services or repositories. Management r
 
 ## 8. Architecture Decision Index
 
-- [ADR-20260721 Compiled Website Runtime Descriptor](../decisions/ADR-20260721-compiled-website-runtime-descriptor.md) - proposed cloud data-plane input and authority boundary.
+- [ADR-20260721 Compiled Website Runtime Descriptor](../decisions/ADR-20260721-compiled-website-runtime-descriptor.md) - accepted cloud data-plane input and authority boundary.
 
 | ADR | Topic | Status |
 | --- | --- | --- |

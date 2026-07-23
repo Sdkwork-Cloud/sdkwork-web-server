@@ -2,5 +2,5 @@ export interface NginxDeployResponse {
   success?: boolean;
   configId?: string;
   deployedAt?: string;
-  reloadResult?: Record<string, unknown>;
+  reloadResult?: { reloaded?: boolean; message?: string; };
 }

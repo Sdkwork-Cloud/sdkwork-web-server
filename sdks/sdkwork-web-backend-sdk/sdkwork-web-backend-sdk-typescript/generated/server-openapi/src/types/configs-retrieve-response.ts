@@ -1,8 +1,8 @@
 import type { NginxConfigResponse } from './nginx-config-response';
 
-export interface NginxConfigsUpdateResponse {
+export interface ConfigsRetrieveResponse {
   code: 0;
-  data: unknown & Record<string, unknown>;
+  data: unknown & { item: NginxConfigResponse; };
   /** Server-owned request correlation id. */
   traceId: string;
 }

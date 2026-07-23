@@ -235,7 +235,7 @@ impl WebRepository {
 
         let assignment = sqlx::query(
             "SELECT a.id AS assignment_id, a.uuid AS assignment_uuid, a.generation,
-                    a.snapshot_uuid, a.snapshot_sha256, a.server_id
+                    a.snapshot_uuid, a.snapshot_sha256, a.server_id, a.environment
              FROM web_runtime_assignment a
              INNER JOIN web_server s ON s.id = a.server_id AND s.tenant_id = a.tenant_id
              WHERE a.tenant_id = $1 AND s.uuid = $2 AND a.snapshot_uuid = $3",
@@ -269,11 +269,18 @@ impl WebRepository {
         .map_err(|error| store_error("lock web runtime observation assignment", error))?;
 
         let latest = sqlx::query(
-            "SELECT uuid AS observation_uuid, state, node_version, reason_code, detail,
-                    CAST(observed_at AS TEXT) AS observed_at
-             FROM web_runtime_observation
-             WHERE tenant_id = $1 AND assignment_id = $2
-             ORDER BY id DESC LIMIT 1",
+            "SELECT o.uuid AS observation_uuid, a.uuid AS assignment_uuid,
+                    a.tenant_id AS observation_tenant_id, s.uuid AS node_uuid,
+                    a.environment, a.generation, a.snapshot_uuid,
+                    a.snapshot_sha256, o.state, o.node_version, o.reason_code, o.detail,
+                    CAST(o.observed_at AS TEXT) AS observed_at
+             FROM web_runtime_observation o
+             INNER JOIN web_runtime_assignment a
+                ON a.id = o.assignment_id AND a.tenant_id = o.tenant_id
+             INNER JOIN web_server s
+                ON s.id = a.server_id AND s.tenant_id = a.tenant_id
+             WHERE o.tenant_id = $1 AND o.assignment_id = $2
+             ORDER BY o.id DESC LIMIT 1",
         )
         .bind(write.tenant_id)
         .bind(assignment_id)
@@ -308,7 +315,7 @@ impl WebRepository {
                         error,
                     )
                 })?;
-                return map_observation(&row, &assignment, &write.node_uuid, latest_state);
+                return map_observation_row(&row, latest_state);
             }
             let is_next_normal_state = write.state != RuntimeObservationState::Rejected
                 && write.state.rank() == latest_state.rank() + 1;
@@ -363,7 +370,9 @@ impl WebRepository {
             assignment_uuid: assignment
                 .try_get("assignment_uuid")
                 .map_err(map_row_error)?,
+            tenant_id: write.tenant_id.to_string(),
             node_uuid: write.node_uuid,
+            environment: assignment.try_get("environment").map_err(map_row_error)?,
             generation: write.generation.to_string(),
             snapshot_uuid: write.snapshot_uuid,
             snapshot_sha256: write.snapshot_sha256,
@@ -373,6 +382,57 @@ impl WebRepository {
             detail: write.detail,
             observed_at,
         })
+    }
+
+    pub(super) async fn retrieve_latest_runtime_observation_repo(
+        &self,
+        requester_tenant_id: i64,
+        can_cross_tenant: bool,
+        snapshot_uuid: &str,
+    ) -> WebServiceResult<RuntimeObservation> {
+        let row = if can_cross_tenant && requester_tenant_id == 0 {
+            sqlx::query(
+                "SELECT o.uuid AS observation_uuid, a.uuid AS assignment_uuid,
+                        a.tenant_id AS observation_tenant_id, s.uuid AS node_uuid,
+                        a.environment, a.generation, a.snapshot_uuid,
+                        a.snapshot_sha256, o.state, o.node_version, o.reason_code, o.detail,
+                        CAST(o.observed_at AS TEXT) AS observed_at
+                 FROM web_runtime_observation o
+                 INNER JOIN web_runtime_assignment a
+                    ON a.id = o.assignment_id AND a.tenant_id = o.tenant_id
+                 INNER JOIN web_server s
+                    ON s.id = a.server_id AND s.tenant_id = a.tenant_id
+                 WHERE a.snapshot_uuid = $1
+                 ORDER BY o.id DESC LIMIT 1",
+            )
+            .bind(snapshot_uuid)
+            .fetch_optional(&self.pool)
+            .await
+        } else {
+            sqlx::query(
+                "SELECT o.uuid AS observation_uuid, a.uuid AS assignment_uuid,
+                        a.tenant_id AS observation_tenant_id, s.uuid AS node_uuid,
+                        a.environment, a.generation, a.snapshot_uuid,
+                        a.snapshot_sha256, o.state, o.node_version, o.reason_code, o.detail,
+                        CAST(o.observed_at AS TEXT) AS observed_at
+                 FROM web_runtime_observation o
+                 INNER JOIN web_runtime_assignment a
+                    ON a.id = o.assignment_id AND a.tenant_id = o.tenant_id
+                 INNER JOIN web_server s
+                    ON s.id = a.server_id AND s.tenant_id = a.tenant_id
+                 WHERE a.tenant_id = $1 AND a.snapshot_uuid = $2
+                 ORDER BY o.id DESC LIMIT 1",
+            )
+            .bind(requester_tenant_id)
+            .bind(snapshot_uuid)
+            .fetch_optional(&self.pool)
+            .await
+        }
+        .map_err(|error| store_error("retrieve latest web runtime observation", error))?
+        .ok_or_else(|| WebServiceError::not_found("runtime observation not found"))?;
+
+        let state = parse_state(&row.try_get::<String, _>("state").map_err(map_row_error)?)?;
+        map_observation_row(&row, state)
     }
 }
 
@@ -389,24 +449,23 @@ fn map_assignment_row(row: &EngineRow) -> WebServiceResult<RuntimeAssignment> {
     })
 }
 
-fn map_observation(
+fn map_observation_row(
     row: &EngineRow,
-    assignment: &EngineRow,
-    node_uuid: &str,
     state: RuntimeObservationState,
 ) -> WebServiceResult<RuntimeObservation> {
-    let generation: i64 = assignment.try_get("generation").map_err(map_row_error)?;
+    let generation: i64 = row.try_get("generation").map_err(map_row_error)?;
+    let tenant_id: i64 = row
+        .try_get("observation_tenant_id")
+        .map_err(map_row_error)?;
     Ok(RuntimeObservation {
         observation_uuid: row.try_get("observation_uuid").map_err(map_row_error)?,
-        assignment_uuid: assignment
-            .try_get("assignment_uuid")
-            .map_err(map_row_error)?,
-        node_uuid: node_uuid.to_owned(),
+        assignment_uuid: row.try_get("assignment_uuid").map_err(map_row_error)?,
+        tenant_id: tenant_id.to_string(),
+        node_uuid: row.try_get("node_uuid").map_err(map_row_error)?,
+        environment: row.try_get("environment").map_err(map_row_error)?,
         generation: generation.to_string(),
-        snapshot_uuid: assignment.try_get("snapshot_uuid").map_err(map_row_error)?,
-        snapshot_sha256: assignment
-            .try_get("snapshot_sha256")
-            .map_err(map_row_error)?,
+        snapshot_uuid: row.try_get("snapshot_uuid").map_err(map_row_error)?,
+        snapshot_sha256: row.try_get("snapshot_sha256").map_err(map_row_error)?,
         state,
         node_version: row.try_get("node_version").map_err(map_row_error)?,
         reason_code: row.try_get("reason_code").map_err(map_row_error)?,

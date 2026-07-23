@@ -148,6 +148,21 @@ impl WebInternalApi for WebService {
             })
             .await
     }
+
+    async fn retrieve_latest_runtime_observation(
+        &self,
+        context: &WebInternalRequestContext,
+        snapshot_uuid: &str,
+    ) -> WebServiceResult<RuntimeObservation> {
+        validate_opaque_id(snapshot_uuid, 128, "snapshotUuid")?;
+        self.repository
+            .retrieve_latest_runtime_observation(
+                context.tenant_id,
+                context.can_publish_cross_tenant,
+                snapshot_uuid,
+            )
+            .await
+    }
 }
 
 fn parse_environment(value: &str) -> WebServiceResult<WebsiteRuntimeEnvironment> {

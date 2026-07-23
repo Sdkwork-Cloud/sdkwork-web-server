@@ -24,7 +24,7 @@
   "paths": {
     "/backend/v3/api/nginx/configs": {
       "get": {
-        "operationId": "nginx.configs.list",
+        "operationId": "configs.list",
         "summary": "List Nginx configurations",
         "tags": [
           "nginx"
@@ -123,7 +123,7 @@
         "x-sdkwork-route-auth": "dual-token"
       },
       "post": {
-        "operationId": "nginx.configs.create",
+        "operationId": "configs.create",
         "summary": "Create an Nginx configuration",
         "tags": [
           "nginx"
@@ -202,7 +202,7 @@
         }
       ],
       "get": {
-        "operationId": "nginx.configs.retrieve",
+        "operationId": "configs.retrieve",
         "summary": "Retrieve an Nginx configuration",
         "tags": [
           "nginx"
@@ -267,7 +267,7 @@
         "x-sdkwork-route-auth": "dual-token"
       },
       "put": {
-        "operationId": "nginx.configs.update",
+        "operationId": "configs.update",
         "summary": "Update an Nginx configuration",
         "tags": [
           "nginx"
@@ -356,7 +356,7 @@
         }
       ],
       "post": {
-        "operationId": "nginx.configs.validate",
+        "operationId": "configs.validate",
         "summary": "Validate an Nginx configuration",
         "tags": [
           "nginx"
@@ -424,7 +424,7 @@
         }
       ],
       "post": {
-        "operationId": "nginx.configs.deploy",
+        "operationId": "configs.deploy",
         "summary": "Deploy an Nginx configuration",
         "tags": [
           "nginx"
@@ -493,7 +493,7 @@
     },
     "/backend/v3/api/nginx/reload": {
       "post": {
-        "operationId": "nginx.reload",
+        "operationId": "reload",
         "summary": "Reload Nginx",
         "tags": [
           "nginx"
@@ -551,7 +551,7 @@
     },
     "/backend/v3/api/nginx/status": {
       "get": {
-        "operationId": "nginx.status.retrieve",
+        "operationId": "status.retrieve",
         "summary": "Retrieve Nginx status",
         "tags": [
           "nginx"
@@ -748,7 +748,7 @@
     },
     "/backend/v3/api/agent/heartbeat": {
       "post": {
-        "operationId": "agent.heartbeat",
+        "operationId": "heartbeat",
         "summary": "Report an edge-agent heartbeat",
         "tags": [
           "agent"
@@ -820,12 +820,12 @@
             }
           }
         },
-        "x-sdkwork-permission": "web.agent.write"
+        "x-sdkwork-permission": "web.heartbeat.write"
       }
     },
     "/backend/v3/api/agent/sync": {
       "get": {
-        "operationId": "agent.retrieve",
+        "operationId": "retrieve",
         "summary": "Retrieve the Nginx configuration and certificate bundle",
         "tags": [
           "agent"
@@ -897,7 +897,7 @@
             }
           }
         },
-        "x-sdkwork-permission": "web.agent.read"
+        "x-sdkwork-permission": "web.retrieve.write"
       }
     },
     "/backend/v3/api/audit_logs": {

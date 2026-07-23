@@ -1,6 +1,6 @@
 # ADR-20260721 Compiled Website Runtime Descriptor
 
-Status: proposed
+Status: accepted
 Requirement: REQ-2026-0060
 Owner: SDKWork Web Server maintainers
 Date: 2026-07-21
@@ -40,9 +40,10 @@ resolution model.
    longest Mount prefix are pre-indexed and evaluated in that order.
 8. Last-known-good website and TLS snapshots remain active during temporary control-plane failure.
    Desired/observed revision and served fingerprint are reported back to Deploy.
-9. In cloud mode, legacy writable `web_site`, `web_domain`, `web_deployment`, and `web_certificate`
-   state becomes a one-way compatibility/runtime projection or is retired through the approved
-   migration. It is not a second business authority.
+9. In cloud mode, `web_site`, `web_domain`, `web_deployment`, and `web_certificate` are not runtime
+   inputs or writable authority. They remain scoped to the explicit standalone local-management
+   profile. The cloud artifact excludes management composition and accepts only Deploy-owned
+   immutable assignments.
 10. Existing ACME implementation choices remain reusable execution details. Upon acceptance, this
     decision narrows the cloud metadata/orchestration ownership portions of
     `ADR-20260623-acme-certificate-authority`; it does not discard its bounded Rust provider choice.
@@ -74,11 +75,12 @@ resolution model.
   circuit/timeout policy.
 - The fleet can continue serving when Deploy is unavailable, but provider availability and stale
   policy become explicit SLO inputs.
-- Web Server cloud management APIs/tables need migration rather than dual ownership.
+- Cloud and standalone profiles require artifact-level process isolation; no compatibility import,
+  cross-profile projection, or dual write is permitted.
 
 ## Implementation Status
 
-The Web Server consumer foundation is implemented without accepting this ADR as complete:
+The accepted Web Server consumer boundary is implemented:
 
 - strict `sdkwork.website-runtime.v1` JSON Schema and typed Rust model;
 - canonical payload SHA-256 verification and bounded semantic validation;
@@ -103,10 +105,11 @@ The Web Server consumer foundation is implemented without accepting this ADR as 
   highest-generation restart/source recovery, replay protection, and staging/production
   configuration enforcement.
 
-ADR acceptance remains blocked on producer/compiler conformance, authenticated distribution,
-rollout observations, TLS material validation/hot swap, provider-aware cache behavior and concrete
-event-driven cache invalidation,
-single-writer migration, and the full verification matrix below.
+Producer/compiler conformance, authenticated runtime-set distribution, durable recovery,
+provider adapters, provider-event reconciliation, cloud/standalone process isolation, and browser
+delivery have executable evidence. Deploy-visible rollout observations, cloud TLS material
+distribution/hot swap, any future concrete content-cache implementation, and production
+security/load/availability evidence remain release gates rather than ADR acceptance blockers.
 
 ## Verification
 
@@ -119,6 +122,6 @@ single-writer migration, and the full verification matrix below.
 
 ## Supersedes / Superseded By
 
-On acceptance, this ADR supersedes only the cloud control-plane ownership assumptions of older Web
+This ADR supersedes only the cloud control-plane ownership assumptions of older Web
 Server management designs. Existing protocol safety and ACME runtime library decisions remain in
 force unless a separate ADR replaces them.

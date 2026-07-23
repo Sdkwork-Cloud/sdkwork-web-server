@@ -142,18 +142,27 @@ Implemented foundation as of 2026-07-22:
 - focused tests for hash tampering, schema rejection, provider capability coherence, device/path
   Variant selection, Mount/provider-root separation, cross-Site longest path/conflicts, atomic
   activation, failed-candidate retention, node scope, rollback, adapter HTTP behavior, provider
-  deadline mapping, and HEAD-without-content-open behavior.
+  deadline mapping, and HEAD-without-content-open behavior;
+- isolated candidate-only activation probes that issue bounded `HEAD` requests for every Binding
+  and reachable selectable device Variant with activation-purpose Provider calls, reject missing
+  entrypoints or unresolved routes before persistence, and preserve both the live registry and
+  recovery slot on failure;
+- Deploy assignment publication and latest-observation reads through the generated Web Internal
+  SDK, immutable per-target observation evidence, full assignment-identity validation, and a
+  transactional all-frozen-target `ACTIVE` quorum that alone advances
+  `deploy_site.current_revision_id`.
 
-Still open and therefore release-blocking: Deployments producer integration through the generated
-Web Internal SDK, detached distribution signature/source attestation where required, staged
-probes/quorum/drift reporting, TLS material authorization/decryption,
+Still open and therefore release-blocking: detached distribution signature/source attestation where
+required, external public-domain multi-vantage probes, production drift dashboards/alerts, TLS
+material authorization/decryption,
 certificate/key/chain/time validation and atomic hot activation, service credential hot rotation,
 true upstream content streaming, provider-aware cache behavior and concrete event-driven cache
 invalidation, sanitizer/rendition
 and full-text search pipelines, single-writer migration, deployed browser-to-resource E2E,
 load/soak, and production operations evidence. The local file watcher remains a
-standalone/development mechanism; cloud pull and node recovery do not replace Deploy producer
-integration, fleet rollout observation, or recorded restart/backup-restore drills. Until the
+standalone/development mechanism; cloud pull and node recovery do not replace Deploy's immutable
+fleet rollout evidence or recorded restart/backup-restore drills. The isolated node-local `HEAD`
+probe does not prove public DNS, certificate/SNI, CDN, or Internet reachability. Until the
 generated owner SDKs support streaming, activation enforces their 16 MiB Knowledgebase and 256 MiB
 Drive object ceilings rather than claiming the descriptor schema's future 1 TiB capability.
 The current website request path is cacheless, so its event invalidator cannot leave stale cached

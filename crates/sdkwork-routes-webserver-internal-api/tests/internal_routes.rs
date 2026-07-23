@@ -72,10 +72,12 @@ impl WebInternalApi for TestInternalApi {
         Ok(RuntimeObservation {
             observation_uuid: "019b0000-0000-7000-8000-000000000002".to_owned(),
             assignment_uuid: "019b0000-0000-7000-8000-000000000001".to_owned(),
+            tenant_id: context.tenant_id.to_string(),
             node_uuid: context
                 .agent_node_uuid
                 .clone()
                 .unwrap_or_else(|| "node-missing".to_owned()),
+            environment: "production".to_owned(),
             generation: request.generation.clone(),
             snapshot_uuid: snapshot_uuid.to_owned(),
             snapshot_sha256: request.snapshot_sha256.clone(),
@@ -84,6 +86,28 @@ impl WebInternalApi for TestInternalApi {
             reason_code: request.reason_code.clone(),
             detail: request.detail.clone(),
             observed_at: "2026-07-22T00:00:01Z".to_owned(),
+        })
+    }
+
+    async fn retrieve_latest_runtime_observation(
+        &self,
+        _context: &WebInternalRequestContext,
+        snapshot_uuid: &str,
+    ) -> WebServiceResult<RuntimeObservation> {
+        Ok(RuntimeObservation {
+            observation_uuid: "019b0000-0000-7000-8000-000000000002".to_owned(),
+            assignment_uuid: "019b0000-0000-7000-8000-000000000001".to_owned(),
+            tenant_id: "42".to_owned(),
+            node_uuid: "node-7".to_owned(),
+            environment: "production".to_owned(),
+            generation: "7".to_owned(),
+            snapshot_uuid: snapshot_uuid.to_owned(),
+            snapshot_sha256: "a".repeat(64),
+            state: sdkwork_webserver_contract::RuntimeObservationState::Active,
+            node_version: Some("1.0.0".to_owned()),
+            reason_code: None,
+            detail: None,
+            observed_at: "2026-07-22T00:00:04Z".to_owned(),
         })
     }
 }
@@ -125,6 +149,7 @@ async fn canonical_internal_routes_return_sdkwork_resource_envelopes() {
     );
 
     let observation = app
+        .clone()
         .oneshot(json_request(
             "POST",
             "/internal/v3/api/web/runtime_assignments/snapshot-7/observations",
@@ -142,6 +167,30 @@ async fn canonical_internal_routes_return_sdkwork_resource_envelopes() {
     assert_eq!(
         observation_body.pointer("/data/item/state"),
         Some(&json!("RECEIVED"))
+    );
+
+    let latest = app
+        .oneshot(
+            Request::builder()
+                .uri("/internal/v3/api/web/runtime_assignments/snapshot-7/observations/latest")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(latest.status(), StatusCode::OK);
+    let latest_body = response_json(latest).await;
+    assert_eq!(
+        latest_body.pointer("/data/item/environment"),
+        Some(&json!("production"))
+    );
+    assert_eq!(
+        latest_body.pointer("/data/item/tenantId"),
+        Some(&json!("42"))
+    );
+    assert_eq!(
+        latest_body.pointer("/data/item/state"),
+        Some(&json!("ACTIVE"))
     );
 }
 

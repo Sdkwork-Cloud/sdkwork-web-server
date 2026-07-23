@@ -1,8 +1,8 @@
 import type { AgentSyncResponse } from './agent-sync-response';
 
-export interface AgentRetrieveResponse {
+export interface RetrieveResponse {
   code: 0;
-  data: unknown & Record<string, unknown>;
+  data: unknown & { item: AgentSyncResponse; };
   /** Server-owned request correlation id. */
   traceId: string;
 }

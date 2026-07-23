@@ -1,8 +1,8 @@
 import type { NginxReloadResponse } from './nginx-reload-response';
 
-export interface NginxReloadPostResponse {
+export interface ReloadResponse {
   code: 0;
-  data: unknown & Record<string, unknown>;
+  data: unknown & { item: NginxReloadResponse; };
   /** Server-owned request correlation id. */
   traceId: string;
 }

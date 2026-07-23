@@ -4,11 +4,28 @@ import type { HttpClient } from '../http/client';
 import type { AgentHeartbeatRequest, AgentHeartbeatResponse, AgentSyncResponse } from '../types';
 
 
-export interface AgentRetrieveParams {
+export interface AgentSyncListParams {
   ifSyncVersion?: string;
 }
 
-export class AgentApi {
+export class AgentSyncApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Retrieve the Nginx configuration and certificate bundle */
+  async list(params?: AgentSyncListParams): Promise<AgentSyncResponse> {
+    const query = buildQueryString([
+      { name: 'ifSyncVersion', value: params?.ifSyncVersion, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.get<AgentSyncResponse>(appendQueryString(backendApiPath(`/agent/sync`), query));
+  }
+}
+
+export class AgentHeartbeatApi {
   private client: HttpClient;
 
   constructor(client: HttpClient) {
@@ -17,17 +34,22 @@ export class AgentApi {
 
 
 /** Report an edge-agent heartbeat */
-  async heartbeat(body: AgentHeartbeatRequest): Promise<AgentHeartbeatResponse> {
+  async create(body: AgentHeartbeatRequest): Promise<AgentHeartbeatResponse> {
     return this.client.post<AgentHeartbeatResponse>(backendApiPath(`/agent/heartbeat`), body, undefined, undefined, 'application/json');
   }
+}
 
-/** Retrieve the Nginx configuration and certificate bundle */
-  async retrieve(params?: AgentRetrieveParams): Promise<AgentSyncResponse> {
-    const query = buildQueryString([
-      { name: 'ifSyncVersion', value: params?.ifSyncVersion, style: 'form', explode: true, allowReserved: false },
-    ]);
-    return this.client.get<AgentSyncResponse>(appendQueryString(backendApiPath(`/agent/sync`), query));
+export class AgentApi {
+
+  public readonly heartbeat: AgentHeartbeatApi;
+  public readonly sync: AgentSyncApi;
+
+  constructor(client: HttpClient) {
+
+    this.heartbeat = new AgentHeartbeatApi(client);
+    this.sync = new AgentSyncApi(client);
   }
+
 }
 
 export function createAgentApi(client: HttpClient): AgentApi {

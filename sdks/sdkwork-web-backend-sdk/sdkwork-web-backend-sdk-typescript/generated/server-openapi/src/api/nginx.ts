@@ -18,6 +18,20 @@ export class NginxStatusApi {
   }
 }
 
+export class NginxReloadApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Reload Nginx */
+  async create(): Promise<NginxReloadResponse> {
+    return this.client.post<NginxReloadResponse>(backendApiPath(`/nginx/reload`));
+  }
+}
+
 export interface NginxConfigsListParams {
   page?: number;
   pageSize?: number;
@@ -35,7 +49,7 @@ export class NginxConfigsApi {
 
 
 /** List Nginx configurations */
-  async list(params?: NginxConfigsListParams): Promise<Record<string, unknown>> {
+  async list(params?: NginxConfigsListParams): Promise<{ items: NginxConfigResponse[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -43,7 +57,7 @@ export class NginxConfigsApi {
       { name: 'configType', value: params?.configType, style: 'form', explode: true, allowReserved: false },
       { name: 'isActive', value: params?.isActive, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/nginx/configs`), query));
+    return this.client.get<{ items: NginxConfigResponse[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/nginx/configs`), query));
   }
 
 /** Create an Nginx configuration */
@@ -73,21 +87,18 @@ export class NginxConfigsApi {
 }
 
 export class NginxApi {
-  private client: HttpClient;
+
   public readonly configs: NginxConfigsApi;
+  public readonly reload: NginxReloadApi;
   public readonly status: NginxStatusApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
+
     this.configs = new NginxConfigsApi(client);
+    this.reload = new NginxReloadApi(client);
     this.status = new NginxStatusApi(client);
   }
 
-
-/** Reload Nginx */
-  async reload(): Promise<NginxReloadResponse> {
-    return this.client.post<NginxReloadResponse>(backendApiPath(`/nginx/reload`));
-  }
 }
 
 export function createNginxApi(client: HttpClient): NginxApi {

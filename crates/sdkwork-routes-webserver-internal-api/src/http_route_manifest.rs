@@ -28,6 +28,13 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     .with_required_permission("web.agent.write")
     .with_idempotent(true)
     .with_rate_limit_tier(RateLimitTier::AuthCritical),
+    HttpRoute::ingress_token(
+        HttpMethod::Get,
+        "/internal/v3/api/web/runtime_assignments/{snapshotUuid}/observations/latest",
+        "runtime",
+        "runtimeAssignments.observations.latest.retrieve",
+    )
+    .with_required_permission("web.runtimeAssignments.write"),
 ];
 
 pub fn internal_route_manifest() -> HttpRouteManifest {

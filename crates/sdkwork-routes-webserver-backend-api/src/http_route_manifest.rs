@@ -7,14 +7,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/backend/v3/api/nginx/configs",
         "nginx",
-        "nginx.configs.list",
+        "configs.list",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/backend/v3/api/nginx/configs",
         "nginx",
-        "nginx.configs.create",
+        "configs.create",
     )
     .with_required_permission("web.nginx.write")
     .with_idempotent(true),
@@ -22,14 +22,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/backend/v3/api/nginx/etc/{configId}",
         "nginx",
-        "nginx.configs.retrieve",
+        "configs.retrieve",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
         HttpMethod::Put,
         "/backend/v3/api/nginx/etc/{configId}",
         "nginx",
-        "nginx.configs.update",
+        "configs.update",
     )
     .with_required_permission("web.nginx.write")
     .with_idempotent(true),
@@ -37,14 +37,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/nginx/etc/{configId}/validate",
         "nginx",
-        "nginx.configs.validate",
+        "configs.validate",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/backend/v3/api/nginx/etc/{configId}/deploy",
         "nginx",
-        "nginx.configs.deploy",
+        "configs.deploy",
     )
     .with_required_permission("web.nginx.write")
     .with_idempotent(true)
@@ -53,7 +53,7 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/nginx/reload",
         "nginx",
-        "nginx.reload",
+        "reload",
     )
     .with_required_permission("web.nginx.write")
     .with_idempotent(true),
@@ -61,7 +61,7 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/backend/v3/api/nginx/status",
         "nginx",
-        "nginx.status.retrieve",
+        "status.retrieve",
     )
     .with_required_permission("web.nginx.write"),
     HttpRoute::dual_token(
@@ -84,17 +84,17 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/agent/heartbeat",
         "agent",
-        "agent.heartbeat",
+        "heartbeat",
     )
-    .with_required_permission("web.agent.write")
+    .with_required_permission("web.heartbeat.write")
     .with_rate_limit_tier(RateLimitTier::AuthCritical),
     HttpRoute::agent_token(
         HttpMethod::Get,
         "/backend/v3/api/agent/sync",
         "agent",
-        "agent.retrieve",
+        "retrieve",
     )
-    .with_required_permission("web.agent.read")
+    .with_required_permission("web.retrieve.write")
     .with_rate_limit_tier(RateLimitTier::AuthCritical),
     HttpRoute::dual_token(
         HttpMethod::Get,

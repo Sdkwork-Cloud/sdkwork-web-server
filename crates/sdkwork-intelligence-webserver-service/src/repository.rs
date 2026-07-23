@@ -348,6 +348,13 @@ pub trait WebRepositoryPort: Send + Sync {
         write: RuntimeObservationWrite,
     ) -> WebServiceResult<RuntimeObservation>;
 
+    async fn retrieve_latest_runtime_observation(
+        &self,
+        requester_tenant_id: i64,
+        can_cross_tenant: bool,
+        snapshot_uuid: &str,
+    ) -> WebServiceResult<RuntimeObservation>;
+
     async fn record_agent_heartbeat(
         &self,
         server_id: &str,

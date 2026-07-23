@@ -38,6 +38,12 @@ impl RuntimeApi {
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
+    /// Retrieve the latest authenticated Web Node runtime-set observation
+    pub async fn assignments_observations_latest_retrieve(&self, snapshot_uuid: &str) -> Result<RuntimeObservation, SdkworkError> {
+        let path = custom_path(&format!("/web/runtime_assignments/{}/observations/latest", serialize_path_parameter(snapshot_uuid, PathParameterSpec::new("snapshotUuid", "simple", false))));
+        self.client.get(&path, None, None).await
+    }
+
 }
 
 struct PathParameterSpec<'a> {

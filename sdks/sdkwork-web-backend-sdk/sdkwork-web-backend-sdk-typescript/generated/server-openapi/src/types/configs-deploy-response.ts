@@ -1,8 +1,8 @@
 import type { NginxDeployResponse } from './nginx-deploy-response';
 
-export interface NginxConfigsDeployResponse {
+export interface ConfigsDeployResponse {
   code: 0;
-  data: unknown & Record<string, unknown>;
+  data: unknown & { item: NginxDeployResponse; };
   /** Server-owned request correlation id. */
   traceId: string;
 }

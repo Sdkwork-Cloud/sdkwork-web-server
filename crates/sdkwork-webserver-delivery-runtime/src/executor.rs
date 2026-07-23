@@ -44,6 +44,23 @@ impl WebsiteDeliveryExecutor {
         &self,
         request: WebsiteDeliveryRequest,
     ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
+        self.execute_with_purpose(request, WebsiteProviderPurpose::Request)
+            .await
+    }
+
+    pub(crate) async fn execute_activation_probe(
+        &self,
+        request: WebsiteDeliveryRequest,
+    ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
+        self.execute_with_purpose(request, WebsiteProviderPurpose::Activation)
+            .await
+    }
+
+    async fn execute_with_purpose(
+        &self,
+        request: WebsiteDeliveryRequest,
+        purpose: WebsiteProviderPurpose,
+    ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
         validate_request_identity(&request)?;
         let runtime_set = self
             .runtime_registry
@@ -88,9 +105,9 @@ impl WebsiteDeliveryExecutor {
                     ));
                 }
                 match route.handler {
-                    WebsiteHandler::Wiki => self.execute_wiki(route, request).await,
+                    WebsiteHandler::Wiki => self.execute_wiki(route, request, purpose).await,
                     WebsiteHandler::Static | WebsiteHandler::Spa => {
-                        self.execute_static(route, request).await
+                        self.execute_static(route, request, purpose).await
                     }
                 }
             }
@@ -101,6 +118,7 @@ impl WebsiteDeliveryExecutor {
         &self,
         route: OwnedSelectedRoute,
         request: WebsiteDeliveryRequest,
+        purpose: WebsiteProviderPurpose,
     ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
         let provider = self
             .provider_registry
@@ -110,7 +128,7 @@ impl WebsiteDeliveryExecutor {
                 capability: "wiki",
             })?;
         let deadline = ProviderDeadline::new(route.provider_timeout_ms);
-        let mut context = route.provider_context(&request);
+        let mut context = route.provider_context(&request, purpose);
         context.deadline_ms = deadline.remaining_ms()?;
         let resolve_request = ResolveWebsiteWikiRouteRequest {
             context: context.clone(),
@@ -220,6 +238,7 @@ impl WebsiteDeliveryExecutor {
         &self,
         route: OwnedSelectedRoute,
         request: WebsiteDeliveryRequest,
+        purpose: WebsiteProviderPurpose,
     ) -> Result<WebsiteDeliveryOutcome, WebsiteDeliveryError> {
         let provider = self
             .provider_registry
@@ -229,7 +248,7 @@ impl WebsiteDeliveryExecutor {
                 capability: "static-content",
             })?;
         let deadline = ProviderDeadline::new(route.provider_timeout_ms);
-        let mut context = route.provider_context(&request);
+        let mut context = route.provider_context(&request, purpose);
         for candidate in static_candidates(&route, request.spa_fallback_eligible) {
             context.deadline_ms = deadline.remaining_ms()?;
             let resolve_request = ResolveWebsiteStaticPathRequest {
@@ -376,7 +395,11 @@ impl OwnedSelectedRoute {
         }
     }
 
-    fn provider_context(&self, request: &WebsiteDeliveryRequest) -> WebsiteProviderRuntimeContext {
+    fn provider_context(
+        &self,
+        request: &WebsiteDeliveryRequest,
+        purpose: WebsiteProviderPurpose,
+    ) -> WebsiteProviderRuntimeContext {
         WebsiteProviderRuntimeContext {
             tenant_scope_hash: self.identity.tenant_scope_hash.clone(),
             site_uuid: self.identity.site_uuid.clone(),
@@ -387,7 +410,7 @@ impl OwnedSelectedRoute {
             request_id: request.request_id.clone(),
             trace_id: request.trace_id.clone(),
             deadline_ms: self.provider_timeout_ms,
-            purpose: WebsiteProviderPurpose::Request,
+            purpose,
         }
     }
 

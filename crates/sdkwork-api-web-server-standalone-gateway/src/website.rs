@@ -23,8 +23,9 @@ use sdkwork_webserver_core::{
     WebServerConfigError,
 };
 use sdkwork_webserver_delivery_runtime::{
-    CachelessWebsiteProviderEventInvalidator, WebsiteDeliveryExecutor, WebsiteProviderRegistry,
-    WebsiteProviderRegistryError, WebsiteRuntimeProviderValidationError,
+    probe_website_runtime_set_activation, CachelessWebsiteProviderEventInvalidator,
+    WebsiteDeliveryExecutor, WebsiteProviderRegistry, WebsiteProviderRegistryError,
+    WebsiteRuntimeActivationProbeError, WebsiteRuntimeProviderValidationError,
     WebsiteRuntimeSetProviderEventReconciler,
 };
 use sdkwork_webserver_drive_provider::{
@@ -109,6 +110,8 @@ pub enum WebsiteDataPlaneBootstrapError {
     TenantScopeMismatch,
     #[error("website runtime-set provider validation failed: {0}")]
     ProviderValidation(#[from] WebsiteRuntimeProviderValidationError),
+    #[error("website runtime-set activation probe failed: {0}")]
+    RuntimeActivationProbe(#[from] WebsiteRuntimeActivationProbeError),
     #[error("website provider configuration is invalid: {0}")]
     ProviderConfig(String),
     #[error("website provider event ingress configuration is required")]
@@ -284,6 +287,37 @@ where
         )
         .await?;
     }
+    let activation_probe = match probe_website_runtime_set_activation(
+        Arc::clone(initial.runtime_set()),
+        Arc::clone(&providers),
+        validation_concurrency,
+    )
+    .await
+    {
+        Ok(report) => report,
+        Err(error) => {
+            if let Some(delivery) = initial_cloud_delivery.as_ref() {
+                reject_cloud_assignment(
+                    source_from_config(&configured_source)?,
+                    &delivery.assignment,
+                    delivery.latest_observation_state,
+                    "ACTIVATION_PROBE_FAILED",
+                    "node-local route and content activation probe failed",
+                )
+                .await?;
+            }
+            return Err(WebsiteDataPlaneBootstrapError::RuntimeActivationProbe(
+                error,
+            ));
+        }
+    };
+    tracing::info!(
+        website_runtime_generation = initial.runtime_set().generation(),
+        activation_probe_bindings = activation_probe.probed_bindings,
+        activation_probe_variants = activation_probe.probed_variants,
+        activation_probe_routes = activation_probe.probed_routes,
+        "website runtime-set passed node-local activation probes"
+    );
     let environment = initial.runtime_set().environment();
     persist_runtime_set(recovery_store.as_ref(), &initial).await?;
     if let Some(delivery) = initial_cloud_delivery.as_mut() {
@@ -295,7 +329,19 @@ where
         )
         .await?;
     }
-    runtime_registry.activate(Arc::clone(initial.runtime_set()))?;
+    if let Err(error) = runtime_registry.activate(Arc::clone(initial.runtime_set())) {
+        if let Some(delivery) = initial_cloud_delivery.as_ref() {
+            reject_cloud_assignment(
+                source_from_config(&configured_source)?,
+                &delivery.assignment,
+                delivery.latest_observation_state,
+                "ACTIVATION_FAILED",
+                "runtime-set failed atomic registry activation",
+            )
+            .await?;
+        }
+        return Err(WebsiteDataPlaneBootstrapError::RuntimeSet(error));
+    }
     if let Some(delivery) = initial_cloud_delivery.as_mut() {
         advance_cloud_observation(
             source_from_config(&configured_source)?,
@@ -1152,6 +1198,17 @@ async fn watch_runtime_set(
                     );
                     continue;
                 }
+                if let Err(error) = probe_website_runtime_set_activation(
+                    Arc::clone(candidate.runtime_set()),
+                    Arc::clone(&context.providers),
+                    context.validation_concurrency,
+                ).await {
+                    log_watcher_error_once(
+                        &mut last_error,
+                        &WebsiteDataPlaneBootstrapError::RuntimeActivationProbe(error),
+                    );
+                    continue;
+                }
                 if let Err(error) = persist_runtime_set(
                     context.recovery_store.as_ref(),
                     &candidate,
@@ -1229,6 +1286,32 @@ async fn watch_cloud_runtime_set(
                             continue;
                         }
                         Some(RuntimeObservationState::Staged) => {
+                            let Some(current) = current else {
+                                log_watcher_error_once(
+                                    &mut last_error,
+                                    &WebsiteDataPlaneBootstrapError::RuntimeAssignment,
+                                );
+                                continue;
+                            };
+                            if let Err(error) = probe_website_runtime_set_activation(
+                                current,
+                                Arc::clone(&context.providers),
+                                context.validation_concurrency,
+                            ).await {
+                                let probe_error = WebsiteDataPlaneBootstrapError::RuntimeActivationProbe(error);
+                                if let Err(observation_error) = reject_cloud_assignment(
+                                    &context.source,
+                                    &delivery.assignment,
+                                    delivery.latest_observation_state,
+                                    "ACTIVATION_PROBE_FAILED",
+                                    "node-local route and content activation probe failed",
+                                ).await {
+                                    log_watcher_error_once(&mut last_error, &observation_error);
+                                } else {
+                                    log_watcher_error_once(&mut last_error, &probe_error);
+                                }
+                                continue;
+                            }
                             if let Err(error) = context.source
                                 .observe(
                                     &delivery.assignment,
@@ -1333,6 +1416,25 @@ async fn watch_cloud_runtime_set(
                     log_watcher_error_once(&mut last_error, &error);
                     continue;
                 }
+                if let Err(error) = probe_website_runtime_set_activation(
+                    Arc::clone(candidate.runtime_set()),
+                    Arc::clone(&context.providers),
+                    context.validation_concurrency,
+                ).await {
+                    let probe_error = WebsiteDataPlaneBootstrapError::RuntimeActivationProbe(error);
+                    if let Err(observation_error) = reject_cloud_assignment(
+                        &context.source,
+                        &delivery.assignment,
+                        delivery.latest_observation_state,
+                        "ACTIVATION_PROBE_FAILED",
+                        "node-local route and content activation probe failed",
+                    ).await {
+                        log_watcher_error_once(&mut last_error, &observation_error);
+                    } else {
+                        log_watcher_error_once(&mut last_error, &probe_error);
+                    }
+                    continue;
+                }
                 if let Err(error) = persist_runtime_set(
                     context.recovery_store.as_ref(),
                     &candidate,
@@ -1352,10 +1454,18 @@ async fn watch_cloud_runtime_set(
                 let report = match context.registry.activate(Arc::clone(candidate.runtime_set())) {
                     Ok(report) => report,
                     Err(error) => {
-                        log_watcher_error_once(
-                            &mut last_error,
-                            &WebsiteDataPlaneBootstrapError::RuntimeSet(error),
-                        );
+                        let activation_error = WebsiteDataPlaneBootstrapError::RuntimeSet(error);
+                        if let Err(observation_error) = reject_cloud_assignment(
+                            &context.source,
+                            &delivery.assignment,
+                            delivery.latest_observation_state,
+                            "ACTIVATION_FAILED",
+                            "runtime-set failed atomic registry activation",
+                        ).await {
+                            log_watcher_error_once(&mut last_error, &observation_error);
+                        } else {
+                            log_watcher_error_once(&mut last_error, &activation_error);
+                        }
                         continue;
                     }
                 };
@@ -1403,6 +1513,7 @@ fn watcher_error_class(error: &WebsiteDataPlaneBootstrapError) -> &'static str {
         WebsiteDataPlaneBootstrapError::ProviderUnavailable { .. } => "provider-unavailable",
         WebsiteDataPlaneBootstrapError::TenantScopeMismatch => "tenant-scope-mismatch",
         WebsiteDataPlaneBootstrapError::ProviderValidation(_) => "provider-validation-failed",
+        WebsiteDataPlaneBootstrapError::RuntimeActivationProbe(_) => "activation-probe-failed",
         WebsiteDataPlaneBootstrapError::RuntimeAssignmentConfig(_) => {
             "runtime-assignment-config-invalid"
         }
@@ -1696,8 +1807,10 @@ mod tests {
                             "message": "success",
                             "data": {"item": {
                                 "observationUuid": format!("observation-{state}"),
+                                "tenantId": "7",
                                 "assignmentUuid": "assignment-7",
                                 "nodeUuid": "node-0001",
+                                "environment": "production",
                                 "generation": "7",
                                 "snapshotUuid": "snapshot-7",
                                 "snapshotSha256": "a".repeat(64),
